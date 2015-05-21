@@ -32,14 +32,14 @@ using namespace std;
 ClassImp(AliAnalysisTaskHMTFMC)
 
 AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC()
-: AliAnalysisTaskSE(), fMyOut(0)
+: AliAnalysisTaskSE(), fMyOut(0), festimators(0)
 {
 
 }
 
 //________________________________________________________________________
 AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC(const char *name) 
-  : AliAnalysisTaskSE(name), fMyOut(0)
+  : AliAnalysisTaskSE(name), fMyOut(0), festimators(0)
     
 {
 
@@ -82,7 +82,6 @@ void AliAnalysisTaskHMTFMC::UserExec(Option_t *)
   }//estimator loop
 
   // Track loop
-  Int_t nchMidEta = 0;
   for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
     AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
     if (!track) {
@@ -109,12 +108,17 @@ void AliAnalysisTaskHMTFMC::UserExec(Option_t *)
 //________________________________________________________________________
 void AliAnalysisTaskHMTFMC::Terminate(Option_t *) 
 {
-  std::cout << "Terminating" << std::endl;
+  fMyOut  = static_cast<TList*> (GetOutputData(1));
+  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {//estimator loop
+    std::cout << "Terminating estimator " << festimators[i]->GetTitlePostfix() << std::endl;
+    festimators[i]->Terminate(fMyOut);
+  }//estimator loop
+  
   // Draw result to the screen
   // Called once at the end of the query   
   //  return;
   //  fHistPt = dynamic_cast<TH1F*> (GetOutputData(1));
-  //fMyOut  = dynamic_cast<TList*> (GetOutputData(1));
+  //
   
   //TH2F* fdNdeta  = (TH2F*) fMyOut->FindObject("fdNdetaMCInel_EtaLt05");
   //std::cout << "integral: " << fdNdeta << std::endl;

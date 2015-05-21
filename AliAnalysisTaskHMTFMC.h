@@ -23,14 +23,15 @@ class AliAnalysisTaskHMTFMC : public AliAnalysisTaskSE {
   virtual void   UserExec(Option_t *option);
   virtual void   Terminate(Option_t *);
 
-  // AliAnalysisTaskHMTFMC(const AliAnalysisTaskHMTFMC&); // not implemented
-  // AliAnalysisTaskHMTFMC& operator=(const AliAnalysisTaskHMTFMC&); // not implemented
-
  private:
   TList *fMyOut;             // Output list
-  MultiplicityEstimatorBase* festi;
+  // MultiplicityEstimatorBase* festi;
   std::vector<MultiplicityEstimatorBase*> festimators;
-  
+
+  // Declaring these shuts up warnings from Weffc++
+  AliAnalysisTaskHMTFMC(const AliAnalysisTaskHMTFMC&); // not implemented
+  AliAnalysisTaskHMTFMC& operator=(const AliAnalysisTaskHMTFMC&); // not implemented
+
   ClassDef(AliAnalysisTaskHMTFMC, 1); // example of analysis
 };
 

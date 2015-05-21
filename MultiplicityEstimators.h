@@ -8,6 +8,7 @@ class TGraphErrors;
 #include "TNamed.h"
 #include "THStack.h"
 #include "TH2F.h"
+#include "TString.h"
 
 
 class MultiplicityEstimatorBase : public TNamed {
@@ -19,11 +20,14 @@ class MultiplicityEstimatorBase : public TNamed {
   enum {kEtaLt05,
 	kEtaLt08};
   void RegisterHistograms(TList* outputList);
+  //get the ending of the name common to all histograms from this estimator:
+  TString GetNamePostfix() {return TString("_") + fName;};
+  //get the ending of the title common to all histograms from this estimator:
+  TString GetTitlePostfix() {return TString(" ") + fTitle;};
   virtual void PreEvent(AliMCEvent* event) {};
   virtual void ProcessTrack(AliMCParticle* track, Int_t iTrack) {};
   virtual void PostEvent() {};
-  //MultiplicityEstimatorBase(const MultiplicityEstimatorBase&);           // not implemented
-  //MultiplicityEstimatorBase& operator=(const MultiplicityEstimatorBase&);// not implemented
+  virtual void Terminate(TList* outputlist) {};
   
  protected:
   /*
@@ -33,14 +37,19 @@ class MultiplicityEstimatorBase : public TNamed {
   void ReadEventHeaders(AliMCEvent* event);
   Int_t festimator_bins;
   TH2F  *fdNdeta;          // dNdEta distributions; multiplicity is on the y-axis
-  /* THStack *fdNdeta_stack;  // 1D dNdeta histograms scaled to number of events */
-  /* TH1F  *fHistNch;         // Multiplicity distribution  */
-  /* TH1F  *fHistNchUnweighted;           // Multiplicity distribution  */
+  THStack *fdNdeta_stack;  // 1D dNdeta histograms scaled to number of events per mult. class
+  TH1D  *fEventCounter;
+  TH1D  *fEventCounterUnweighted;
   /* TH2D  *fEventCounter;    // Event counter, xaxis: #processed/weighted; yaxis:cent. bins */
   AliHeader *fheader;       // Event header
   AliMCEvent *fevent;       // current event
   AliStack  *fstack;
   Float_t feventWeight;        // weight of the event read from the header
+
+ private:
+  MultiplicityEstimatorBase(const MultiplicityEstimatorBase&);           // not implemented
+  MultiplicityEstimatorBase& operator=(const MultiplicityEstimatorBase&);// not implemented
+
 
   ClassDef(MultiplicityEstimatorBase, 1); // example of analysis
 };
@@ -54,7 +63,8 @@ class EtaBase : public MultiplicityEstimatorBase {
   void PreEvent(AliMCEvent* event);
   void ProcessTrack(AliMCParticle* track, Int_t itrack);
   void PostEvent();
-  Int_t nch_current_event;   // counter for charged particles in current event
+  void Terminate(TList* outputlist);
+  Int_t nch_in_estimator_region;   // counter for charged particles in current event
   std::vector<Float_t> eta_values_current_event;
   Float_t eta_min, eta_max;  // range in eta for mult. estimation
   ClassDef(EtaBase, 1)
