@@ -29,12 +29,11 @@ void runProof(
               const char *proofcluster = "alice-caf.cern.ch", // which proof cluster to use in proof mode
               const char * rootVersion = "v5-34-08",
               const char * alirootVersion = "v5-06-09",
-              const char * aliphysicsVersion = "vAN-20150323",
+              const char * aliphysicsVersion = "vAN-20150323"
               // const char * rootVersion = "v5-34-08",
               // const char * alirootVersion = "v5-06-16",
               // const char * aliphysicsVersion = "vAN-20150503"
 	      )
-	     
 {
 
   
@@ -65,6 +64,7 @@ void runProof(
 
 
   // create task
+  gROOT->LoadMacro("MultiplicityEstimators.cxx+g");
   gROOT->LoadMacro("AliAnalysisTaskHMTFMC.cxx+g");
   AliAnalysisTask *task = new AliAnalysisTaskHMTFMC("TaskdNdeta");
   // Enable MC event handler
@@ -113,7 +113,7 @@ AliAnalysisGrid* CreateAlienHandler(const char *mode, const char * rootVersion, 
   // May need to reset proof. Supported modes: 0-no reset, 1-soft, 2-hard
   plugin->SetProofReset(0);
   // May limit number of workers
-  plugin->SetNproofWorkers(0);
+  plugin->SetNproofWorkers(1);
   // May limit the number of workers per slave
   plugin->SetNproofWorkersPerSlave(1);   // FIXME: add a parameter for this?
   // May use a specific version of root installed in proof
@@ -127,12 +127,21 @@ AliAnalysisGrid* CreateAlienHandler(const char *mode, const char * rootVersion, 
   // Request connection to alien upon connection to grid
   plugin->SetProofConnectGrid(kFALSE);
   // code
-  plugin->SetAnalysisSource(Form("%s.cxx",taskname));
+  plugin->SetAnalysisSource(Form("%s.cxx %s.cxx",
+				 "MultiplicityEstimators",
+				 taskname));
+  std::cout << "Anlysis source files: " << std::endl;
+  std::cout << plugin->GetAnalysisSource() << std::endl;
  
   // Declare all libraries (other than the default ones for the framework. These will be
   // loaded by the generated analysis macro. Add all extra files (task .cxx/.h) here.
-  plugin->SetAdditionalLibs(Form("%s.h %s.cxx",taskname, taskname));
-
+  // List is read from the front -> important for dependencies!
+  plugin->SetAdditionalLibs(Form("%s.h %s.cxx %s.h %s.cxx",
+				 "MultiplicityEstimators", "MultiplicityEstimators",
+				 taskname, taskname));
+  std::cout << "Additional libs: " << std::endl;
+  std::cout << plugin->GetAdditionalLibs() << std::endl;
+  
   // Other PROOF specific parameters
   plugin->SetProofParameter("PROOF_UseMergers","-1");
   printf("Using: PROOF_UseMergers   : %s\n", plugin->GetProofParameter("PROOF_UseMergers"));

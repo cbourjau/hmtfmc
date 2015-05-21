@@ -14,7 +14,7 @@ class MultiplicityEstimatorBase : public TNamed {
  public:
   MultiplicityEstimatorBase();
   MultiplicityEstimatorBase(const char* name, const char* title);
-  //virtual ~MultiplicityEstimatorBase() {}
+  virtual ~MultiplicityEstimatorBase() {}
   // Available estimators
   enum {kEtaLt05,
 	kEtaLt08};
