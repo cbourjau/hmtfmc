@@ -4,7 +4,9 @@
 -I/home/hehi/cbourjau/repos/alicesw/root/v5-34-08/inst/include/
 -I/home/hehi/cbourjau/repos/alicesw/aliroot/master/inst/include/
 -I/home/hehi/cbourjau/repos/alicesw/aliphysics/master/inst/include/
+-I/home/hehi/cbourjau/repos/alicesw/aliphysics/master/src/PWGLF/FORWARD/trains/
 -L/home/hehi/cbourjau/repos/alicesw/root/v5-34-08/inst/lib
+
 -lEve
 -lEG
 -lTreePlayer
