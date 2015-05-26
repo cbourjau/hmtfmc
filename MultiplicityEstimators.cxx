@@ -127,7 +127,7 @@ void EtaBase::PostEvent(){
   nch_in_estimator_region = 0;
 }
 
-void EtaBase::Terminate(TList* outputlist){
+void EtaBase::Terminate(TList* outputlist,TList* results){
   // recover pointers to histograms since they might get lost in PROOF
   fEventCounter = static_cast<TH1D*>(outputlist->FindObject("fEventCounter" + GetNamePostfix()));
   fEventCounterUnweighted = static_cast<TH1D*>(outputlist->FindObject("fEventCounter" + GetNamePostfix()));
@@ -146,6 +146,7 @@ void EtaBase::Terminate(TList* outputlist){
       // See histogram def in Begin for which bin is which
       // Divide by number of events in each multiplicity bin
       temp->Scale(1.0 / nevents_weighted);
+      std::cout << temp->Integral() << std::endl;
       // used colors between 800 and 900
       temp->SetMarkerColor(800 + (Int_t)((100.0/mult_bin_max)*(mult_bin-1) + 1));
       char title[40];

@@ -1,9 +1,14 @@
 #ifndef MultiplicityEstimators_cxx
 #define MultiplicityEstimators_cxx
 
-class TH1F;
-class TH1I;
-class TGraphErrors;
+//class TH1F;
+//class TH1I;
+//class TGraphErrors;
+class AliMCEvent;
+class AliMCParticle;
+class AliHeader;
+class AliStack;
+class AliMCParticle;
 
 #include "TNamed.h"
 #include "THStack.h"
@@ -24,10 +29,10 @@ class MultiplicityEstimatorBase : public TNamed {
   TString GetNamePostfix() {return TString("_") + fName;};
   //get the ending of the title common to all histograms from this estimator:
   TString GetTitlePostfix() {return TString(" ") + fTitle;};
-  virtual void PreEvent(AliMCEvent* event) {};
-  virtual void ProcessTrack(AliMCParticle* track, Int_t iTrack) {};
-  virtual void PostEvent() {};
-  virtual void Terminate(TList* outputlist) {};
+  virtual void PreEvent(AliMCEvent* event) = 0;
+  virtual void ProcessTrack(AliMCParticle* track, Int_t iTrack) = 0;
+  virtual void PostEvent() = 0;
+  virtual void Terminate(TList* sum, TList* results) = 0;
   
  protected:
   /*
@@ -63,7 +68,7 @@ class EtaBase : public MultiplicityEstimatorBase {
   void PreEvent(AliMCEvent* event);
   void ProcessTrack(AliMCParticle* track, Int_t itrack);
   void PostEvent();
-  void Terminate(TList* outputlist);
+  void Terminate(TList* sum, TList* results);
   Int_t nch_in_estimator_region;   // counter for charged particles in current event
   std::vector<Float_t> eta_values_current_event;
   Float_t eta_min, eta_max;  // range in eta for mult. estimation

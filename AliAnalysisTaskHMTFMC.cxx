@@ -32,39 +32,70 @@ using namespace std;
 ClassImp(AliAnalysisTaskHMTFMC)
 
 AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC()
-: AliAnalysisTaskSE(), fMyOut(0), festimators(0)
+: AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0) 
 {
 
 }
 
 //________________________________________________________________________
 AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC(const char *name) 
-  : AliAnalysisTaskSE(name), fMyOut(0), festimators(0)
+  : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0) 
     
 {
-
   AliPDG::AddParticlesToPdgDataBase();
 
   DefineOutput(1, TList::Class());
+  DefineOutput(2, TList::Class());
+}
+
+void AliAnalysisTaskHMTFMC::AddEstimator(const char* n)
+{
+  if (!fEstimatorNames.IsNull()) fEstimatorNames.Append(",");
+  fEstimatorNames.Append(n);
+}
+    
+void AliAnalysisTaskHMTFMC::InitEstimators()
+{
+  fEstimatorsList = new TList;
+  fEstimatorsList->SetOwner();
+  fEstimatorsList->SetName("estimators");
+  
+  TObjArray* arr = fEstimatorNames.Tokenize(",");
+  TObject*   obj = 0;
+  TIter      next(arr);
+  while ((obj = next())) {
+    MultiplicityEstimatorBase* e = MakeEstimator(obj->GetName());
+    fEstimatorsList->Add(e);
+  }
+}
+//________________________________________________________________________
+MultiplicityEstimatorBase*
+AliAnalysisTaskHMTFMC::MakeEstimator(const TString& name)
+{
+  if (name.BeginsWith("EtaLt05")) return new EtaLt05;
+  return 0;
 }
 
 //________________________________________________________________________
 void AliAnalysisTaskHMTFMC::UserCreateOutputObjects()
 {
-  // Create histograms
-  // Called once
-  std::cout << "creating user output object" << std::endl;
   fMyOut = new TList();
-
-  festimators.push_back(new EtaLt05());
-  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {
-    festimators[i]->RegisterHistograms(fMyOut);
-  }
-
   fMyOut->SetOwner();
+
+  InitEstimators();
+
+  TIter next(fEstimatorsList);
+  MultiplicityEstimatorBase* e = 0;
+  while ((e = static_cast<MultiplicityEstimatorBase*>(next()))) {
+    e->RegisterHistograms(fMyOut);
+    // putting estimators into a vector for easier looping in UserExec.
+    // it is only available on the slaves
+    festimators.push_back(e);
+  }
   
   // Suppress annoying printout
   AliLog::SetGlobalLogLevel(AliLog::kError);
+  
   PostData(1, fMyOut);
 }
 
@@ -108,11 +139,33 @@ void AliAnalysisTaskHMTFMC::UserExec(Option_t *)
 //________________________________________________________________________
 void AliAnalysisTaskHMTFMC::Terminate(Option_t *) 
 {
-  fMyOut  = static_cast<TList*> (GetOutputData(1));
-  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {//estimator loop
-    std::cout << "Terminating estimator " << festimators[i]->GetTitlePostfix() << std::endl;
-    festimators[i]->Terminate(fMyOut);
-  }//estimator loop
+  std::cout << "Terminate" << std::endl;
+
+  // recreates the fEstimatorsList
+  InitEstimators();
+
+  // This list is associated to a read only file
+  fMyOut = static_cast<TList*> (GetOutputData(1));
+  if (!fMyOut) {
+    Error("Terminate", "Didn't get sum container");
+    return;
+  }
+  
+  TList* results = new TList;
+  results->SetOwner();
+  results->SetName("terminateResults");
+
+  TIter nextEst(fEstimatorsList);
+  MultiplicityEstimatorBase* e = 0;
+  while ((e = static_cast<MultiplicityEstimatorBase*>(nextEst()))) {
+    std::cout << "Terminating estimator " << e->GetTitle() << std::endl;
+    e->Terminate(fMyOut, results);
+  }
+  PostData(2, results);
+  // for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {//estimator loop
+
+  //   festimators[i]->Terminate(fMyOut);
+  // }//estimator loop
   
   // Draw result to the screen
   // Called once at the end of the query   
