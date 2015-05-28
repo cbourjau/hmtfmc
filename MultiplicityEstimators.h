@@ -13,8 +13,23 @@ class AliMCParticle;
 #include "TNamed.h"
 #include "THStack.h"
 #include "TH2F.h"
+#include "TH3F.h"
 #include "TString.h"
 
+enum {
+  kPROTON,
+  kLAMBDA,
+  kK0S,
+  kKPLUS,
+  kKMINUS,
+  kPIPLUS,
+  kPIMINUS,
+  kPI0,
+  kXI,
+  kOMEGAMINUS,
+  kOMEGAPLUS,
+  kNPID
+};
 
 class MultiplicityEstimatorBase : public TNamed {
  public:
@@ -43,6 +58,10 @@ class MultiplicityEstimatorBase : public TNamed {
   Int_t festimator_bins;
   TH2F  *fdNdeta;          // dNdEta distributions; multiplicity is on the y-axis
   THStack *fdNdeta_stack;  // 1D dNdeta histograms scaled to number of events per mult. class
+  TH1D  *fPNch;            // Multiplicity distribution
+  // TH2F  *fnPID_eta_lt_05[kNPID];   // dN/deta|_{eta<.5} of event; multiplicity class;
+  TH2F  *ftmp_pT_pid;   //! Temp hist to count particles in pT and pid bins
+  TH3F  *festi_pT_pid;  // multiplicity class; pT; pid
   TH1D  *fEventCounter;
   TH1D  *fEventCounterUnweighted;
   /* TH2D  *fEventCounter;    // Event counter, xaxis: #processed/weighted; yaxis:cent. bins */
@@ -70,6 +89,7 @@ class EtaBase : public MultiplicityEstimatorBase {
   void PostEvent();
   void Terminate(TList* sum, TList* results);
   Int_t nch_in_estimator_region;   // counter for charged particles in current event
+  Int_t n_pid_in_event[kNPID];     // counter for PID'ed particles in this event
   std::vector<Float_t> eta_values_current_event;
   Float_t eta_min, eta_max;  // range in eta for mult. estimation
   ClassDef(EtaBase, 1)

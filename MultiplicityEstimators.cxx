@@ -20,7 +20,7 @@ using namespace std;
 ClassImp(MultiplicityEstimatorBase)
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
-  : TNamed(), fdNdeta(0), fdNdeta_stack(0), fEventCounter(0), fEventCounterUnweighted(0)
+: TNamed(), fdNdeta(0), fdNdeta_stack(0), fEventCounter(0), fEventCounterUnweighted(0)
    
 {
 }
@@ -63,8 +63,22 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
   fEventCounterUnweighted->GetXaxis()->SetTitle("processed and weighted");
   fEventCounterUnweighted->GetYaxis()->SetTitle("Multiplicity");
   outputList->Add(fEventCounterUnweighted);
-}
+  
+  festi_pT_pid = new TH3F("festi_pT_pid" + GetNamePostfix(),
+			  "Event class vs. $p_T$ vs. pid," + GetTitlePostfix(),
+			  festimator_bins, 0.0, 100,
+			  20, 0, 20,
+			  kNPID, -.5, kNPID - 0.5);
+  festi_pT_pid->SetDirectory(0);			    
+  outputList->Add(festi_pT_pid);
 
+  // initalize a temp histogram filled during the first track loop
+  ftmp_pT_pid = new TH2F("ftmp_pT_pid" + GetNamePostfix(),
+			 "Single Event pT vs. pid",
+			 20, 0, 20,
+			 kNPID, -.5, kNPID - 0.5);
+  ftmp_pT_pid->SetDirectory(0);
+}
 
 void MultiplicityEstimatorBase::ReadEventHeaders(AliMCEvent *event){
   // Here we need some generator-dependent logic, in case we need to extract useful information from the headers.
@@ -109,26 +123,59 @@ void EtaBase::PreEvent(AliMCEvent *event){
 void EtaBase::ProcessTrack(AliMCParticle *track, Int_t iTrack){
   //std::cout << track->IsPrimary() << std::endl;
   Bool_t isPrimary = fevent->Stack()->IsPhysicalPrimary(iTrack);
-  if (isPrimary && track->Charge() != 0){
-    if(TMath::Abs(track->Eta()) < eta_max && TMath::Abs(track->Eta()) > eta_min) nch_in_estimator_region++;
-    eta_values_current_event.push_back(track->Eta());
+  if (isPrimary){
+    if (track->Charge() != 0){
+      if(TMath::Abs(track->Eta()) < eta_max && TMath::Abs(track->Eta()) > eta_min) nch_in_estimator_region++;
+      eta_values_current_event.push_back(track->Eta());
+    }
+    Int_t pdgCode = track->PdgCode();
+    if      (pdgCode == 2212){ftmp_pT_pid->Fill(track->Pt(), kPROTON);}  //proton
+    else if (pdgCode == 3122){ftmp_pT_pid->Fill(track->Pt(), kLAMBDA);}  //Lambda
+    else if (pdgCode == 310) {ftmp_pT_pid->Fill(track->Pt(), kK0S);}     //K^0_S
+    else if (pdgCode == 321) {ftmp_pT_pid->Fill(track->Pt(), kKPLUS);}   //K^+
+    else if (pdgCode == -321){ftmp_pT_pid->Fill(track->Pt(), kKMINUS);}  //K^-
+    else if (pdgCode == 211) {ftmp_pT_pid->Fill(track->Pt(), kPIPLUS);}  //pi^+
+    else if (pdgCode == -211){ftmp_pT_pid->Fill(track->Pt(), kPIMINUS);} //pi^-
+    else if (pdgCode == -111){ftmp_pT_pid->Fill(track->Pt(), kPI0);}     //pi^0
+    else if (pdgCode == 3322){ftmp_pT_pid->Fill(track->Pt(), kXI);}      //Xi^0
+    else if (pdgCode == 3334){ftmp_pT_pid->Fill(track->Pt(), kOMEGAMINUS);}  //Omega^-
+    else if (pdgCode == -3334){ftmp_pT_pid->Fill(track->Pt(), kOMEGAPLUS);}  //Omega^+
   }
 }
 
 void EtaBase::PostEvent(){
+  // loop over buffered tracks, now that the event class is known
   for (vector<Float_t>::size_type track = 0; track != eta_values_current_event.size(); track++) {
     fdNdeta->Fill(eta_values_current_event[track], nch_in_estimator_region, feventWeight);
   }
+
+  // loop over all bins in the ftmp_pT_pid histogram and fill them into the 3D one
+  // this is necessary since the multiplicity class was not available when looping through the
+  // tracks the first time. On the other hand, here we need to know the pT distribution of the tracks
+  Int_t xbin_max = ftmp_pT_pid->GetXaxis()->GetNbins();
+  // y axis are the different particles defined as enum in the header file
+  for (Int_t ipid = 0; ipid <= kNPID; ipid++) {
+    for (Int_t xbin = 1; xbin <= xbin_max ; xbin++) {
+      Float_t c = ftmp_pT_pid->GetBinContent(xbin, ipid);
+      festi_pT_pid->Fill(nch_in_estimator_region,
+			 ftmp_pT_pid->GetXaxis()->GetBinCenter(xbin),
+			 ipid,
+			 c);
+    }
+  }
+  // Fill event counters
   fEventCounter->Fill(nch_in_estimator_region, feventWeight);
   fEventCounterUnweighted->Fill(nch_in_estimator_region);
 
   // Clear counters and chaches for the next event:
+  ftmp_pT_pid->Reset();
   eta_values_current_event.clear();
   nch_in_estimator_region = 0;
+  memset(n_pid_in_event, 0, kNPID*sizeof(*n_pid_in_event));
 }
 
 void EtaBase::Terminate(TList* outputlist,TList* results){
-  // recover pointers to histograms since they might get lost in PROOF
+  // recover pointers to histograms since they are null on master
   fEventCounter = static_cast<TH1D*>(outputlist->FindObject("fEventCounter" + GetNamePostfix()));
   fEventCounterUnweighted = static_cast<TH1D*>(outputlist->FindObject("fEventCounter" + GetNamePostfix()));
   fdNdeta = static_cast<TH2F*>(outputlist->FindObject("fdNdetaMCInel" + GetNamePostfix()));
