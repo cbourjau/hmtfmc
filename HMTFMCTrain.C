@@ -1,3 +1,12 @@
+/* 
+Run locally:
+$ runTrain --class=HMTFMCTrain --name=myname_lite --include=. --url="lite://$PWD/input//?pattern="galice.root"&workers=2&mc&recursive#TE" --type=ESD
+
+For debugging
+ rm -rf myname_lite && runTrain --class=HMTFMCTrain --name=myname_lite --include=. --url="local://\$PWD/input/root_archive_00001/?pattern="galice.root"&mc#TE" ; cat build.log
+*/
+  
+
 #ifndef __CINT__
 # include <AliAnalysisManager.h>
 #else 
@@ -17,7 +26,7 @@ public:
   {
     // Set Generator here?
     // fOptions.Set("type", "AOD"); // AOD input
-    // fOptions.Set("type", "ESD"); // ESD input
+    fOptions.Set("type", "ESD"); // ESD input
     //fOptions.Add("parameter", "VALUE", "Help on parameter", "value");
   }
   virtual AliVEventHandler* CreateMCHandler(UShort_t /*type*/, bool mc)
