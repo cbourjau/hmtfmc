@@ -1,0 +1,26 @@
+* Introduction
+This repository contains the analysis on multiplicity estimators done in the HMTF for the ALICE experiment. The choice of the multiplicity estimator has significant impact on observables later retrieved based on multiplicity selections. In order to better to better understand these biases, various observables are extracted from MC truth data using various estimators.
+
+* Estimators 
+
+* Running the analysis 
+The analysis is structured in two parts. The first one uses the AliRoot framework to loop over the given events and creates basic histograms. The second part of the analysis (post-analysis) is implemented in pyroot. It extracts the desired observables from the previously created histograms and creates the appropriate plots to display them.
+** Dependencies
+As mentioned, the first part of the analysis is implemented in the standard AliRoot framework and has no further dependencies. The post-analysis is implemented in pyroot (included in the standard ROOT distribution) but also uses rootpy ([[http://www.rootpy.org/][link]]) for convenience sake. This dependency can removed if necessary. For the time being, the following is a short instruction on how to set up rootpy:
+Python development should best be done in virtual environments. Thus, virtualenv and virtualenvwrapper should be installed from the distributions repositories. Then, something like:
+#+begin_src sh
+  $ mkvirtualenv hmtf
+  $ workon hmtf
+  $ mkdir hmtf
+  $ cd hmtf
+  $ git clone https://github.com/rootpy/rootpy
+  $ cd rootpy
+  $ pip install ./
+#+end_src
+should set up rootpy.
+** Really running the analysis
+The analysis is set up to run with the runTrain facility ([[http://hehi00.nbi.dk:8888/pwglfforward/train_setup_doc.html][link]]) in order to avoid having to maintain individual scripts for local or proof deployment. The analysis is easiest run by just executing the script `run.sh`. Namely:
+#+begin_src sh
+
+#+end_src
+
