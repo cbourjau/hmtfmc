@@ -21,6 +21,12 @@ should set up rootpy.
 ** Really running the analysis
 The analysis is set up to run with the runTrain facility ([[http://hehi00.nbi.dk:8888/pwglfforward/train_setup_doc.html][link]]) in order to avoid having to maintain individual scripts for local or proof deployment. The analysis is easiest run by just executing the script `run.sh`. Namely:
 #+begin_src sh
-
+  $ ./run.sh local [OPTIONS]
+  $ ./run.sh lite [OPTIONS]
+  $ ./run.sh proof [OPTIONS]
 #+end_src
+
+Available options are (to be completed):
+`--events=N # limit number of events to be processed`
+
 
