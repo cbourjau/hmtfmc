@@ -56,15 +56,14 @@ class MultiplicityEstimatorBase : public TNamed {
    */
   void ReadEventHeaders(AliMCEvent* event);
   Int_t festimator_bins;
-  TH2F  *fdNdeta;          // dNdEta distributions; multiplicity is on the y-axis
+  // histograms for weighted [0] and unweighted [1] are created where appropriate
+  enum {kWeighted,
+	kUnweighted};
+  TH2F  *fdNdeta[2];          // dNdEta distributions; multiplicity is on the y-axis
   THStack *fdNdeta_stack;  // 1D dNdeta histograms scaled to number of events per mult. class
-  TH1D  *fPNch;            // Multiplicity distribution
-  // TH2F  *fnPID_eta_lt_05[kNPID];   // dN/deta|_{eta<.5} of event; multiplicity class;
   TH2F  *ftmp_pT_pid;   //! Temp hist to count particles in pT and pid bins
-  TH3F  *festi_pT_pid;  // multiplicity class; pT; pid
-  TH1D  *fEventCounter;
-  TH1D  *fEventCounterUnweighted;
-  /* TH2D  *fEventCounter;    // Event counter, xaxis: #processed/weighted; yaxis:cent. bins */
+  TH3F  *festi_pT_pid[2];  // multiplicity class; pT; pid
+  TH1D  *fEventcounter[2];
   AliHeader *fheader;       // Event header
   AliMCEvent *fevent;       // current event
   AliStack  *fstack;

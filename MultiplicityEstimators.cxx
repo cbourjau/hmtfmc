@@ -36,63 +36,74 @@ Int_t pid_enum_to_pdg(Int_t pid_enum) {
 
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
-: TNamed(), fdNdeta(0), fdNdeta_stack(0), fEventCounter(0), fEventCounterUnweighted(0)
-   
+: TNamed(), fdNdeta_stack(0)
 {
 }
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase(const char* name, const char* title)
-  : TNamed(name, title), fdNdeta(0), fdNdeta_stack(0), fEventCounter(0), fEventCounterUnweighted(0)
+  : TNamed(name, title), fdNdeta_stack(0)
 {
 }
 
 void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
-  std::cout << "Registering Histogram" << std::endl;
-  fdNdeta = new TH2F("fdNdetaMCInel" + GetNamePostfix(),
-		     "MC $dN/d\\eta$ Inel," + GetTitlePostfix(),
-		     200, -10.0, 10.0,
-		     festimator_bins, 0, 100);    
-  fdNdeta->GetXaxis()->SetTitle("#eta");
-  fdNdeta->GetYaxis()->SetTitle("$N_{ch}$ in " + GetTitlePostfix());
-  fdNdeta->GetZaxis()->SetTitle("$N_{ch}$ per $\eta$ bin");
-  fdNdeta->SetMarkerStyle(kFullCircle);
-  fdNdeta->Sumw2();
-  fdNdeta->SetDirectory(0);
-  outputList->Add(fdNdeta);
+  std::cout << "Registering Histogram: " << GetName() << std::endl;
+  // Put all histograms of one estimator in their own sub-list
+  TList *curr_est = new TList();
+  curr_est->SetName(GetName());
+  outputList->Add(curr_est);
 
   // Histogram stack to make some nice plots in terminate
-  fdNdeta_stack = new THStack("dndeta_stack" + GetNamePostfix(),
-			      "$dN/d\\eta$" + GetTitlePostfix());
-  outputList->Add(fdNdeta_stack);
+  fdNdeta_stack = new THStack("dNdeta_stack" ,
+			      "dN/d#eta$" + GetTitlePostfix());
+  curr_est->Add(fdNdeta_stack);
 
-  // Setup counter histograms
-  // Use double in order to not saturate!
-  fEventCounter = new TH1D ("fEventCounter" + GetNamePostfix(),
-			    "Multiplicity distribution" + GetTitlePostfix(),
-			    festimator_bins, 0.0, 100);
-  fEventCounter->Sumw2();
-  outputList->Add(fEventCounter);
-    
-  fEventCounterUnweighted = new TH1D ("fEventCounter_unweighted" + GetNamePostfix(),
-				      "Multiplicity distribution (unweighted)" + GetTitlePostfix(),
-				      festimator_bins, 0.0, 100);
-  fEventCounterUnweighted->GetXaxis()->SetTitle("processed and weighted");
-  fEventCounterUnweighted->GetYaxis()->SetTitle("Multiplicity");
-  outputList->Add(fEventCounterUnweighted);
-  
-  festi_pT_pid = new TH3F("festi_pT_pid" + GetNamePostfix(),
-			  "Event class vs. $p_T$ vs. pid," + GetTitlePostfix(),
-			  festimator_bins, 0.0, 100,
-			  20, 0, 20,
-			  kNPID, -.5, kNPID - 0.5);
-  festi_pT_pid->SetDirectory(0);			    
-  outputList->Add(festi_pT_pid);
+  for (Int_t weighted_or_not = 0; weighted_or_not <= 1; weighted_or_not++) {
+    TString postfix("");
+    if (weighted_or_not == kUnweighted) {postfix = TString("_unweighted");}
 
+    fdNdeta[weighted_or_not] = new TH2F("fdNdeta" + postfix ,
+		       "$dN/d\\eta$ Inel, " + GetTitlePostfix(),
+		       200, -10.0, 10.0,
+		       festimator_bins, 0, 100);    
+    fdNdeta[weighted_or_not]->GetXaxis()->SetTitle("#eta");
+    fdNdeta[weighted_or_not]->GetYaxis()->SetTitle("N_{ch} in " + GetTitlePostfix());
+    fdNdeta[weighted_or_not]->GetZaxis()->SetTitle("N_{ch} per #eta bin");
+    fdNdeta[weighted_or_not]->SetMarkerStyle(kFullCircle);
+    fdNdeta[weighted_or_not]->Sumw2();
+    fdNdeta[weighted_or_not]->SetDirectory(0);
+    curr_est->Add(fdNdeta[weighted_or_not]);
+
+
+    // Setup counter histograms
+    // Use double in order to not saturate!
+    fEventcounter[weighted_or_not] = new TH1D ("fEventcounter" + postfix,
+					       "Multiplicity distribution " + GetTitlePostfix(),
+					       festimator_bins, 0.0, 100);
+    fEventcounter[weighted_or_not]->Sumw2();
+    fEventcounter[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity in estimator");
+    fEventcounter[weighted_or_not]->GetYaxis()->SetTitle("Events");
+    curr_est->Add(fEventcounter[weighted_or_not]);
+
+    // 3D: Mult, pT, PID
+    festi_pT_pid[weighted_or_not] = new TH3F("festi_pT_pid" + postfix,
+			    "Event class vs. $p_T$ vs. pid," + GetTitlePostfix(),
+			    festimator_bins, 0.0, 100,
+			    20, 0, 20,
+			    kNPID, -.5, kNPID - 0.5);
+    festi_pT_pid[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity");
+    festi_pT_pid[weighted_or_not]->GetYaxis()->SetTitle("p_{T} [GeV]");
+    festi_pT_pid[weighted_or_not]->GetZaxis()->SetTitle("PID");
+    // Name bins with pdg code:
     for (Int_t ipid = 0; ipid < kNPID; ipid++) {
       festi_pT_pid[weighted_or_not]->GetZaxis()->SetBinLabel(ipid + 1, Form("%d",pid_enum_to_pdg(ipid)));
     }
+    festi_pT_pid[weighted_or_not]->Sumw2();
+    festi_pT_pid[weighted_or_not]->SetDirectory(0);			    
+    curr_est->Add(festi_pT_pid[weighted_or_not]);
+  }
+  
   // initalize a temp histogram filled during the first track loop
-  ftmp_pT_pid = new TH2F("ftmp_pT_pid" + GetNamePostfix(),
+  ftmp_pT_pid = new TH2F("ftmp_pT_pid" ,
 			 "Single Event pT vs. pid",
 			 20, 0, 20,
 			 kNPID, -.5, kNPID - 0.5);
@@ -160,7 +171,8 @@ void EtaBase::ProcessTrack(AliMCParticle *track, Int_t iTrack){
 void EtaBase::PostEvent(){
   // loop over buffered tracks, now that the event class is known
   for (vector<Float_t>::size_type track = 0; track != eta_values_current_event.size(); track++) {
-    fdNdeta->Fill(eta_values_current_event[track], nch_in_estimator_region, feventWeight);
+    fdNdeta[kUnweighted]->Fill(eta_values_current_event[track], nch_in_estimator_region);
+    fdNdeta[kWeighted]->Fill(eta_values_current_event[track], nch_in_estimator_region, feventWeight);
   }
 
   // loop over all bins in the ftmp_pT_pid histogram and fill them into the 3D one
@@ -170,31 +182,37 @@ void EtaBase::PostEvent(){
   // y axis are the different particles defined as enum in the header file
   for (Int_t ipid = 0; ipid <= kNPID; ipid++) {
     for (Int_t xbin = 1; xbin <= xbin_max ; xbin++) {
-      Float_t c = ftmp_pT_pid->GetBinContent(xbin, ipid);
-      festi_pT_pid->Fill(nch_in_estimator_region,
-			 ftmp_pT_pid->GetXaxis()->GetBinCenter(xbin),
-			 ipid,
-			 c);
+      Float_t c = ftmp_pT_pid->GetBinContent(xbin, ipid + 1); // ipid are not the hist bins, see above!
+      festi_pT_pid[kUnweighted]->Fill(nch_in_estimator_region,
+				      ftmp_pT_pid->GetXaxis()->GetBinCenter(xbin),
+				      ipid,
+				      c);
+      festi_pT_pid[kWeighted]->Fill(nch_in_estimator_region,
+				    ftmp_pT_pid->GetXaxis()->GetBinCenter(xbin),
+				    ipid,
+				    c*feventWeight);
     }
   }
   // Fill event counters
-  fEventCounter->Fill(nch_in_estimator_region, feventWeight);
-  fEventCounterUnweighted->Fill(nch_in_estimator_region);
 
   // Clear counters and chaches for the next event:
   ftmp_pT_pid->Reset();
   eta_values_current_event.clear();
   nch_in_estimator_region = 0;
   memset(n_pid_in_event, 0, kNPID*sizeof(*n_pid_in_event));
+  fEventcounter[kWeighted]->Fill(nch_in_estimator_region, feventWeight);
+  fEventcounter[kUnweighted]->Fill(nch_in_estimator_region);
 }
 
 void EtaBase::Terminate(TList* outputlist,TList* results){
   // recover pointers to histograms since they are null on master
-  fEventCounter = static_cast<TH1D*>(outputlist->FindObject("fEventCounter" + GetNamePostfix()));
-  fEventCounterUnweighted = static_cast<TH1D*>(outputlist->FindObject("fEventCounter" + GetNamePostfix()));
-  fdNdeta = static_cast<TH2F*>(outputlist->FindObject("fdNdetaMCInel" + GetNamePostfix()));
-  fdNdeta_stack = static_cast<THStack*>(outputlist->FindObject("dndeta_stack" + GetNamePostfix()));
-
+  std::cout << "Terminate " << fName << std::endl;
+  TList *curr_est = static_cast<TList*>(outputlist->FindObject(GetName()));
+  fEventcounter[kWeighted] = static_cast<TH1D*>(curr_est->FindObject("fEventcounter" ));
+  fEventcounter[kUnweighted] = static_cast<TH1D*>(curr_est->FindObject("fEventcounter_unweighted" ));
+  fdNdeta[kWeighted] = static_cast<TH2F*>(curr_est->FindObject("fdNdeta" ));
+  fdNdeta[kUnweighted] = static_cast<TH2F*>(curr_est->FindObject("fdNdeta_unweighted" ));
+  fdNdeta_stack = static_cast<THStack*>(curr_est->FindObject("dNdeta_stack" ));
   // loop over multiplicity bins
   Int_t mult_bin_max = fdNdeta->GetYaxis()->GetNbins();
   for (Int_t mult_bin = 1; mult_bin < mult_bin_max; mult_bin++) {
