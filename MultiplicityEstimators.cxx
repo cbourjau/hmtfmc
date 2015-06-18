@@ -39,12 +39,12 @@ Int_t pid_enum_to_pdg(Int_t pid_enum) {
 
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
-: TNamed()
+  : TNamed(), ftmp_pT_pid(0), fweight_esti(0)
 {
 }
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase(const char* name, const char* title)
-  : TNamed(name, title)
+  : TNamed(name, title), ftmp_pT_pid(0), fweight_esti(0)
 {
 }
 
@@ -105,6 +105,8 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
 			  10000, 0, 10000,
 			  festimator_bins, 0.0, 100);
   fweight_esti->SetDirectory(0);
+  fweight_esti->GetXaxis()->SetTitle("Event weight");
+  fweight_esti->GetYaxis()->SetTitle("Multiplicity in estimator region");
   curr_est->Add(fweight_esti);
 
   // initalize a temp histogram filled during the first track loop
