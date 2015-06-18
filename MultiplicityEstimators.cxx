@@ -19,6 +19,22 @@ using namespace std;
 
 ClassImp(MultiplicityEstimatorBase)
 
+Int_t pid_enum_to_pdg(Int_t pid_enum) {
+  if (pid_enum == kPROTON) return 2212;
+  else if (pid_enum == kLAMBDA) return 3122;
+  else if (pid_enum == kK0S) return 310;
+  else if (pid_enum == kKPLUS) return 321;
+  else if (pid_enum == kKMINUS) return -321;
+  else if (pid_enum == kPIPLUS) return 211;
+  else if (pid_enum == kPIMINUS) return -211;
+  else if (pid_enum == kPI0) return 111;
+  else if (pid_enum == kXI) return 3322;
+  else if (pid_enum == kOMEGAMINUS) return 3334;
+  else if (pid_enum == kOMEGAPLUS) return -3334;
+  else return 99999;
+}
+
+
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
 : TNamed(), fdNdeta(0), fdNdeta_stack(0), fEventCounter(0), fEventCounterUnweighted(0)
    
@@ -72,6 +88,9 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
   festi_pT_pid->SetDirectory(0);			    
   outputList->Add(festi_pT_pid);
 
+    for (Int_t ipid = 0; ipid < kNPID; ipid++) {
+      festi_pT_pid[weighted_or_not]->GetZaxis()->SetBinLabel(ipid + 1, Form("%d",pid_enum_to_pdg(ipid)));
+    }
   // initalize a temp histogram filled during the first track loop
   ftmp_pT_pid = new TH2F("ftmp_pT_pid" + GetNamePostfix(),
 			 "Single Event pT vs. pid",
@@ -129,17 +148,12 @@ void EtaBase::ProcessTrack(AliMCParticle *track, Int_t iTrack){
       eta_values_current_event.push_back(track->Eta());
     }
     Int_t pdgCode = track->PdgCode();
-    if      (pdgCode == 2212){ftmp_pT_pid->Fill(track->Pt(), kPROTON);}  //proton
-    else if (pdgCode == 3122){ftmp_pT_pid->Fill(track->Pt(), kLAMBDA);}  //Lambda
-    else if (pdgCode == 310) {ftmp_pT_pid->Fill(track->Pt(), kK0S);}     //K^0_S
-    else if (pdgCode == 321) {ftmp_pT_pid->Fill(track->Pt(), kKPLUS);}   //K^+
-    else if (pdgCode == -321){ftmp_pT_pid->Fill(track->Pt(), kKMINUS);}  //K^-
-    else if (pdgCode == 211) {ftmp_pT_pid->Fill(track->Pt(), kPIPLUS);}  //pi^+
-    else if (pdgCode == -211){ftmp_pT_pid->Fill(track->Pt(), kPIMINUS);} //pi^-
-    else if (pdgCode == -111){ftmp_pT_pid->Fill(track->Pt(), kPI0);}     //pi^0
-    else if (pdgCode == 3322){ftmp_pT_pid->Fill(track->Pt(), kXI);}      //Xi^0
-    else if (pdgCode == 3334){ftmp_pT_pid->Fill(track->Pt(), kOMEGAMINUS);}  //Omega^-
-    else if (pdgCode == -3334){ftmp_pT_pid->Fill(track->Pt(), kOMEGAPLUS);}  //Omega^+
+    for (Int_t ipid = 0; ipid < kNPID; ipid++) {
+      if (pdgCode == pid_enum_to_pdg(ipid)){
+	ftmp_pT_pid->Fill(track->Pt(), ipid);
+	break;
+      }
+    }
   }
 }
 
