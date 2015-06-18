@@ -194,7 +194,7 @@ void EtaBase::PostEvent(){
   // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
   // value for the pid.
   Int_t xbin_max = ftmp_pT_pid->GetXaxis()->GetNbins();
-  for (Int_t ipid = 0; ipid <= kNPID; ipid++) {
+  for (Int_t ipid = 0; ipid < kNPID; ipid++) {
     for (Int_t xbin = 1; xbin <= xbin_max ; xbin++) {
       Float_t c = ftmp_pT_pid->GetBinContent(xbin, ipid + 1); // ipid are not the hist bins, see above!
       festi_pT_pid[kUnweighted]->Fill(nch_in_estimator_region,
