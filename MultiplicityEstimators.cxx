@@ -189,8 +189,8 @@ void EtaBase::PostEvent(){
 
   // loop over all bins in the ftmp_pT_pid histogram and fill them into the 3D one
   // this is necessary since the multiplicity was not known when looping through the
-  // tracks the first time. On the other hand, here we need to know the pT distribution of the tracks
-  // y axis are the different particles defined as enum in the header file
+  // tracks the first time. On the other hand, here we need to know the pT distribution of the tracks.
+  // y axis are the different particles defined as enum in the header file.
   // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
   // value for the pid.
   Int_t xbin_max = ftmp_pT_pid->GetXaxis()->GetNbins();
