@@ -3,3 +3,4 @@
 *.root
 core
 *.pyc
+/input/*
