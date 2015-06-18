@@ -65,6 +65,7 @@ void AliAnalysisTaskHMTFMC::InitEstimators()
   TIter      next(arr);
   while ((obj = next())) {
     MultiplicityEstimatorBase* e = MakeEstimator(obj->GetName());
+    std::cout << "Init estimtor: " << obj->GetName() << std::endl;
     fEstimatorsList->Add(e);
   }
 }
@@ -151,9 +152,7 @@ void AliAnalysisTaskHMTFMC::Terminate(Option_t *)
     Error("Terminate", "Didn't get sum container");
     return;
   }
-  
   TList* results = new TList;
-  results->SetOwner();
   results->SetName("terminateResults");
 
   TIter nextEst(fEstimatorsList);

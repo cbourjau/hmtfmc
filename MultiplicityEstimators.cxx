@@ -4,6 +4,10 @@
 #include "TH1F.h"
 #include "TH2F.h"
 #include "THStack.h"
+#include "TCanvas.h"
+#include "TPad.h"
+#include "TLegend.h"
+#include "TString.h"
 
 // #include "AliLog.h"
 #include "AliMCEvent.h"
