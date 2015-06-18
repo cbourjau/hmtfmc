@@ -70,4 +70,10 @@ Available options can be found with `--help`. Eg.:
       trackref        For MC input, check TrackRef.root presence [false]
 
 #+end_src
+** Running the post analysis
+If rootpy is installed running the postanalysis should be as easy as:
+#+begin_src sh
+  $ python post.py ./lite/MC_estimators.root
+#+end_src
 
+The results of the post analysis are saved in the same file but in the "folder" `results_post`
