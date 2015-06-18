@@ -3,7 +3,6 @@
 #include "TList.h"
 #include "TH1F.h"
 #include "TH2F.h"
-#include "THStack.h"
 #include "TCanvas.h"
 #include "TPad.h"
 #include "TLegend.h"
@@ -40,12 +39,12 @@ Int_t pid_enum_to_pdg(Int_t pid_enum) {
 
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
-: TNamed(), fdNdeta_stack(0)
+: TNamed()
 {
 }
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase(const char* name, const char* title)
-  : TNamed(name, title), fdNdeta_stack(0)
+  : TNamed(name, title)
 {
 }
 
@@ -56,10 +55,6 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
   curr_est->SetName(GetName());
   outputList->Add(curr_est);
 
-  // Histogram stack to make some nice plots in terminate
-  fdNdeta_stack = new THStack("dNdeta_stack" ,
-			      "dN/d#eta$" + GetTitlePostfix());
-  curr_est->Add(fdNdeta_stack);
 
   for (Int_t weighted_or_not = 0; weighted_or_not <= 1; weighted_or_not++) {
     TString postfix("");
@@ -224,59 +219,6 @@ void EtaBase::Terminate(TList* outputlist,TList* results){
   fEventcounter[kUnweighted] = static_cast<TH1D*>(curr_est->FindObject("fEventcounter_unweighted" ));
   fdNdeta[kWeighted] = static_cast<TH2F*>(curr_est->FindObject("fdNdeta" ));
   fdNdeta[kUnweighted] = static_cast<TH2F*>(curr_est->FindObject("fdNdeta_unweighted" ));
-  fdNdeta_stack = static_cast<THStack*>(curr_est->FindObject("dNdeta_stack" ));
-  // new list to save results in
-  TList *results_est = new TList();
-  results_est->SetName(curr_est->GetName());
-  results_est->SetOwner();
-  
-  // loop over multiplicity bins
-  // make hist stack for dN/deta in each estimator bin
-  TCanvas *c = new TCanvas(Form("dNdEta_summary%s", GetName()));
-  c->cd();
-  TPad *pad1 = new TPad("dNdEta_histograms" , "", 
-			0., 0., .7, 1.);
-  TPad *pad2 = new TPad("dNdEta_histograms" , "",
-			.7, 0, 1., 1.);
-  pad1->Draw();
-  pad2->Draw();
-
-  c->cd();
-  pad2->cd(0);
-  TLegend *leg = new TLegend(0, 0, 1, 1);
-  leg->SetEntrySeparation(0.0);
-  pad1->cd();
-  leg->SetBorderSize(0);
-  Int_t mult_bin_max = fdNdeta[kWeighted]->GetYaxis()->GetNbins();
-  for (Int_t mult_bin = 1; mult_bin < mult_bin_max; mult_bin++) {
-    Double_t nevents_weighted = fEventcounter[kWeighted]->Integral(mult_bin, mult_bin);
-    Double_t nevents_unweighted = fEventcounter[kUnweighted]->Integral(mult_bin, mult_bin);
-    if (nevents_weighted > 1.0) {
-      fdNdeta[kWeighted]->GetYaxis()->SetRange(mult_bin, mult_bin);
-      // cannot use scale here since that ignores the range. Because ROOT hates me...
-      TH1D *temp = (TH1D*) fdNdeta[kWeighted]->ProjectionX()->Clone();
-      temp->SetDirectory(0);
-      // See histogram def in Begin for which bin is which
-      // Divide by number of events in each multiplicity bin
-      temp->Scale(1.0 / nevents_weighted);
-      // used colors between 800 and 900
-      temp->SetMarkerColor(800 + (Int_t)((100.0/mult_bin_max)*(mult_bin-1) + 1));
-      char title[40];
-      sprintf(title, "%.2f $ \\le N_{ch} < $ %.2f",
-	      fdNdeta[kWeighted]->GetYaxis()->GetBinLowEdge(mult_bin),
-	      fdNdeta[kWeighted]->GetYaxis()->GetBinUpEdge(mult_bin));
-      temp->SetTitle(title + TString("(weighted events"));
-      leg->AddEntry(temp);
-      fdNdeta_stack->Add(temp);
-    }
-  }
-  fdNdeta_stack->Draw("nostack");
-  c->cd();
-  pad2->cd();
-  leg->Draw();
-  c->Update();
-  results_est->Add(c);
-  results->Add(results_est);
 }
 
 

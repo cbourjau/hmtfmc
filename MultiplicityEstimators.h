@@ -11,7 +11,6 @@ class AliStack;
 class AliMCParticle;
 
 #include "TNamed.h"
-#include "THStack.h"
 #include "TH2F.h"
 #include "TH3F.h"
 #include "TString.h"
@@ -60,7 +59,6 @@ class MultiplicityEstimatorBase : public TNamed {
   enum {kWeighted,
 	kUnweighted};
   TH2F  *fdNdeta[2];          // dNdEta distributions; multiplicity is on the y-axis
-  THStack *fdNdeta_stack;  // 1D dNdeta histograms scaled to number of events per mult. class
   TH2F  *ftmp_pT_pid;   //! Temp hist to count particles in pT and pid bins
   TH3F  *festi_pT_pid[2];  // multiplicity class; pT; pid
   TH1D  *fEventcounter[2];
