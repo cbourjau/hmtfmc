@@ -51,8 +51,8 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
         if tmp.GetEntries() < 1:
             continue
         tmp.name = tmp.name + str(ibin)
-        tmp.title = (str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
-                      + '$\le |\N_{ch}| \le'
+        tmp.set_title(str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
+                      + '$ \le N_{ch} \le $'
                       + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
         stack.Add(tmp)
     return stack
@@ -73,7 +73,7 @@ def plot_stack_of_estimators(stack):
 
     c.cd()
     pad1.cd(0)
-    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, header="Estimators", entrysep=0, entryheight=.04)
+    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, header="Estimator bins", entrysep=0, entryheight=.04)
     leg.SetBorderSize(0)
     maximum = 0
     for mult_bin, h in enumerate(stack):
