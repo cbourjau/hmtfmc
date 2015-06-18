@@ -81,7 +81,7 @@ class MultiplicityEstimatorBase : public TNamed {
 class EtaBase : public MultiplicityEstimatorBase {
  public:
   EtaBase();
-  EtaBase(const char* name, const char* title);
+  EtaBase(const char* name, const char* title, Float_t eta_min, Float_t eta_max);
  protected:
   void PreEvent(AliMCEvent* event);
   void ProcessTrack(AliMCParticle* track, Int_t itrack);
@@ -94,9 +94,4 @@ class EtaBase : public MultiplicityEstimatorBase {
   ClassDef(EtaBase, 1)
 };
 
-class EtaLt05 : public EtaBase {
- public:
-  EtaLt05();
-  ClassDef(EtaLt05, 1);
-};
 #endif

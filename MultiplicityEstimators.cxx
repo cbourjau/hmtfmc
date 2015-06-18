@@ -139,8 +139,8 @@ void MultiplicityEstimatorBase::ReadEventHeaders(AliMCEvent *event){
 //______________________________________________________________________________________
 EtaBase::EtaBase() : MultiplicityEstimatorBase() {}
 
-EtaBase::EtaBase(const char* name, const char* title)
-  : MultiplicityEstimatorBase(name, title)
+EtaBase::EtaBase(const char* name, const char* title, Float_t eta_min, Float_t eta_max)
+  : MultiplicityEstimatorBase(name, title), eta_min(eta_min), eta_max(eta_max)
 {
   festimator_bins = 10;
 }
@@ -239,7 +239,3 @@ void EtaBase::Terminate(TList* outputlist,TList* results){
 }
 
 
-EtaLt05::EtaLt05() : EtaBase("EtaLt05", "$\\eta \\lt 0.5$") {
-  eta_min = 0.0;
-  eta_max = 0.5;
-}
