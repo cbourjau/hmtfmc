@@ -105,7 +105,13 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     festi_pT_pid[weighted_or_not]->SetDirectory(0);			    
     curr_est->Add(festi_pT_pid[weighted_or_not]);
   }
-  
+
+  fweight_esti = new TH2D("fweight_esti", "Distribution of weights in each mult class",
+			  10000, 0, 10000,
+			  festimator_bins, 0.0, 100);
+  fweight_esti->SetDirectory(0);
+  curr_est->Add(fweight_esti);
+
   // initalize a temp histogram filled during the first track loop
   ftmp_pT_pid = new TH2F("ftmp_pT_pid" ,
 			 "Single Event pT vs. pid",
@@ -207,6 +213,7 @@ void EtaBase::PostEvent(){
   // Fill event counters
   fEventcounter[kWeighted]->Fill(nch_in_estimator_region, feventWeight);
   fEventcounter[kUnweighted]->Fill(nch_in_estimator_region);
+  fweight_esti->Fill(feventWeight, nch_in_estimator_region);
 }
 
 void EtaBase::Terminate(TList* outputlist,TList* results){

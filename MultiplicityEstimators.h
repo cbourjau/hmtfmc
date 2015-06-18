@@ -64,6 +64,7 @@ class MultiplicityEstimatorBase : public TNamed {
   TH2F  *ftmp_pT_pid;   //! Temp hist to count particles in pT and pid bins
   TH3F  *festi_pT_pid[2];  // multiplicity class; pT; pid
   TH1D  *fEventcounter[2];
+  TH2D  *fweight_esti;  // Distribution of weights in each multiplicity class
   AliHeader *fheader;       // Event header
   AliMCEvent *fevent;       // current event
   AliStack  *fstack;
