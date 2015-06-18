@@ -142,8 +142,6 @@ void AliAnalysisTaskHMTFMC::UserExec(Option_t *)
 //________________________________________________________________________
 void AliAnalysisTaskHMTFMC::Terminate(Option_t *) 
 {
-  std::cout << "Terminate" << std::endl;
-
   // recreates the fEstimatorsList
   InitEstimators();
 
@@ -165,21 +163,4 @@ void AliAnalysisTaskHMTFMC::Terminate(Option_t *)
     e->Terminate(fMyOut, results);
   }
   PostData(2, results);
-  // for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {//estimator loop
-
-  //   festimators[i]->Terminate(fMyOut);
-  // }//estimator loop
-  
-  // Draw result to the screen
-  // Called once at the end of the query   
-  //  return;
-  //  fHistPt = dynamic_cast<TH1F*> (GetOutputData(1));
-  //
-  
-  //TH2F* fdNdeta  = (TH2F*) fMyOut->FindObject("fdNdetaMCInel_EtaLt05");
-  //std::cout << "integral: " << fdNdeta << std::endl;
-
-
-  // std::cout << "Processed " << fHistIev->GetBinContent(0) << " events, equivalent to "<< fHistIev->GetBinContent(1) << " generated events."  << std::endl;
-  
 }

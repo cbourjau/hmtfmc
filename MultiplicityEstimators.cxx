@@ -157,7 +157,6 @@ void EtaBase::PreEvent(AliMCEvent *event){
 }
 
 void EtaBase::ProcessTrack(AliMCParticle *track, Int_t iTrack){
-  //std::cout << track->IsPrimary() << std::endl;
   Bool_t isPrimary = fevent->Stack()->IsPhysicalPrimary(iTrack);
   if (isPrimary){
     if (track->Charge() != 0){
@@ -182,10 +181,12 @@ void EtaBase::PostEvent(){
   }
 
   // loop over all bins in the ftmp_pT_pid histogram and fill them into the 3D one
-  // this is necessary since the multiplicity class was not available when looping through the
+  // this is necessary since the multiplicity was not known when looping through the
   // tracks the first time. On the other hand, here we need to know the pT distribution of the tracks
-  Int_t xbin_max = ftmp_pT_pid->GetXaxis()->GetNbins();
   // y axis are the different particles defined as enum in the header file
+  // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
+  // value for the pid.
+  Int_t xbin_max = ftmp_pT_pid->GetXaxis()->GetNbins();
   for (Int_t ipid = 0; ipid <= kNPID; ipid++) {
     for (Int_t xbin = 1; xbin <= xbin_max ; xbin++) {
       Float_t c = ftmp_pT_pid->GetBinContent(xbin, ipid + 1); // ipid are not the hist bins, see above!
