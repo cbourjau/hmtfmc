@@ -146,8 +146,14 @@ EtaBase::EtaBase(const char* name, const char* title, Float_t eta_min, Float_t e
 }
 
 void EtaBase::PreEvent(AliMCEvent *event){
-  ReadEventHeaders(event);
   // Room for more header logic
+  ReadEventHeaders(event);
+
+  // Clear counters and chaches for the following event:
+  ftmp_pT_pid->Reset();
+  eta_values_current_event.clear();
+  nch_in_estimator_region = 0;
+  memset(n_pid_in_event, 0, kNPID*sizeof(*n_pid_in_event));
 }
 
 void EtaBase::ProcessTrack(AliMCParticle *track, Int_t iTrack){
@@ -194,12 +200,6 @@ void EtaBase::PostEvent(){
     }
   }
   // Fill event counters
-
-  // Clear counters and chaches for the next event:
-  ftmp_pT_pid->Reset();
-  eta_values_current_event.clear();
-  nch_in_estimator_region = 0;
-  memset(n_pid_in_event, 0, kNPID*sizeof(*n_pid_in_event));
   fEventcounter[kWeighted]->Fill(nch_in_estimator_region, feventWeight);
   fEventcounter[kUnweighted]->Fill(nch_in_estimator_region);
 }
