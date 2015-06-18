@@ -4,7 +4,7 @@ import sys
 from rootpy.io import root_open
 from rootpy import asrootpy
 from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
-from post_utils import make_stack_of_mult_bins_for_pids,\
+from post_utils import create_dNdeta_stack, make_stack_of_mult_bins_for_pids,\
     plot_stack_of_estimators, create_stack_pid_ratio_over_pt,\
     create_hist_pid_ratio_over_mult
 
@@ -19,15 +19,32 @@ try:
     f_post.rmdir('Results_post')
 except:
     pass
+
+# Loop over all estimators in the Sums list:
 for est_dir in f.Sums:
+    # and do everything for weighted and unweighted:
     for postfix in ["", "_unweighted"]:
         h3d = f.Sums.FindObject(est_dir.GetName()).FindObject('festi_pT_pid' + postfix)
         h3d = asrootpy(h3d)
+
+        h2d = f.Sums.FindObject(est_dir.GetName()).FindObject('fdNdeta' + postfix)
+        h2d = asrootpy(h2d)
         res_dir = f_post.mkdir("Results_post/" + est_dir.GetName() + postfix, recurse=True)
         res_dir.write()
 
         # res_dir = f_post.Results_post.FindObject(est_dir.GetName())
         f_post.Results_post.cd(est_dir.GetName() + postfix)
+
+        ###########################################################
+        # Category 1 on TWiki
+        # create dN/deta stack for the current estimator
+        hs = create_dNdeta_stack(h2d)
+        hs.title = "$dN/d\eta$ vs. $\eta$ " + "({})".format(h3d.title[30:])
+        c = plot_stack_of_estimators(hs)
+        c.name = "dN_deta_summary"
+        c.Update()
+        c.write()
+
         ###########################################################
         # Category 2 on TWiki
         # create particle ratio vs pT plots
