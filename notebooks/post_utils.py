@@ -28,7 +28,7 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
             continue
         tmp.name = tmp.name + str(ibin)
         tmp.title = (str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
-                      + '$\le |\eta| \le'
+                      + '$\le |\N_{ch}| \le'
                       + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
         stack.Add(tmp)
     return stack
