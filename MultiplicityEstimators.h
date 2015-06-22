@@ -44,7 +44,8 @@ class MultiplicityEstimatorBase : public TNamed {
   //get the ending of the title common to all histograms from this estimator:
   TString GetTitlePostfix() {return TString(" ") + fTitle;};
   virtual void PreEvent(AliMCEvent* event) = 0;
-  virtual void ProcessTrack(AliMCParticle* track, Int_t iTrack) = 0;
+  virtual void ProcessTrackForMultiplicityEstimation(AliMCParticle* track) = 0;
+  virtual void ProcessTrackWithKnownMultiplicity(AliMCParticle* track) = 0;
   virtual void PostEvent() = 0;
   virtual void Terminate(TList* sum, TList* results) = 0;
   
@@ -59,7 +60,6 @@ class MultiplicityEstimatorBase : public TNamed {
   enum {kWeighted,
 	kUnweighted};
   TH2F  *fdNdeta[2];          // dNdEta distributions; multiplicity is on the y-axis
-  TH2F  *ftmp_pT_pid;   //! Temp hist to count particles in pT and pid bins
   TH3F  *festi_pT_pid[2];  // multiplicity class; pT; pid
   TH1D  *fEventcounter[2];
   TH2D  *fweight_esti;  // Distribution of weights in each multiplicity class
@@ -83,12 +83,12 @@ class EtaBase : public MultiplicityEstimatorBase {
   EtaBase(const char* name, const char* title, Float_t eta_min, Float_t eta_max);
  protected:
   void PreEvent(AliMCEvent* event);
-  void ProcessTrack(AliMCParticle* track, Int_t itrack);
+  void ProcessTrackForMultiplicityEstimation(AliMCParticle* track);
+  void ProcessTrackWithKnownMultiplicity(AliMCParticle *track);
   void PostEvent();
   void Terminate(TList* sum, TList* results);
-  Int_t nch_in_estimator_region;   // counter for charged particles in current event
+  Int_t fnch_in_estimator_region;   // counter for charged particles in current event
   Int_t n_pid_in_event[kNPID];     // counter for PID'ed particles in this event
-  std::vector<Float_t> eta_values_current_event;
   Float_t eta_min, eta_max;  // range in eta for mult. estimation
   ClassDef(EtaBase, 1)
 };

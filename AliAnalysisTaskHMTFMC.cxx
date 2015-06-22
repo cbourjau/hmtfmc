@@ -116,25 +116,38 @@ void AliAnalysisTaskHMTFMC::UserExec(Option_t *)
     festimators[i]->PreEvent(mcEvent);
   }//estimator loop
 
-  // Track loop
+  // Track loop for establishing multiplicity
   for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
     AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
     if (!track) {
       Printf("ERROR: Could not receive track %d", iTrack);
       continue;
     }
-    for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
-      festimators[i]->ProcessTrack(track, iTrack);
-    }//estimator loop
+    if (mcEvent->Stack()->IsPhysicalPrimary(iTrack)){
+      for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
+	festimators[i]->ProcessTrackForMultiplicityEstimation(track);
+      }//estimator loop
+    }
   }  //track loop
 
-  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {//estimator loop
+  // Track loop with known multiplicity in each estimator
+  for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
+    AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
+    if (!track) {
+      Printf("ERROR: Could not receive track %d", iTrack);
+      continue;
+    }
+    if (mcEvent->Stack()->IsPhysicalPrimary(iTrack)){
+      for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
+	festimators[i]->ProcessTrackWithKnownMultiplicity(track);
+      }//estimator loop
+    }
+  }  //track loop
+
+  // Increment eventcounters etc.
+  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
     festimators[i]->PostEvent();
   }//estimator loop
-
-
-  // fHistNch->Fill(nchMidEta,evWeight);
-  // fHistNchUnweighted->Fill(nchMidEta);
 
   // Post output data.
   PostData(1, fMyOut);

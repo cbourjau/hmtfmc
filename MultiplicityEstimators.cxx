@@ -39,12 +39,12 @@ Int_t pid_enum_to_pdg(Int_t pid_enum) {
 
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
-  : TNamed(), ftmp_pT_pid(0), fweight_esti(0)
+  : TNamed(), fweight_esti(0)
 {
 }
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase(const char* name, const char* title)
-  : TNamed(name, title), ftmp_pT_pid(0), fweight_esti(0)
+  : TNamed(name, title), fweight_esti(0)
 {
 }
 
@@ -105,16 +105,10 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
 			  10000, 0, 10000,
 			  festimator_bins, 0.0, 100);
   fweight_esti->SetDirectory(0);
+  fweight_esti->Sumw2();
   fweight_esti->GetXaxis()->SetTitle("Event weight");
   fweight_esti->GetYaxis()->SetTitle("Multiplicity in estimator region");
   curr_est->Add(fweight_esti);
-
-  // initalize a temp histogram filled during the first track loop
-  ftmp_pT_pid = new TH2F("ftmp_pT_pid" ,
-			 "Single Event pT vs. pid",
-			 20, 0, 20,
-			 kNPID, -.5, kNPID - 0.5);
-  ftmp_pT_pid->SetDirectory(0);
 }
 
 void MultiplicityEstimatorBase::ReadEventHeaders(AliMCEvent *event){
@@ -157,60 +151,47 @@ void EtaBase::PreEvent(AliMCEvent *event){
   ReadEventHeaders(event);
 
   // Clear counters and chaches for the following event:
-  ftmp_pT_pid->Reset();
-  eta_values_current_event.clear();
-  nch_in_estimator_region = 0;
+  fnch_in_estimator_region = 0;
   memset(n_pid_in_event, 0, kNPID*sizeof(*n_pid_in_event));
 }
 
-void EtaBase::ProcessTrack(AliMCParticle *track, Int_t iTrack){
-  Bool_t isPrimary = fevent->Stack()->IsPhysicalPrimary(iTrack);
-  if (isPrimary){
-    if (track->Charge() != 0){
-      if(TMath::Abs(track->Eta()) < eta_max && TMath::Abs(track->Eta()) > eta_min) nch_in_estimator_region++;
-      eta_values_current_event.push_back(track->Eta());
-    }
-    Int_t pdgCode = track->PdgCode();
-    for (Int_t ipid = 0; ipid < kNPID; ipid++) {
-      if (pdgCode == pid_enum_to_pdg(ipid)){
-	ftmp_pT_pid->Fill(track->Pt(), ipid);
-	break;
-      }
+/*
+  Count tracks to establish multiplicity in this estimator
+*/
+void EtaBase::ProcessTrackForMultiplicityEstimation(AliMCParticle *track){
+  if (track->Charge() != 0){
+    if(TMath::Abs(track->Eta()) < eta_max && TMath::Abs(track->Eta()) > eta_min) fnch_in_estimator_region++;
+  }
+}
+
+// loop over tracks again, now that mult is known:
+void EtaBase::ProcessTrackWithKnownMultiplicity(AliMCParticle *track){
+  fdNdeta[kUnweighted]->Fill(track->Eta(), fnch_in_estimator_region);
+  fdNdeta[kWeighted]->Fill(track->Eta(), fnch_in_estimator_region, feventWeight);
+
+  // y axis are the different particles defined as enum in the header file.
+  // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
+  // value for the pid.
+  Int_t pdgCode = track->PdgCode();
+  for (Int_t ipid = 0; ipid < kNPID; ipid++) {
+    if (pdgCode == pid_enum_to_pdg(ipid)){
+      festi_pT_pid[kUnweighted]->Fill(fnch_in_estimator_region,
+				      track->Pt(),
+				      ipid);
+      festi_pT_pid[kWeighted]->Fill(fnch_in_estimator_region,
+				    track->Pt(),
+				    ipid,
+				    feventWeight);
+      break;
     }
   }
 }
 
 void EtaBase::PostEvent(){
-  // loop over buffered tracks, now that the event class is known
-  for (vector<Float_t>::size_type track = 0; track != eta_values_current_event.size(); track++) {
-    fdNdeta[kUnweighted]->Fill(eta_values_current_event[track], nch_in_estimator_region);
-    fdNdeta[kWeighted]->Fill(eta_values_current_event[track], nch_in_estimator_region, feventWeight);
-  }
-
-  // loop over all bins in the ftmp_pT_pid histogram and fill them into the 3D one
-  // this is necessary since the multiplicity was not known when looping through the
-  // tracks the first time. On the other hand, here we need to know the pT distribution of the tracks.
-  // y axis are the different particles defined as enum in the header file.
-  // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
-  // value for the pid.
-  Int_t xbin_max = ftmp_pT_pid->GetXaxis()->GetNbins();
-  for (Int_t ipid = 0; ipid < kNPID; ipid++) {
-    for (Int_t xbin = 1; xbin <= xbin_max ; xbin++) {
-      Float_t c = ftmp_pT_pid->GetBinContent(xbin, ipid + 1); // ipid are not the hist bins, see above!
-      festi_pT_pid[kUnweighted]->Fill(nch_in_estimator_region,
-				      ftmp_pT_pid->GetXaxis()->GetBinCenter(xbin),
-				      ipid,
-				      c);
-      festi_pT_pid[kWeighted]->Fill(nch_in_estimator_region,
-				    ftmp_pT_pid->GetXaxis()->GetBinCenter(xbin),
-				    ipid,
-				    c*feventWeight);
-    }
-  }
   // Fill event counters
-  fEventcounter[kWeighted]->Fill(nch_in_estimator_region, feventWeight);
-  fEventcounter[kUnweighted]->Fill(nch_in_estimator_region);
-  fweight_esti->Fill(feventWeight, nch_in_estimator_region);
+  fEventcounter[kUnweighted]->Fill(fnch_in_estimator_region);
+  fEventcounter[kWeighted]->Fill(fnch_in_estimator_region, feventWeight);
+  fweight_esti->Fill(feventWeight, fnch_in_estimator_region);
 }
 
 void EtaBase::Terminate(TList* outputlist,TList* results){
