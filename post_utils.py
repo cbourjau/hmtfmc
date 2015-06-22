@@ -10,7 +10,7 @@ def create_dNdeta_stack(h2d, event_counter):
     xaxis: eta
     yaxis: multiplicity bins
     """
-    stack = HistStack()
+    stack = HistStack(name="dNdeta_stack")
     nbins = h2d.yaxis.GetNbins()
     for mult_bin in range(1, nbins):
         h2d.yaxis.set_range(mult_bin, mult_bin)
@@ -140,3 +140,34 @@ def create_hist_pid_ratio_over_mult(h3d, pid1, pid2):
     ratio.title = "pid{0} / pid{1}, {2}".format(pid1, pid2, h3d.title[30:])
     ratio.xaxis.title = "Multiplicity in estimator region"
     return ratio
+
+
+def create_canonnical_avg_from_stacks(stacks):
+    """
+    stacks: list of HistStack
+    Each stack has histograms for each mult_bin
+    return: stack with the same hist binning in mult_bins 
+    """
+    n_estimators = len(stacks)
+    avg_stack = stacks[0].Clone()
+    for s in stacks[1:]:
+        if len(s) != len(avg_stack):
+            raise ValueError("Given list of HistStacks do not contain equal number of hists")
+        for h_sum, h_this_est in zip(avg_stack, s):
+            h_sum.Add(h_this_est)
+    # scale histograms in avg_stack by the number of estimators
+    for h in avg_stack:
+        h.Scale(1.0/n_estimators)
+    return avg_stack
+
+def divide_stacks(stack1, stack2):
+    """Divide two given stacks of histograms if they contain the same number of hists"""
+    if len(stack1) != len(stack2):
+        raise ValueError('Given HistStacks do not contain same number of hists')
+    outstack = HistStack()
+    for hpid1, hpid2 in zip(stack1.GetHists(), stack2.GetHists()):
+        tmp = hpid1/hpid2
+        tmp.title = hpid1.title
+        outstack.Add(tmp)
+    outstack.Draw('nostack')
+    return outstack

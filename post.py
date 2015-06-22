@@ -3,10 +3,13 @@ import sys
 
 from rootpy.io import root_open
 from rootpy import asrootpy
+from rootpy.interactive import wait
 from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
 from post_utils import create_dNdeta_stack, make_stack_of_mult_bins_for_pids,\
     plot_stack_of_estimators, create_stack_pid_ratio_over_pt,\
-    create_hist_pid_ratio_over_mult
+    create_hist_pid_ratio_over_mult,\
+    create_canonnical_avg_from_stacks,\
+    divide_stacks
 
 if len(sys.argv) != 2:
     print "Usage: python ./post.py path_to_root_file.root"
@@ -162,3 +165,50 @@ with root_open(sys.argv[1], 'update') as f_post:
             h = create_hist_pid_ratio_over_mult(h3d, [1], [2])
             h.name = "lambda_over_K0S__vs__mult"
             h.write()
+
+
+with root_open(sys.argv[1], 'update') as f:
+    # Create ratio plots; depends on the former loop
+    print "creating ratios of dN/deta plots for each multiplicity bin:"
+    for postfix in [""]:  #, "_unweighted"]:
+        # Get the  dN/deta stack for each estimator in order to calc 
+        # the cannonical average for all _other_ estimators later on
+        stacks = []
+        for est_dir in f.Sums:
+            f.Results_post.cd(est_dir.GetName() + postfix)
+            dndeta_stack = asrootpy(f.FindObject("Results_post")\
+                                    .FindObject(est_dir.GetName() + postfix)\
+                                    .Get("dNdeta_summary")\
+                                    .FindObject('dNdeta_stack'))
+            stacks.append(dndeta_stack)
+        # looping over file again in order to have the estimator name handy,
+        # could also loop over stacks, of cause
+        for i, est_dir in enumerate(f.Sums):
+            res_dir_str = "Results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
+            try:
+                # delete old result directory
+                f.rmdir(res_dir_str)
+                res_dir = f.mkdir(res_dir_str, recurse=True)
+                res_dir.write()
+            except:
+                pass
+            # calc cannonical avg withouth the current hist
+            other_stacks = stacks[:i]
+            try:
+                other_stacks += stacks[i+1:]
+            except IndexError:
+                pass
+            avg_stack = create_canonnical_avg_from_stacks(other_stacks)
+            ratio = divide_stacks(stacks[i], avg_stack)
+            ratio.title = (r'\text{Ratio of "}'
+                           + stacks[i].title
+                           + r'\text{" to cannonical average}')
+
+            ratio.title = ratio.title.replace("$","")#.replace("\\","#")
+            
+            c = plot_stack_of_estimators(ratio)
+            c.name = stacks[i].name + '_ratio_cannonical_avg'
+            c.Update()
+            f.cd(res_dir_str)
+            c.Write()
+
