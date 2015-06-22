@@ -1,6 +1,12 @@
 *.d
 *.so
+*.o
 *.root
 core
 *.pyc
+build.log
 /input/*
+/lite/*
+/caf/*
+/local/*
+/mwe/*
