@@ -15,6 +15,12 @@ case x$1 in
 	wks= #"&workers=10"
 	rv="&aliphysics=vAN-20150323&root=v5-34-08&aliroot=v5-06-19&plugin"
 	url="proof://alice-caf.cern.ch//default/ilakomov/TestDownScale1" ;;
+    xalien|xgrid)
+	name="alien"
+	rv="&aliphysics=last,regular&pattern=*/galice.root&files=../inputs"
+	dir="/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1"
+	url="alien://${dir}"
+	;;
     x--help)
 	echo "Usage: $0 [local|lite|proof]" ; exit 0 ;; 
     *)
