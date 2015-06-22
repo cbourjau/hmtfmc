@@ -4,7 +4,7 @@ from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
 import ROOT
 
 
-def create_dNdeta_stack(h2d):
+def create_dNdeta_stack(h2d, event_counter):
     """
     Create dN/deta stack for various multiplicity bins from given 2D histogram.
     xaxis: eta
@@ -14,7 +14,6 @@ def create_dNdeta_stack(h2d):
     nbins = h2d.yaxis.GetNbins()
     for mult_bin in range(1, nbins):
         h2d.yaxis.set_range(mult_bin, mult_bin)
-        h2d.drawstyle = 'colz'
         stack.Add(asrootpy(h2d.projection_x()))
         # named colors of the ROOT TColor colorwheel are between 800 and 900, +1 to make them look better
         stack[-1].color = 800 + int(100.0/nbins)*(mult_bin-1) + 1
@@ -22,7 +21,8 @@ def create_dNdeta_stack(h2d):
         stack[-1].title = (str(h2d.yaxis.get_bin_low_edge(mult_bin))
                            +'$ \le N_{ch} < $' +
                            str(h2d.yaxis.get_bin_up_edge(mult_bin)))
-
+        # scale by the number of events in this mult_bin
+        stack[-1].Scale(1.0/float(event_counter.Integral(mult_bin, mult_bin)))
     stack.Draw('nostack')
     stack.xaxis.SetTitle("$\eta$")
     stack.yaxis.SetTitle('$1/N dN_{ch}/d\eta$')
@@ -137,6 +137,6 @@ def create_hist_pid_ratio_over_mult(h3d, pid1, pid2):
         h_2.set_bin_content(ibin + 1, cont)
         h_2.set_bin_error(ibin + 1, err)
     ratio = h_1/h_2
-    ratio.title = "pid{0} / pid{1}, estimator: |#eta | < 0.5".format(pid1, pid2)
+    ratio.title = "pid{0} / pid{1}, {2}".format(pid1, pid2, h3d.title[30:])
     ratio.xaxis.title = "Multiplicity in estimator region"
     return ratio

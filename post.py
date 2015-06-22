@@ -29,6 +29,9 @@ for est_dir in f.Sums:
 
         h2d = f.Sums.FindObject(est_dir.GetName()).FindObject('fdNdeta' + postfix)
         h2d = asrootpy(h2d)
+
+        h_event_counter = f.Sums.FindObject(est_dir.GetName()).FindObject('fEventcounter' + postfix)
+        h_event_counter = asrootpy(h_event_counter)
         res_dir = f_post.mkdir("Results_post/" + est_dir.GetName() + postfix, recurse=True)
         res_dir.write()
 
@@ -38,7 +41,7 @@ for est_dir in f.Sums:
         ###########################################################
         # Category 1 on TWiki
         # create dN/deta stack for the current estimator
-        hs = create_dNdeta_stack(h2d)
+        hs = create_dNdeta_stack(h2d, h_event_counter)
         hs.title = "$dN/d\eta$ vs. $\eta$ " + "({})".format(h3d.title[30:])
         c = plot_stack_of_estimators(hs)
         c.name = "dN_deta_summary"
