@@ -58,10 +58,9 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
     return stack
 
 
-def plot_stack_of_estimators(stack):
+def plot_histogram_stack(stack):
     """
-    Plot a stack of histograms where each represents a different estimator bin.
-    Returns a canvas
+    Plot a stack of histograms. The legend is generated from the titles of the histograms.
     """
     stack = asrootpy(stack)
     c = Canvas()
@@ -73,7 +72,7 @@ def plot_stack_of_estimators(stack):
 
     c.cd()
     pad1.cd(0)
-    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, header="Estimator bins", entrysep=0, entryheight=.04)
+    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04)
     leg.SetBorderSize(0)
     maximum = 0
     for mult_bin, h in enumerate(stack):
