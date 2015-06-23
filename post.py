@@ -15,41 +15,48 @@ if len(sys.argv) != 2:
     print "Usage: python ./post.py path_to_root_file.root"
     exit
 
-
-
 with root_open(sys.argv[1], 'update') as f_post:
     try:
         # delete old result directory
-        f_post.rmdir('Results_post')
+        f_post.rmdir('results_post')
     except:
         pass
     # Loop over all estimators in the Sums list:
     for est_dir in f_post.Sums:
         # and do everything for weighted and unweighted:
-        for postfix in [""]:  #, "_unweighted"]:
+        for postfix in ["", "_unweighted"]:
             h3d = f_post.Sums.FindObject(est_dir.GetName()).FindObject('festi_pT_pid' + postfix)
             h3d = asrootpy(h3d)
 
             h2d = f_post.Sums.FindObject(est_dir.GetName()).FindObject('fdNdeta' + postfix)
             h2d = asrootpy(h2d)
 
-            h_event_counter = f_post.Sums.FindObject(est_dir.GetName()).FindObject('fEventcounter' + postfix)
-            h_event_counter = asrootpy(h_event_counter)
-            res_dir = f_post.mkdir("Results_post/" + est_dir.GetName() + postfix, recurse=True)
+            h_event_counter = asrootpy(f_post.Sums\
+                                       .FindObject(est_dir.GetName())\
+                                       .FindObject('fEventcounter' + postfix))
+            res_dir = f_post.mkdir("results_post/" + est_dir.GetName() + postfix, recurse=True)
             res_dir.write()
 
-            # res_dir = f_post.Results_post.FindObject(est_dir.GetName())
-            f_post.Results_post.cd(est_dir.GetName() + postfix)
+            # res_dir = f_post.results_post.FindObject(est_dir.GetName())
+            f_post.results_post.cd(est_dir.GetName() + postfix)
+
+            esti_title = r"(\text{{{}}})".format(h3d.title[30:])
 
             ###########################################################
             # Category 1 on TWiki
             # create dN/deta stack for the current estimator
             hs = create_dNdeta_stack(h2d, h_event_counter)
-            hs.title = "$dN/d\eta$ vs. $\eta$ " + "({})".format(h3d.title[30:])
+            hs.title = "dN/d\eta\text{ vs.}$\eta$ " + esti_title
             c = plot_stack_of_estimators(hs)
             c.name = "dNdeta_summary"
             c.Update()
             c.write()
+
+            # P(N_ch)
+            h_PN_ch = asrootpy(h_event_counter.clone("PN_ch"))
+            h_PN_ch.Scale(1.0/h_PN_ch.Integral())
+            h_PN_ch.title = "P(N_{ch})" + esti_title
+            h_PN_ch.write()
 
             ###########################################################
             # Category 2 on TWiki
