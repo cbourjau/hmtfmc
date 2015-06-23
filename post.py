@@ -56,6 +56,7 @@ with root_open(sys.argv[1], 'update') as f_post:
             h_PN_ch = asrootpy(h_event_counter.clone("PN_ch"))
             h_PN_ch.Scale(1.0/h_PN_ch.Integral())
             h_PN_ch.title = "P(N_{ch})" + esti_title
+            h_PN_ch.yaxis.title = "P(N_{ch})"
             h_PN_ch.write()
 
             ###########################################################
@@ -181,39 +182,51 @@ with root_open(sys.argv[1], 'update') as f:
     for postfix in ["", "_unweighted"]:
         # Get the  dN/deta stack for each estimator in order to calc 
         # the cannonical average for all _other_ estimators later on
-        stacks = []
+        dNdeta_stacks = []
         for est_dir in f.Sums:
-            stacks.append(asrootpy(f.Get("results_post")\
+            dNdeta_stacks.append(asrootpy(f.Get("results_post")\
                                    .Get(est_dir.GetName() + postfix)\
                                    .Get("dNdeta_summary")\
                                    .FindObject('dNdeta_stack')))
         # looping over file again in order to have the estimator name handy,
-        # could also loop over stacks, of cause
+        # could also loop over dNdeta_stacks, of cause
         for i, est_dir in enumerate(f.Sums):
             res_dir_str = "results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
             try:
-                # delete old result directory
-                f.rmdir(res_dir_str)
-                res_dir = f.mkdir(res_dir_str, recurse=True)
-                res_dir.write()
+                f.mkdir(res_dir_str, recurse=True)
             except:
                 pass
             # calc cannonical avg withouth the current hist
-            other_stacks = stacks[:i]
+            other_dNdeta_stacks = dNdeta_stacks[:i]
             try:
-                other_stacks += stacks[i+1:]
+                other_dNdeta_stacks += dNdeta_stacks[i+1:]
             except IndexError:
                 pass
-            avg_stack = create_canonnical_avg_from_stacks(other_stacks)
-            ratio = divide_stacks(stacks[i], avg_stack)
+            avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
+            ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
             ratio.title = (r'\text{Ratio of "}'
-                           + stacks[i].title
+                           + dNdeta_stacks[i].title
                            + r'\text{" to cannonical average}')
 
             ratio.title = ratio.title.replace("$","")
             
-            c.name = stacks[i].name + '_ratio_cannonical_avg'
             c = plot_histogram_stack(ratio)
+            c.name = dNdeta_stacks[i].name + '_ratio_cannonical_avg'
             c.Update()
             f.cd(res_dir_str)
             c.Write()
+
+        # create stack of P(N_ch)
+        pNch_stack = HistStack()
+        pNch_stack.name = "pNch_stack"
+        for est_dir in f.Sums:
+            pNch_stack.Add(asrootpy(f.Get("results_post")\
+                                    .Get(est_dir.GetName() + postfix)\
+                                    .Get("PN_ch")))
+        c = plot_histogram_stack(pNch_stack)
+        c.name = "PN_ch_summary" + postfix
+        c.Update()
+        f.cd("results_post")
+        c.write()
+
+            
