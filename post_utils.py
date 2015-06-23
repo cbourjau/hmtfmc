@@ -150,6 +150,7 @@ def create_canonnical_avg_from_stacks(stacks):
     """
     n_estimators = len(stacks)
     avg_stack = stacks[0].Clone()
+    avg_stack.name = "avg_stack"
     for s in stacks[1:]:
         if len(s) != len(avg_stack):
             raise ValueError("Given list of HistStacks do not contain equal number of hists")
@@ -165,6 +166,7 @@ def divide_stacks(stack1, stack2):
     if len(stack1) != len(stack2):
         raise ValueError('Given HistStacks do not contain same number of hists')
     outstack = HistStack()
+    outstack.name = "{0}_div_by_{1}".format(stack1.name, stack2.name)
     for hpid1, hpid2 in zip(stack1.GetHists(), stack2.GetHists()):
         tmp = hpid1/hpid2
         tmp.title = hpid1.title

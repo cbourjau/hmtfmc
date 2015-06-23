@@ -174,24 +174,23 @@ with root_open(sys.argv[1], 'update') as f_post:
             h.write()
 
 
+
+# Create ratio plots; depends on the previously created histograms
 with root_open(sys.argv[1], 'update') as f:
-    # Create ratio plots; depends on the former loop
-    print "creating ratios of dN/deta plots for each multiplicity bin:"
-    for postfix in [""]:  #, "_unweighted"]:
+    print "creating ratios of dN/deta plots for each multiplicity bin"
+    for postfix in ["", "_unweighted"]:
         # Get the  dN/deta stack for each estimator in order to calc 
         # the cannonical average for all _other_ estimators later on
         stacks = []
         for est_dir in f.Sums:
-            f.Results_post.cd(est_dir.GetName() + postfix)
-            dndeta_stack = asrootpy(f.FindObject("Results_post")\
-                                    .FindObject(est_dir.GetName() + postfix)\
-                                    .Get("dNdeta_summary")\
-                                    .FindObject('dNdeta_stack'))
-            stacks.append(dndeta_stack)
+            stacks.append(asrootpy(f.Get("results_post")\
+                                   .Get(est_dir.GetName() + postfix)\
+                                   .Get("dNdeta_summary")\
+                                   .FindObject('dNdeta_stack')))
         # looping over file again in order to have the estimator name handy,
         # could also loop over stacks, of cause
         for i, est_dir in enumerate(f.Sums):
-            res_dir_str = "Results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
+            res_dir_str = "results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
             try:
                 # delete old result directory
                 f.rmdir(res_dir_str)
@@ -211,11 +210,10 @@ with root_open(sys.argv[1], 'update') as f:
                            + stacks[i].title
                            + r'\text{" to cannonical average}')
 
-            ratio.title = ratio.title.replace("$","")#.replace("\\","#")
+            ratio.title = ratio.title.replace("$","")
             
             c = plot_stack_of_estimators(ratio)
             c.name = stacks[i].name + '_ratio_cannonical_avg'
             c.Update()
             f.cd(res_dir_str)
             c.Write()
-
