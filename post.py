@@ -181,14 +181,27 @@ with root_open(sys.argv[1], 'update') as f:
     for postfix in ["", "_unweighted"]:
         # Get the  dN/deta stack for each estimator in order to calc 
         # the cannonical average for all _other_ estimators later on
+        # P(N_ch): one stack containing all estimators!
         dNdeta_stacks = []
+        pNch_stack = HistStack()
+        pNch_stack.name = "pNch_stack"
         for est_dir in f.Sums:
             dNdeta_stacks.append(asrootpy(f.Get("results_post")\
                                    .Get(est_dir.GetName() + postfix)\
                                    .Get("dNdeta_summary")\
                                    .FindObject('dNdeta_stack')))
+            pNch_stack.Add(asrootpy(f.Get("results_post")\
+                                    .Get(est_dir.GetName() + postfix)\
+                                    .Get("PN_ch")))
+
+        # Write P(Nch) stack to disk before proceeding
+        c = plot_histogram_stack(pNch_stack)
+        c.name = "PN_ch_summary" + postfix
+        c.Update()
+        f.cd("results_post")
+        c.write()
+
         # looping over file again in order to have the estimator name handy,
-        # could also loop over dNdeta_stacks, of cause
         for i, est_dir in enumerate(f.Sums):
             res_dir_str = "results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
             try:
@@ -196,11 +209,7 @@ with root_open(sys.argv[1], 'update') as f:
             except:
                 pass
             # calc cannonical avg withouth the current hist
-            other_dNdeta_stacks = dNdeta_stacks[:i]
-            try:
-                other_dNdeta_stacks += dNdeta_stacks[i+1:]
-            except IndexError:
-                pass
+            other_dNdeta_stacks = dNdeta_stacks[:i] + dNdeta_stacks[i+1:]
             avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
             ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
             ratio.title = (r'\text{Ratio of "}'
@@ -213,17 +222,15 @@ with root_open(sys.argv[1], 'update') as f:
             f.cd(res_dir_str)
             c.Write()
 
-        # create stack of P(N_ch)
-        pNch_stack = HistStack()
-        pNch_stack.name = "pNch_stack"
-        for est_dir in f.Sums:
-            pNch_stack.Add(asrootpy(f.Get("results_post")\
-                                    .Get(est_dir.GetName() + postfix)\
-                                    .Get("PN_ch")))
-        c = plot_histogram_stack(pNch_stack)
-        c.name = "PN_ch_summary" + postfix
-        c.Update()
-        f.cd("results_post")
-        c.write()
-
-            
+            # create ratio between P(N_ch) and cannonical_avg
+            avg = pNch_stack[0].Clone()
+            avg.Clear()
+            other_PNch = pNch_stack[:i] + pNch_stack[i+1:]
+            [avg.Add(h) for h in other_PNch]
+            avg.Scale(1.0/(len(other_PNch)))
+                                            
+            ratio = pNch_stack[i] / avg
+            ratio.name = "{0}_div_by_can_avg".format(pNch_stack[i].name)
+            ratio.title = "Ratio of {} over cannonical avg".format(pNch_stack[i].title)
+            f.cd(res_dir_str)
+            ratio.Write()
