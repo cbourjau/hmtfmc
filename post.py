@@ -1,9 +1,11 @@
 """Run post analysis on the given file"""
 import sys
+if len(sys.argv) != 2:
+    print "Usage: python ./post.py path_to_root_file.root"
+    quit()
 
 from rootpy.io import root_open
-from rootpy import asrootpy
-from rootpy.interactive import wait
+from rootpy import asrootpy, ROOT
 from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
 from post_utils import create_dNdeta_stack, make_stack_of_mult_bins_for_pids,\
     plot_histogram_stack, create_stack_pid_ratio_over_pt,\
@@ -11,9 +13,8 @@ from post_utils import create_dNdeta_stack, make_stack_of_mult_bins_for_pids,\
     create_canonnical_avg_from_stacks,\
     divide_stacks
 
-if len(sys.argv) != 2:
-    print "Usage: python ./post.py path_to_root_file.root"
-    exit
+# go into batch mode
+ROOT.gROOT.SetBatch(True)
 
 with root_open(sys.argv[1], 'update') as f_post:
     try:
