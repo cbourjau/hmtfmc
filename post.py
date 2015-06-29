@@ -5,9 +5,9 @@ if len(sys.argv) != 2:
     quit()
 
 from rootpy.io import root_open
-from rootpy import asrootpy, ROOT
-from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
-from post_utils import create_dNdeta_stack, make_stack_of_mult_bins_for_pids,\
+from rootpy import asrootpy, ROOT, log
+from rootpy.plotting import HistStack
+from post_utils import create_dNdeta_stack,\
     plot_histogram_stack, create_stack_pid_ratio_over_pt,\
     create_hist_pid_ratio_over_mult,\
     create_canonnical_avg_from_stacks,\
@@ -15,6 +15,9 @@ from post_utils import create_dNdeta_stack, make_stack_of_mult_bins_for_pids,\
 
 # go into batch mode
 ROOT.gROOT.SetBatch(True)
+
+log = log["/post"]  # set name of this script in logger
+log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch())) # Results in "DEBUG:myapp] Hello"
 
 with root_open(sys.argv[1], 'update') as f_post:
     try:
@@ -24,6 +27,7 @@ with root_open(sys.argv[1], 'update') as f_post:
         pass
     # Loop over all estimators in the Sums list:
     for est_dir in f_post.Sums:
+        log.info("Computing histograms for {0}".format(est_dir.GetName()))
         # and do everything for weighted and unweighted:
         for postfix in ["", "_unweighted"]:
             h3d = f_post.Sums.FindObject(est_dir.GetName()).FindObject('festi_pT_pid' + postfix)
@@ -178,7 +182,7 @@ with root_open(sys.argv[1], 'update') as f_post:
 
 # Create ratio plots; depends on the previously created histograms
 with root_open(sys.argv[1], 'update') as f:
-    print "creating ratios of dN/deta plots for each multiplicity bin"
+    log.info("Creating ratios of dN/deta plots for each multiplicity bin")
     for postfix in ["", "_unweighted"]:
         # Get the  dN/deta stack for each estimator in order to calc 
         # the cannonical average for all _other_ estimators later on
