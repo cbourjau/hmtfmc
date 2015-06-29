@@ -39,8 +39,7 @@ AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC()
 
 //________________________________________________________________________
 AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC(const char *name) 
-  : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0) 
-    
+  : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0)
 {
   AliPDG::AddParticlesToPdgDataBase();
 
@@ -73,10 +72,18 @@ void AliAnalysisTaskHMTFMC::InitEstimators()
 MultiplicityEstimatorBase*
 AliAnalysisTaskHMTFMC::MakeEstimator(const TString& name)
 {
-  if (name.BeginsWith("EtaLt05")) return new EtaBase("EtaLt05", "| \\eta| \\le 0.5", 0.0, 0.5);
-  if (name.BeginsWith("EtaLt08")) return new EtaBase("EtaLt08", "| \\eta| \\le 0.8", 0.0, 0.8);
-  if (name.BeginsWith("EtaLt15")) return new EtaBase("EtaLt15", "| \\eta| \\le 1.5", 0.0, 1.5);
-  if (name.BeginsWith("Eta08_15")) return new EtaBase("Eta08_15", "0.8 \\le | \\eta| \\le 1.5", 0.8, 1.5);
+  if (name.BeginsWith("EtaLt05")) return new EtaBase("EtaLt05", "| \\eta| \\le 0.5", -0.5, 0.0, 0.0, 0.5);
+  if (name.BeginsWith("EtaLt08")) return new EtaBase("EtaLt08", "| \\eta| \\le 0.8", -0.8, 0.0, 0.0, 0.8);
+  if (name.BeginsWith("EtaLt15")) return new EtaBase("EtaLt15", "| \\eta| \\le 1.5", -1.5, 0.0, 0.0, 1.5);
+  if (name.BeginsWith("Eta08_15")) return new EtaBase("Eta08_15", "0.8 \\le | \\eta| \\le 1.5",
+						      -1.5, -0.8, 0.8, 1.5);
+  if (name.BeginsWith("V0A")) return new EtaBase("V0A", "2.8 \\le \\eta \\le 5.1",
+						 0.0, 0.0, 2.8, 5.1);
+  if (name.BeginsWith("V0C")) return new EtaBase("V0C", "-3.7 \\le \\eta \\le -1.7",
+						 -3.7, -1.7, 2.8, 5.1);
+  if (name.BeginsWith("V0M")) return new EtaBase("V0M", "-3.7 \\le \\eta \\le -1.7 || 2.8 \\le \\eta \\le 5.1",
+						 -3.7, -1.7, 2.8, 5.1);
+
   return 0;
 }
 

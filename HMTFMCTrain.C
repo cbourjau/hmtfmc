@@ -69,6 +69,12 @@ public:
 			    task));
     gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"Eta08_15\")",
 			    task));
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"V0A\")",
+			    task));
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"V0C\")",
+			    task));
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"V0M\")",
+			    task));
 
     mgr->AddTask(task);
         

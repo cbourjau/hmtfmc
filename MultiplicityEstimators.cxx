@@ -63,7 +63,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     fdNdeta[weighted_or_not] = new TH2F("fdNdeta" + postfix ,
 		       "dN/d\\eta \\ Inel,\\ " + GetTitlePostfix(),
 		       200, -10.0, 10.0,
-		       festimator_bins, 0, 100);    
+		       festimator_bins, 0, festimator_bins);
     fdNdeta[weighted_or_not]->GetXaxis()->SetTitle("\\eta");
     fdNdeta[weighted_or_not]->GetYaxis()->SetTitle("N_{ch} \\ in \\ " + GetTitlePostfix());
     fdNdeta[weighted_or_not]->GetZaxis()->SetTitle("N_{ch} \\ per\\ \\eta \\ bin");
@@ -77,7 +77,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     // Use double in order to not saturate!
     fEventcounter[weighted_or_not] = new TH1D ("fEventcounter" + postfix,
 					       Form("Multiplicity\\ distribution\\ %s", GetTitlePostfix().Data()),
-					       festimator_bins, 0.0, 100);
+					       festimator_bins, 0.0, festimator_bins);
     fEventcounter[weighted_or_not]->Sumw2();
     fEventcounter[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity\\ in\\ estimator");
     fEventcounter[weighted_or_not]->GetYaxis()->SetTitle("Events");
@@ -87,7 +87,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     festi_pT_pid[weighted_or_not] =
       new TH3F("festi_pT_pid" + postfix,
 	       Form("Event\\ class\\ vs.\\ p_{T}\\ vs.\\ pid,\\ %s", GetTitlePostfix().Data()),
-	       festimator_bins, 0.0, 100,
+	       festimator_bins, 0.0, festimator_bins,
 	       20, 0, 20,
 	       kNPID, -.5, kNPID - 0.5);
     festi_pT_pid[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity");
@@ -104,7 +104,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
 
   fweight_esti = new TH2D("fweight_esti", "Distribution of weights in each mult class",
 			  10000, 0, 10000,
-			  festimator_bins, 0.0, 100);
+			  festimator_bins, 0.0, festimator_bins);
   fweight_esti->SetDirectory(0);
   fweight_esti->Sumw2();
   fweight_esti->GetXaxis()->SetTitle("Event weight");
@@ -141,10 +141,14 @@ void MultiplicityEstimatorBase::ReadEventHeaders(AliMCEvent *event){
 //______________________________________________________________________________________
 EtaBase::EtaBase() : MultiplicityEstimatorBase() {}
 
-EtaBase::EtaBase(const char* name, const char* title, Float_t eta_min, Float_t eta_max)
-  : MultiplicityEstimatorBase(name, title), eta_min(eta_min), eta_max(eta_max)
+EtaBase::EtaBase(const char* name, const char* title,
+		 Float_t feta_min_backwards, Float_t feta_max_backwards, 
+		 Float_t feta_min_forwards, Float_t feta_max_forwards)
+  : MultiplicityEstimatorBase(name, title),
+    feta_min_backwards(feta_min_backwards), feta_max_backwards(feta_max_backwards),
+    feta_min_forwards(feta_min_forwards), feta_max_forwards(feta_max_forwards)
 {
-  festimator_bins = 10;
+  festimator_bins = 100;
 }
 
 void EtaBase::PreEvent(AliMCEvent *event){
@@ -153,7 +157,7 @@ void EtaBase::PreEvent(AliMCEvent *event){
 
   // Clear counters and chaches for the following event:
   fnch_in_estimator_region = 0;
-  memset(n_pid_in_event, 0, kNPID*sizeof(*n_pid_in_event));
+  memset(fn_pid_in_event, 0, kNPID*sizeof(*fn_pid_in_event));
 }
 
 /*
@@ -161,7 +165,13 @@ void EtaBase::PreEvent(AliMCEvent *event){
 */
 void EtaBase::ProcessTrackForMultiplicityEstimation(AliMCParticle *track){
   if (track->Charge() != 0){
-    if(TMath::Abs(track->Eta()) < eta_max && TMath::Abs(track->Eta()) > eta_min) fnch_in_estimator_region++;
+    if((track->Eta() >= feta_min_backwards &&
+       track->Eta() <= feta_max_backwards) ||
+       (track->Eta() >= feta_min_forwards &&
+	track->Eta() <= feta_max_forwards))
+      {
+	fnch_in_estimator_region++;
+      }
   }
 }
 

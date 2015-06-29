@@ -80,7 +80,8 @@ class MultiplicityEstimatorBase : public TNamed {
 class EtaBase : public MultiplicityEstimatorBase {
  public:
   EtaBase();
-  EtaBase(const char* name, const char* title, Float_t eta_min, Float_t eta_max);
+  EtaBase(const char* name, const char* title, Float_t eta_min_backwards, Float_t eta_max_backwards,
+	  Float_t eta_min_forwards, Float_t eta_max_forwards);
  protected:
   void PreEvent(AliMCEvent* event);
   void ProcessTrackForMultiplicityEstimation(AliMCParticle* track);
@@ -88,8 +89,9 @@ class EtaBase : public MultiplicityEstimatorBase {
   void PostEvent();
   void Terminate(TList* sum, TList* results);
   Int_t fnch_in_estimator_region;   // counter for charged particles in current event
-  Int_t n_pid_in_event[kNPID];     // counter for PID'ed particles in this event
-  Float_t eta_min, eta_max;  // range in eta for mult. estimation
+  Int_t fn_pid_in_event[kNPID];     // counter for PID'ed particles in this event
+  Float_t feta_min_forwards, feta_max_forwards;  // range in eta for mult. estimation (positive values)
+  Float_t feta_min_backwards, feta_max_backwards;  // range in eta for mult. estimation (positive values)
   ClassDef(EtaBase, 1)
 };
 
