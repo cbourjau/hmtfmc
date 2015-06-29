@@ -4,6 +4,38 @@ from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
 import ROOT
 
 
+perc_edges = [0.0, 0.05, .10, .20, .40, .60, .80, 1.0] 
+
+def get_nch_for_percentile_bins(event_counter, perc_edges):
+    """
+    Get a event_counter histogram and return which bins mark the edges
+    for percentile edges given in perc_edges.
+    eg. for perc_edges = [0.0, 0.05, .10, .20, .40, .60, .80, 1.0]
+    return a list of bin numbers marking the edges of the given percentiles;
+    """
+    event_counter.xaxis.set_range(0, 0) # reset ranges
+    n_total = event_counter.Integral()
+    nch_edges = [event_counter.xaxis.get_nbins()]  # highest bin is for sure an edge
+    sum = 0.0
+    bins = [bin for bin in event_counter.bins()]
+    for bin in bins[::-1]:  # start from the highest mult bin
+        sum += bin.value
+        curr_percent = (sum / n_total)
+        if curr_percent > perc_edges[len(nch_edges)]:
+            nch_edges.append(bin.idx+1)  # we want bins with events less than given percentile, but count backwards!
+            # break if we are in the last percentile bin:
+            if len(perc_edges) == len(nch_edges):
+                break
+            # check of the last bin was large enough, or if the current percentage bin width is to small:
+            # ie. does the next percentile edge still fall into the current nch_bin
+            if curr_percent > perc_edges[len(nch_edges)]:
+                raise ValueError("Percentage bins were to small to map to N_ch bins")
+    if nch_edges[-1] == 1:
+        # The last bin is to small
+        raise ValueError("Percentage bins were to small to map to N_ch bins")
+    return nch_edges + [1]  # the last percentile coincides with the last bin
+
+
 def create_dNdeta_stack(h2d, event_counter):
     """
     Create dN/deta stack for various multiplicity bins from given 2D histogram.
@@ -11,27 +43,28 @@ def create_dNdeta_stack(h2d, event_counter):
     yaxis: multiplicity bins
     """
     stack = HistStack(name="dNdeta_stack")
-    nbins = h2d.yaxis.GetNbins()
-    for mult_bin in range(1, nbins):
-        h2d.yaxis.set_range(mult_bin, mult_bin)
+    nmult_classes = len(perc_edges) - 1
+    nch_of_percentile_edges = get_nch_for_percentile_bins(event_counter, perc_edges)
+    for ibin, nch_upper_edge in enumerate(nch_of_percentile_edges[:-1]):
+        nch_lower_edge = nch_of_percentile_edges[ibin + 1]
+        h2d.yaxis.set_range(nch_lower_edge, nch_upper_edge)  # works only if bin width is one nch!!!!!!!!
         stack.Add(asrootpy(h2d.projection_x()))
         # named colors of the ROOT TColor colorwheel are between 800 and 900, +1 to make them look better
-        stack[-1].color = 800 + int(100.0/nbins)*(mult_bin-1) + 1
-        stack[-1].name = str(mult_bin)
-        stack[-1].title = (str(h2d.yaxis.get_bin_low_edge(mult_bin))
-                           +'$ \le N_{ch} < $' +
-                           str(h2d.yaxis.get_bin_up_edge(mult_bin)))
+        stack[-1].color = 800 + int(100.0/nmult_classes)*(ibin-1) + 1
+        stack[-1].name = "{0}_to_{1}".format(str(perc_edges[ibin]), str(perc_edges[ibin+1]))
+        stack[-1].title = "{0} - {1}%".format(str(perc_edges[ibin]*100),
+                                              str(perc_edges[ibin+1]*100))
         # scale by the number of events in this mult_bin
-        stack[-1].Scale(1.0/float(event_counter.Integral(mult_bin, mult_bin)))
+        stack[-1].Scale(1.0/float(event_counter.Integral(nch_lower_edge, nch_upper_edge)))
     stack.Draw('nostack')
     stack.xaxis.SetTitle("$\eta$")
     stack.yaxis.SetTitle('$1/N dN_{ch}/d\eta$')
     return stack
 
-def make_stack_of_mult_bins_for_pids(h3d, pids):
+def make_stack_of_mult_bins_for_pids(h3d, event_counter, pids):
     """
-    Make a histstack for the different mult bins. Takes the 3D hist and an itrerable of pids.
-    The pids are added befor the stacks are created (eg. charged pions)
+    Make a histstack for the different mult bins. Takes the 3D hist, a event_counter hist
+    and an itrerable of pids. The pids are added befor the stacks are created (eg. charged pions)
     Return a HistStack
     """
     h3d = asrootpy(h3d)
@@ -39,21 +72,20 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
     pid_hists = []
     for pid in pids:
         h3d.zaxis.SetRange(pid+1, pid+1)  # pid + 1 = histogram bin :P 
-        pid_h2d = asrootpy(h3d.Project3D("xy"))
+        pid_h2d = asrootpy(h3d.Project3D("xy"))  #beware! xaxis becomse pt, yaxis becomes mult!
         pid_h2d.name = pid_h2d.name[:-2] + "pid" + str(pid)
         pid_hists.append(pid_h2d)
     pid_sum_hist = sum(pid_hists)
-
-    n_mult_classes = pid_h2d.yaxis.get_nbins()
-    for ibin in range(1, n_mult_classes):
-        pid_sum_hist.yaxis.set_range(ibin, ibin)
+    nch_of_percentile_edges = get_nch_for_percentile_bins(event_counter, perc_edges)
+    for ibin, nch_upper_edge in enumerate(nch_of_percentile_edges[:-1]):
+        nch_lower_edge = nch_of_percentile_edges[ibin + 1]
+        pid_sum_hist.yaxis.set_range(nch_lower_edge, nch_upper_edge)
         tmp = asrootpy(pid_sum_hist.projection_x())
         if tmp.GetEntries() < 1:
             continue
         tmp.name = tmp.name + str(ibin)
-        tmp.set_title(str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
-                      + '$ \le N_{ch} \le $'
-                      + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
+        tmp.title = "{0} - {1}%".format(str(perc_edges[ibin]*100),
+                                        str(perc_edges[ibin+1]*100))
         stack.Add(tmp)
     return stack
 
@@ -92,15 +124,15 @@ def plot_histogram_stack(stack):
     return c
 
 
-def create_stack_pid_ratio_over_pt(h3d, pid1, pid2):
+def create_stack_pid_ratio_over_pt(h3d, event_counter, pid1, pid2):
     """
     Create a hist stack, where hists are the ratio of particles of species 1 over 2 vs. pt, stack is
     binned in multiplicity bins.
     pidx must be a list, these particles are added together befor dividing (eg. pi charged)
     """
     h3d = asrootpy(h3d)   
-    stack1 = make_stack_of_mult_bins_for_pids(h3d, pid1)
-    stack2 = make_stack_of_mult_bins_for_pids(h3d, pid2)
+    stack1 = make_stack_of_mult_bins_for_pids(h3d, event_counter, pid1)
+    stack2 = make_stack_of_mult_bins_for_pids(h3d, event_counter, pid2)
     outstack = HistStack()
     for ibin, (hpid1, hpid2) in enumerate(zip(stack1.GetHists(), stack2.GetHists())):
         tmp = hpid1/hpid2
@@ -112,7 +144,7 @@ def create_stack_pid_ratio_over_pt(h3d, pid1, pid2):
     return outstack
 
 
-def create_hist_pid_ratio_over_mult(h3d, pid1, pid2):
+def create_hist_pid_ratio_over_mult(h3d, event_counter, pid1, pid2):
     """
     Create a histogram whith the ratio of particles of species 1 over 2 vs. multiplicity
     pidx must be a list, these particles are added together befor dividing (eg. pi charged)
@@ -123,8 +155,8 @@ def create_hist_pid_ratio_over_mult(h3d, pid1, pid2):
     h_1 = Hist1D(edges)
     h_2 = Hist1D(edges)
     
-    stack1 = make_stack_of_mult_bins_for_pids(h3d, pid1)
-    stack2 = make_stack_of_mult_bins_for_pids(h3d, pid2)
+    stack1 = make_stack_of_mult_bins_for_pids(h3d, event_counter, pid1)
+    stack2 = make_stack_of_mult_bins_for_pids(h3d, event_counter, pid2)
     
     for ibin, (hpid1, hpid2) in enumerate(zip(stack1.GetHists(), stack2.GetHists())):
         err = ROOT.Double()
