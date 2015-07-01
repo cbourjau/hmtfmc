@@ -187,8 +187,8 @@ with root_open(sys.argv[1], 'update') as f:
         # Get the  dN/deta stack for each estimator in order to calc 
         # the cannonical average for all _other_ estimators later on
         # P(N_ch): one stack containing all estimators!
-        dNdeta_stacks = []
-        pNch_stack = HistStack()
+        dNdeta_stacks = []        # List of stacks!
+        pNch_stack = HistStack()  # One HistStack!
         pNch_stack.name = "pNch_stack"
         for est_dir in f.Sums:
             dNdeta_stacks.append(asrootpy(f.Get("results_post")\
@@ -200,6 +200,7 @@ with root_open(sys.argv[1], 'update') as f:
                                     .Get("PN_ch")))
 
         # Write P(Nch) stack to disk before proceeding
+        pNch_stack.title = "P(N_{ch}) of various estimators"
         c = plot_histogram_stack(pNch_stack)
         c.name = "PN_ch_summary" + postfix
         c.Update()
@@ -217,9 +218,9 @@ with root_open(sys.argv[1], 'update') as f:
             other_dNdeta_stacks = dNdeta_stacks[:i] + dNdeta_stacks[i+1:]
             avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
             ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
-            ratio.title = (r'\text{Ratio of "}'
+            ratio.title = (r'Ratio\\ of\\ '
                            + dNdeta_stacks[i].title
-                           + r'\text{" to cannonical average}')
+                           + r'\\ to\\ cannonical\\ average')
             
             c = plot_histogram_stack(ratio)
             c.name = dNdeta_stacks[i].name + '_ratio_cannonical_avg'
