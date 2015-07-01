@@ -14,6 +14,7 @@ class AliMCParticle;
 #include "TH2F.h"
 #include "TH3F.h"
 #include "TString.h"
+#include "TNtuple.h"
 
 enum {
   kPROTON,
@@ -62,6 +63,8 @@ class MultiplicityEstimatorBase : public TNamed {
   TH2F  *fdNdeta[2];          // dNdEta distributions; multiplicity is on the y-axis
   TH3F  *festi_pT_pid[2];  // multiplicity class; pT; pid
   TH1D  *fEventcounter[2];
+  TNtuple *fNchInEstimatorRegion;
+
   TH2D  *fweight_esti;  // Distribution of weights in each multiplicity class
   AliHeader *fheader;       // Event header
   AliMCEvent *fevent;       // current event
