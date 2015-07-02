@@ -21,6 +21,7 @@ def create_dNdeta_stack(h2d, event_counter):
                            +'$ \le N_{ch} < $' +
                            str(h2d.yaxis.get_bin_up_edge(mult_bin)))
         # scale by the number of events in this mult_bin
+        # import ipdb; ipdb.set_trace()
         stack[-1].Scale(1.0/float(event_counter.Integral(mult_bin, mult_bin)))
     stack.Draw('nostack')
     stack.xaxis.SetTitle("$\eta$")
@@ -87,7 +88,6 @@ def plot_histogram_stack(stack):
     c.cd()
     pad2.cd()
     leg.Draw()
-    c.Update()
     return c
 
 

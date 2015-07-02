@@ -14,7 +14,7 @@ from post_utils import create_dNdeta_stack,\
     divide_stacks
 
 # go into batch mode
-ROOT.gROOT.SetBatch(True)
+ROOT.gROOT.SetBatch(False)
 
 log = log["/post"]  # set name of this script in logger
 log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch())) # Results in "DEBUG:myapp] Hello"
@@ -68,10 +68,9 @@ with root_open(sys.argv[1], 'update') as f_post:
             # Category 1 on TWiki
             # create dN/deta stack for the current estimator
             hs = create_dNdeta_stack(h2d, h_event_counter)
-            hs.title = "dN/d\\eta \\ vs.\\ \\eta\\ " + esti_title
+            hs.title = r"dN/d\eta \ vs.\ \eta\ " + esti_title
             c = plot_histogram_stack(hs)
             c.name = "dNdeta_summary"
-            c.Update()
             c.write()
 
             # P(N_ch)
@@ -86,105 +85,90 @@ with root_open(sys.argv[1], 'update') as f_post:
             # create particle ratio vs pT plots
             # Ratios to pich
             hs = create_stack_pid_ratio_over_pt(h3d, [0], [5,6])
-            hs.title = "p/\\pi^{+-}\\ vs.\\ p_{T} " + "({})".format(esti_title)
+            hs.title = "p/\\pi^{+-}\\ vs.\\ p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "proton_over_pich__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [2], [5,6])
-            hs.SetTitle(r'K^{0}_{S}/\\pi^{+-}\\ vs.\\ p_{T}\\ ' + "({})".format(esti_title))
+            hs.SetTitle('K^{0}_{S}/\\pi^{+-}\\ vs.\\ p_{T}\\ ' + "{}".format(esti_title))
             c = plot_histogram_stack(hs)
             c.name = "K0S_over_pich__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [1], [5,6])
-            hs.title= r"\\Lambda/\\pi^{+-}\\ vs.\\ p_{T}\\ " + "({})".format(esti_title)
+            hs.title= "\\Lambda/\\pi^{+-}\\ vs.\\ p_{T}\\ " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "Lambda_over_pich__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [8], [5,6])
-            hs.title= "\\Xi/\\pi^{+-}\\ vs.\\ p_{T}\\ " + "({})".format(esti_title)
+            hs.title= "\\Xi/\\pi^{+-}\\ vs.\\ p_{T}\\ " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "Xi_over_pich__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [9,10], [5,6])
-            hs.title= "\Omega_{ch}/\pi^{+-} vs. p_{T} " + "({})".format(esti_title)
+            hs.title= "\Omega_{ch}/\pi^{+-} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "OmegaCh_over_pich__vs__pt"
-            c.Update()
             c.write()
 
             # Ratios to pi0
             # hs = create_stack_pid_ratio_over_pt(h3d, [5,6], [7])
-            # hs.title = "p^{+-}/\pi^{0} vs. p_{T} " + "({})".format(esti_title)
+            # hs.title = "p^{+-}/\pi^{0} vs. p_{T} " + "{}".format(esti_title)
             # c = plot_histogram_stack(hs)
             # c.name = "pich_over_pi0__vs__pt"
-            # c.Update()
             # c.write()
 
             # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [0], [7]))
             # c.name = "proton_over_pi0__vs__pt"
-            # c.title= "p/#pi^{0} vs. p_{T} " + "({})".format(est_dir.GetName())
-            # c.Update()
+            # c.title= "p/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
             # c.write()
 
             # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [2], [7]))
             # c.name = "K0S_over_pi0__vs__pt"
-            # c.title= "K0S/#pi^{0} vs. p_{T} " + "({})".format(est_dir.GetName())
-            # c.Update()
+            # c.title= "K0S/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
             # c.write()
 
             # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [1], [7]))
             # c.name = "Lambda_over_pi0__vs__pt"
-            # c.title= "#Lambda/#pi^{0} vs. p_{T} " + "({})".format(est_dir.GetName())
-            #c.Update()
+            # c.title= "#Lambda/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
             # c.write()
 
             # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [8], [7]))
             # c.name = "Xi_over_pi0__vs__pt"
-            # c.title= "#Xi/#pi^{0} vs. p_{T} " + "({})".format(est_dir.GetName())
-            # c.Update()
+            # c.title= "#Xi/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
             # c.write()
 
             # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [9,10], [7]))
             # c.name = "OmegaCh_over_pi0__vs__pt"
-            # c.title= "#Omega_{ch}/#pi^{0} vs. p_{T} " + "({})".format(est_dir.GetName())
-            # c.Update()
+            # c.title= "#Omega_{ch}/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
             # c.write()
 
             # Ratios to K0S
             hs = create_stack_pid_ratio_over_pt(h3d, [0], [2])
-            hs.title= "p/K^{0}_{S} vs. p_{T} " + "({})".format(esti_title)
+            hs.title= "p/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "proton_over_K0S__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [1], [2])
-            hs.title= "\Lambda/K^{0}_{S} vs. p_{T} " + "({})".format(esti_title)
+            hs.title= "\\Lambda/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "Lambda_over_K0S__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [8], [2])
-            hs.title= "\Xi/K^{0}_{S} vs. p_{T} " + "({})".format(esti_title)
+            hs.title= "\\Xi/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "Xi_over_K0S__vs__pt"
-            c.Update()
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(h3d, [9,10], [2])
-            hs.title= "\Omega_{ch}/K^{0}_{S} vs. p_{T} " + "({})".format(esti_title)
+            hs.title= "\\Omega_{ch}/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "OmegaCh_over_K0S__vs__pt"
-            c.Update()
             c.write()
             #############################################################33
             #Category 3 on Twiki
@@ -221,7 +205,6 @@ with root_open(sys.argv[1], 'update') as f:
         pNch_stack.title = "P(N_{ch}) of various estimators"
         c = plot_histogram_stack(pNch_stack)
         c.name = "PN_ch_summary" + postfix
-        c.Update()
         f.cd("results_post")
         c.write()
 
@@ -236,9 +219,9 @@ with root_open(sys.argv[1], 'update') as f:
             other_dNdeta_stacks = dNdeta_stacks[:i] + dNdeta_stacks[i+1:]
             avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
             ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
-            ratio.title = (r'Ratio\\ of\\ '
+            ratio.title = ('Ratio\\ of\\ '
                            + dNdeta_stacks[i].title
-                           + r'\\ to\\ cannonical\\ average')
+                           + '\\ to\\ cannonical\\ average')
             
             c = plot_histogram_stack(ratio)
             c.name = dNdeta_stacks[i].name + '_ratio_cannonical_avg'
