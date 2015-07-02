@@ -72,6 +72,7 @@ void AliAnalysisTaskHMTFMC::InitEstimators()
 MultiplicityEstimatorBase*
 AliAnalysisTaskHMTFMC::MakeEstimator(const TString& name)
 {
+  if (name.BeginsWith("Total")) return new EtaBase("Total", "Total \\eta coverage", -10.0, 0.0, 0.0, 10.0);
   if (name.BeginsWith("EtaLt05")) return new EtaBase("EtaLt05", "| \\eta| \\le 0.5", -0.5, 0.0, 0.0, 0.5);
   if (name.BeginsWith("EtaLt08")) return new EtaBase("EtaLt08", "| \\eta| \\le 0.8", -0.8, 0.0, 0.0, 0.8);
   if (name.BeginsWith("EtaLt15")) return new EtaBase("EtaLt15", "| \\eta| \\le 1.5", -1.5, 0.0, 0.0, 1.5);
