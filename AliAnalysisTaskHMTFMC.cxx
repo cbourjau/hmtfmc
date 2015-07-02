@@ -80,7 +80,7 @@ AliAnalysisTaskHMTFMC::MakeEstimator(const TString& name)
   if (name.BeginsWith("V0A")) return new EtaBase("V0A", "2.8 \\le \\eta \\le 5.1",
 						 0.0, 0.0, 2.8, 5.1);
   if (name.BeginsWith("V0C")) return new EtaBase("V0C", "-3.7 \\le \\eta \\le -1.7",
-						 -3.7, -1.7, 2.8, 5.1);
+						 -3.7, -1.7, 0.0, 0.0);
   if (name.BeginsWith("V0M")) return new EtaBase("V0M", "-3.7 \\le \\eta \\le -1.7 || 2.8 \\le \\eta \\le 5.1",
 						 -3.7, -1.7, 2.8, 5.1);
 
