@@ -101,7 +101,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     curr_est->Add(festi_pT_pid[weighted_or_not]);
   }
 
-  fNchInEstimatorRegion = new TNtuple("ntuple", "Nch in estimator region", "nch:nch_unweighted");
+  fNchInEstimatorRegion = new TNtuple("fevent_counter", "Nch in estimator region", "nch:ev_weight");
   curr_est->Add(fNchInEstimatorRegion);
 
   fweight_esti = new TH2D("fweight_esti", "Distribution of weights in each mult class",
@@ -204,7 +204,7 @@ void EtaBase::PostEvent(){
   // Fill event counters
   fEventcounter[kUnweighted]->Fill(fnch_in_estimator_region);
   fEventcounter[kWeighted]->Fill(fnch_in_estimator_region, feventWeight);
-  fNchInEstimatorRegion->Fill(fnch_in_estimator_region*feventWeight, fnch_in_estimator_region);
+  fNchInEstimatorRegion->Fill(fnch_in_estimator_region, feventWeight);
   fweight_esti->Fill(feventWeight, fnch_in_estimator_region);
 }
 

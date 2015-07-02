@@ -1,4 +1,3 @@
-from rootpy.io import root_open
 from rootpy import asrootpy
 from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
 import ROOT

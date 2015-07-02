@@ -6,7 +6,7 @@ if len(sys.argv) != 2:
 
 from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log
-from rootpy.plotting import HistStack
+from rootpy.plotting import HistStack, Hist1D, Hist2D
 from post_utils import create_dNdeta_stack,\
     plot_histogram_stack, create_stack_pid_ratio_over_pt,\
     create_hist_pid_ratio_over_mult,\
@@ -19,6 +19,9 @@ ROOT.gROOT.SetBatch(True)
 log = log["/post"]  # set name of this script in logger
 log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch())) # Results in "DEBUG:myapp] Hello"
 
+# Rebin multiplicity with factor:
+rebin_mult = 10
+
 with root_open(sys.argv[1], 'update') as f_post:
     try:
         # delete old result directory
@@ -30,20 +33,35 @@ with root_open(sys.argv[1], 'update') as f_post:
         log.info("Computing histograms for {0}".format(est_dir.GetName()))
         # and do everything for weighted and unweighted:
         for postfix in ["", "_unweighted"]:
-            h3d = f_post.Sums.FindObject(est_dir.GetName()).FindObject('festi_pT_pid' + postfix)
+            h3d = est_dir.FindObject('festi_pT_pid' + postfix)
             h3d = asrootpy(h3d)
-
-            h2d = f_post.Sums.FindObject(est_dir.GetName()).FindObject('fdNdeta' + postfix)
+            h3d.RebinX(rebin_mult)
+            #h3d.Scale(1.0/rebin_mult)
+            
+            h2d = est_dir.FindObject('fdNdeta' + postfix)
             h2d = asrootpy(h2d)
+            h2d.RebinY(rebin_mult)
 
-            h_event_counter = asrootpy(f_post.Sums\
-                                       .FindObject(est_dir.GetName())\
-                                       .FindObject('fEventcounter' + postfix))
+            nt = asrootpy(est_dir.FindObject("fevent_counter"))
+            
             res_dir = f_post.mkdir("results_post/" + est_dir.GetName() + postfix, recurse=True)
             res_dir.write()
 
             # res_dir = f_post.results_post.FindObject(est_dir.GetName())
             f_post.results_post.cd(est_dir.GetName() + postfix)
+
+            # Write out event counters vs. multiplicity
+            h_event_counter = Hist1D(100, 0, 100,
+                                     name=("event_counter" + postfix),
+                                     title="Event counter vs. multiplicity in est region")
+            if postfix:  # empty string is falsy
+                nt.Project(h_event_counter.name, "nch")
+            else:
+                nt.Project(h_event_counter.name, "nch", "ev_weight")
+            h_event_counter.write()
+
+            # rescale for later operations
+            h_event_counter.Rebin(rebin_mult)
 
             esti_title = "({0})".format(h3d.title[38:])
             ###########################################################
@@ -240,3 +258,35 @@ with root_open(sys.argv[1], 'update') as f:
             ratio.title = "Ratio of {} over cannonical avg".format(pNch_stack[i].title)
             f.cd(res_dir_str)
             ratio.Write()
+
+
+# Make correlations between estimators
+with root_open(sys.argv[1], 'update') as f:
+    log.info("Correlating N_ch of each estimator")
+    corr_dir = 'results_post/correlations'
+    try:
+        f.mkdir(corr_dir, recurse=True)
+    except:
+        pass
+    # only for weighted case
+    # Take ntuple from the first estimator and then add friends to this one
+    nt0 = f.Sums[0].FindObject("fevent_counter")
+    nt0.SetAlias(f.Sums[0].GetName(), "fevent_counter")
+    previous_estimator_names = [f.Sums[0].GetName(), ]
+    for est_dir in f.Sums[1:]:
+        nt0.AddFriend(est_dir.FindObject("fevent_counter"), est_dir.GetName())
+        for est_name in previous_estimator_names:
+            corr_hist = Hist2D(200, 0, 200,
+                               200, 0, 200,
+                               name="corr_hist_{}_vs_{}".format(est_name, est_dir.GetName()))
+            # Lables are deliberatly swaped, see Projection below!
+            corr_hist.title = ("Correlation N_{{ch}} in {0} and {1};N_{{ch}} {1};N_{{ch}} {0}"\
+                               .format(est_name, est_dir.GetName()))
+
+            # this projects onto y:x, to make coding more adventurous 
+            nt0.Project(corr_hist.name, "{0}.nch:{1}.nch".format(est_name, est_dir.GetName()),
+                        "ev_weight")
+            corr_hist.drawstyle = 'colz'
+            f.cd(corr_dir)
+            corr_hist.write()
+        previous_estimator_names.append(est_dir.GetName())
