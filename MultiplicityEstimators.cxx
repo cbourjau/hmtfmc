@@ -180,24 +180,25 @@ void EtaBase::ProcessTrackForMultiplicityEstimation(AliMCParticle *track){
 // loop over tracks again, now that mult is known:
 void EtaBase::ProcessTrackWithKnownMultiplicity(AliMCParticle *track){
   if (track->Charge() != 0){
+    // only enforce charged tracks for dN/deta!
     fdNdeta[kUnweighted]->Fill(track->Eta(), fnch_in_estimator_region);
     fdNdeta[kWeighted]->Fill(track->Eta(), fnch_in_estimator_region, feventWeight);
-
-    // y axis are the different particles defined as enum in the header file.
-    // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
-    // value for the pid.
-    Int_t pdgCode = track->PdgCode();
-    for (Int_t ipid = 0; ipid < kNPID; ipid++) {
-      if (pdgCode == pid_enum_to_pdg(ipid)){
-	festi_pT_pid[kUnweighted]->Fill(fnch_in_estimator_region,
-					track->Pt(),
-					ipid);
-	festi_pT_pid[kWeighted]->Fill(fnch_in_estimator_region,
+  }
+  // y axis are the different particles defined as enum in the header file.
+  // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
+  // value for the pid.
+  Int_t pdgCode = track->PdgCode();
+  for (Int_t ipid = 0; ipid < kNPID; ipid++) {
+    // these tracks might be uncharged!
+    if (pdgCode == pid_enum_to_pdg(ipid)){
+      festi_pT_pid[kUnweighted]->Fill(fnch_in_estimator_region,
 				      track->Pt(),
-				      ipid,
-				      feventWeight);
-	break;
-      }
+				      ipid);
+      festi_pT_pid[kWeighted]->Fill(fnch_in_estimator_region,
+				    track->Pt(),
+				    ipid,
+				    feventWeight);
+      break;
     }
   }
 }
