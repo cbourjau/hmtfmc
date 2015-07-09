@@ -106,7 +106,7 @@ def create_stack_pid_ratio_over_pt(h3d, pid1, pid2):
         tmp.title = hpid1.title
         outstack.Add(tmp)
     outstack.Draw('nostack')
-    outstack.title = "pid{0} / pid{1}, estimator: |#eta | < 0.5".format(pid1, pid2)
+    outstack.title = "pid{0} / pid{1}".format(pid1, pid2)
     outstack.xaxis.SetTitle("p_{T}")
     return outstack
 
