@@ -60,7 +60,8 @@ public:
     }
     AliAnalysisTaskSE* task = reinterpret_cast<AliAnalysisTaskSE*>(ret);
     // add estimators here:
-    // task->AddEstimator("EtaLt05");
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"Total\")",
+			    task));
     gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"EtaLt05\")",
 			    task));
     gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"EtaLt08\")",
