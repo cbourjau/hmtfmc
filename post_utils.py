@@ -18,14 +18,14 @@ def create_dNdeta_stack(h2d, event_counter):
         stack[-1].color = 800 + int(100.0/nbins)*(mult_bin-1) + 1
         stack[-1].name = str(mult_bin)
         stack[-1].title = (str(h2d.yaxis.get_bin_low_edge(mult_bin))
-                           +'$ \le N_{ch} < $' +
+                           +' #leq N_{ch} #leq ' +
                            str(h2d.yaxis.get_bin_up_edge(mult_bin)))
         # scale by the number of events in this mult_bin
         # import ipdb; ipdb.set_trace()
         stack[-1].Scale(1.0/float(event_counter.Integral(mult_bin, mult_bin)))
     stack.Draw('nostack')
-    stack.xaxis.SetTitle("$\eta$")
-    stack.yaxis.SetTitle('$1/N dN_{ch}/d\eta$')
+    stack.xaxis.SetTitle("#eta")
+    stack.yaxis.SetTitle('1/N dN_{ch}/d#eta')
     return stack
 
 def make_stack_of_mult_bins_for_pids(h3d, pids):
@@ -52,7 +52,7 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
             continue
         tmp.name = tmp.name + str(ibin)
         tmp.set_title(str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
-                      + '$ \le N_{ch} \le $'
+                      + '#leq N_{ch} #leq '
                       + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
         stack.Add(tmp)
     return stack
@@ -64,8 +64,8 @@ def plot_histogram_stack(stack):
     """
     stack = asrootpy(stack)
     c = Canvas()
-    pad1 = Pad(0., 0., .7, 1.,)
-    pad2 = Pad(.7, 0, 1., 1.)
+    pad1 = Pad(0., 0., .7, 1., name="plot")
+    pad2 = Pad(.7, 0, 1., 1., name="legend")
     pad1.Draw()
     pad2.Draw()
     nesti = len(stack.GetHists())
