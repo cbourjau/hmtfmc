@@ -1,44 +1,41 @@
-#include "TChain.h"
-#include "TTree.h"
-#include "TH1F.h"
+#include <iostream>
+
 #include "TCanvas.h"
-
-#include "AliAnalysisTask.h"
-#include "AliAnalysisManager.h"
-
-#include "AliVEvent.h"
-#include "AliESDEvent.h"
-#include "AliMCEvent.h"
-#include "AliAODEvent.h"
-
-#include "AliAnalysisTaskHMTFMC.h"
+#include "TChain.h"
 #include "TGraphErrors.h"
-#include "AliLog.h"
-#include "AliStack.h"
-#include "AliHeader.h"
+#include "TH1F.h"
+#include "TH2F.h"
+#include "TTree.h"
+
+#include "AliAODEvent.h"
+#include "AliAnalysisManager.h"
+#include "AliAnalysisTask.h"
+#include "AliESDEvent.h"
+#include "AliGenDPMjetEventHeader.h"
 #include "AliGenEventHeader.h"
 #include "AliGenPythiaEventHeader.h"
-
-#include <iostream>
+#include "AliHeader.h"
+#include "AliLog.h"
+#include "AliMCEvent.h"
 #include "AliPDG.h"
-#include "AliGenDPMjetEventHeader.h"
-#include "TH2F.h"
+#include "AliStack.h"
+#include "AliVEvent.h"
 
-
+#include "AliAnalysisTaskHMTFMCMultEst.h"
 #include "MultiplicityEstimators.h"
 
 using namespace std;
 
-ClassImp(AliAnalysisTaskHMTFMC)
+ClassImp(AliAnalysisTaskHMTFMCMultEst)
 
-AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC()
+AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
 : AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0) 
 {
 
 }
 
 //________________________________________________________________________
-AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC(const char *name) 
+AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name) 
   : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0)
 {
   AliPDG::AddParticlesToPdgDataBase();
@@ -47,13 +44,13 @@ AliAnalysisTaskHMTFMC::AliAnalysisTaskHMTFMC(const char *name)
   DefineOutput(2, TList::Class());
 }
 
-void AliAnalysisTaskHMTFMC::AddEstimator(const char* n)
+void AliAnalysisTaskHMTFMCMultEst::AddEstimator(const char* n)
 {
   if (!fEstimatorNames.IsNull()) fEstimatorNames.Append(",");
   fEstimatorNames.Append(n);
 }
     
-void AliAnalysisTaskHMTFMC::InitEstimators()
+void AliAnalysisTaskHMTFMCMultEst::InitEstimators()
 {
   fEstimatorsList = new TList;
   fEstimatorsList->SetOwner();
@@ -70,7 +67,7 @@ void AliAnalysisTaskHMTFMC::InitEstimators()
 }
 //________________________________________________________________________
 MultiplicityEstimatorBase*
-AliAnalysisTaskHMTFMC::MakeEstimator(const TString& name)
+AliAnalysisTaskHMTFMCMultEst::MakeEstimator(const TString& name)
 {
   if (name.BeginsWith("Total")) return new EtaBase("Total", "full #eta coverage ", -20, 0.0, 0.0, 20);
   if (name.BeginsWith("EtaLt05")) return new EtaBase("EtaLt05", "| #eta| #leq 0.5", -0.5, 0.0, 0.0, 0.5);
@@ -89,7 +86,7 @@ AliAnalysisTaskHMTFMC::MakeEstimator(const TString& name)
 }
 
 //________________________________________________________________________
-void AliAnalysisTaskHMTFMC::UserCreateOutputObjects()
+void AliAnalysisTaskHMTFMCMultEst::UserCreateOutputObjects()
 {
   fMyOut = new TList();
   fMyOut->SetOwner();
@@ -112,7 +109,7 @@ void AliAnalysisTaskHMTFMC::UserCreateOutputObjects()
 }
 
 //________________________________________________________________________
-void AliAnalysisTaskHMTFMC::UserExec(Option_t *) 
+void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *) 
 {
   AliMCEvent* mcEvent = MCEvent();
   if (!mcEvent) {
@@ -162,7 +159,7 @@ void AliAnalysisTaskHMTFMC::UserExec(Option_t *)
 }      
 
 //________________________________________________________________________
-void AliAnalysisTaskHMTFMC::Terminate(Option_t *) 
+void AliAnalysisTaskHMTFMCMultEst::Terminate(Option_t *) 
 {
   // recreates the fEstimatorsList
   InitEstimators();

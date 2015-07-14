@@ -1,5 +1,5 @@
-#ifndef AliAnalysisTaskHMTFMC_cxx
-#define AliAnalysisTaskHMTFMC_cxx
+#ifndef AliAnalysisTaskHMTFMCMultEst_cxx
+#define AliAnalysisTaskHMTFMCMultEst_cxx
 
 
 class TH1F;
@@ -13,11 +13,11 @@ enum {kHistINEL,kHistNSD,kHistND,kHistSiD,kNHist};
 #include <stdio.h>
 
 
-class AliAnalysisTaskHMTFMC : public AliAnalysisTaskSE {
+class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
  public:
-  AliAnalysisTaskHMTFMC();
-  AliAnalysisTaskHMTFMC(const char *name );
-  virtual ~AliAnalysisTaskHMTFMC() {};
+  AliAnalysisTaskHMTFMCMultEst();
+  AliAnalysisTaskHMTFMCMultEst(const char *name );
+  virtual ~AliAnalysisTaskHMTFMCMultEst() {};
 
   void AddEstimator(const char* n);
   void InitEstimators();
@@ -35,10 +35,10 @@ class AliAnalysisTaskHMTFMC : public AliAnalysisTaskSE {
   std::vector<MultiplicityEstimatorBase*> festimators;
 
   // Declaring these shuts up warnings from Weffc++
-  AliAnalysisTaskHMTFMC(const AliAnalysisTaskHMTFMC&); // not implemented
-  AliAnalysisTaskHMTFMC& operator=(const AliAnalysisTaskHMTFMC&); // not implemented
+  AliAnalysisTaskHMTFMCMultEst(const AliAnalysisTaskHMTFMCMultEst&); // not implemented
+  AliAnalysisTaskHMTFMCMultEst& operator=(const AliAnalysisTaskHMTFMCMultEst&); // not implemented
 
-  ClassDef(AliAnalysisTaskHMTFMC, 1); // example of analysis
+  ClassDef(AliAnalysisTaskHMTFMCMultEst, 1); // example of analysis
 };
 
 #endif

@@ -1,9 +1,9 @@
 /* 
 Run locally:
-$ runTrain --class=HMTFMCTrain --name=myname_lite --include=. --url="lite://$PWD/input//?pattern="galice.root"&workers=2&mc&recursive#TE" --type=ESD
+$ runTrain --class=HMTFMCMultEstTrain --name=myname_lite --include=. --url="lite://$PWD/input//?pattern="galice.root"&workers=2&mc&recursive#TE" --type=ESD
 
 For debugging
- rm -rf myname_lite && runTrain --class=HMTFMCTrain --name=myname_lite --include=. --url="local://\$PWD/input/root_archive_00001/?pattern="galice.root"&mc#TE" ; cat build.log
+ rm -rf myname_lite && runTrain --class=HMTFMCMultEstTrain --name=myname_lite --include=. --url="local://\$PWD/input/root_archive_00001/?pattern="galice.root"&mc#TE" ; cat build.log
 */
   
 
@@ -14,15 +14,15 @@ class AliAnalysisManager;
 #endif
 
 #include "MultiplicityEstimators.h"
-#include "AliAnalysisTaskHMTFMC.h"
+#include "AliAnalysisTaskHMTFMCMultEst.h"
 #include "TrainSetup.C"
 #include "ParUtilities.C"
 
 
-class HMTFMCTrain : public TrainSetup
+class HMTFMCMultEstTrain : public TrainSetup
 {
 public:
-  HMTFMCTrain(const char* name="HMTFMCTrain") : TrainSetup(name)
+  HMTFMCMultEstTrain(const char* name="HMTFMCMultEstTrain") : TrainSetup(name)
   {
     // Set Generator here?
     // fOptions.Set("type", "AOD"); // AOD input
@@ -48,33 +48,33 @@ public:
     fRailway->LoadLibrary("pythia6_4_25");
     fRailway->LoadAux("MultiplicityEstimators.h");
     fRailway->LoadSource("MultiplicityEstimators.cxx");
-    fRailway->LoadAux("AliAnalysisTaskHMTFMC.h");
-    fRailway->LoadSource("AliAnalysisTaskHMTFMC.cxx");
+    fRailway->LoadAux("AliAnalysisTaskHMTFMCMultEst.h");
+    fRailway->LoadSource("AliAnalysisTaskHMTFMCMultEst.cxx");
     AliAnalysisManager::SetCommonFileName("MC_estimators.root");
  
-    // AliAnalysisTaskHMTFMC *task = new AliAnalysisTaskHMTFMC("TaskdNdeta");
-    Long_t ret = gROOT->ProcessLine("new AliAnalysisTaskHMTFMC(\"TaskdNdeta\")");
+    // AliAnalysisTaskHMTFMCMultEst *task = new AliAnalysisTaskHMTFMCMultEst("TaskdNdeta");
+    Long_t ret = gROOT->ProcessLine("new AliAnalysisTaskHMTFMCMultEst(\"TaskMultEst\")");
     if (!ret) {
       Error("CreateTasks", "Failed to make my task!");  
       return;
     }
     AliAnalysisTaskSE* task = reinterpret_cast<AliAnalysisTaskSE*>(ret);
     // add estimators here:
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"Total\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"Total\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"EtaLt05\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"EtaLt05\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"EtaLt08\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"EtaLt08\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"EtaLt15\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"EtaLt15\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"Eta08_15\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"Eta08_15\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"V0A\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"V0A\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"V0C\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"V0C\")",
 			    task));
-    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMC)%p)->AddEstimator(\"V0M\")",
+    gROOT->ProcessLine(Form("((AliAnalysisTaskHMTFMCMultEst)%p)->AddEstimator(\"V0M\")",
 			    task));
 
     mgr->AddTask(task);
@@ -94,6 +94,6 @@ public:
 
     mgr->ConnectInput(task, 0, mgr->GetCommonInputContainer());  
   }
-  const char* ClassName() const { return "HMTFMCTrain"; }
+  const char* ClassName() const { return "HMTFMCMultEstTrain"; }
 
 };

@@ -1,5 +1,5 @@
 #!/bin/sh
-wks="&workers=10"
+wks="&workers=4"
 rv="&pattern=galice.root&recursive"
 case x$1 in
     xlocal)
@@ -32,7 +32,7 @@ url="${url}?mc${rv}${wks}#TE"
 
 rm -rf $name
 set -x
-runTrain --class=HMTFMCTrain --name=$name --type=ESD --url="$url" $@ 
+runTrain --class=HMTFMCMultEstTrain --name=$name --type=ESD --url="$url" $@ 
 
 #
 # EOF
