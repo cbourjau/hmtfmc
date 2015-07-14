@@ -61,12 +61,12 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     if (weighted_or_not == kUnweighted) {postfix = TString("_unweighted");}
 
     fdNdeta[weighted_or_not] = new TH2F("fdNdeta" + postfix ,
-		       "dN/d\\eta \\ Inel,\\ " + GetTitlePostfix(),
+		       "dN/d#eta Inel, " + GetTitlePostfix(),
 		       200, -10.0, 10.0,
 		       festimator_bins, 0, festimator_bins);
-    fdNdeta[weighted_or_not]->GetXaxis()->SetTitle("\\eta");
-    fdNdeta[weighted_or_not]->GetYaxis()->SetTitle("N_{ch} \\ in \\ " + GetTitlePostfix());
-    fdNdeta[weighted_or_not]->GetZaxis()->SetTitle("N_{ch} \\ per\\ \\eta \\ bin");
+    fdNdeta[weighted_or_not]->GetXaxis()->SetTitle("#eta");
+    fdNdeta[weighted_or_not]->GetYaxis()->SetTitle("N_{ch} in " + GetTitlePostfix());
+    fdNdeta[weighted_or_not]->GetZaxis()->SetTitle("N_{ch} per #eta bin");
     fdNdeta[weighted_or_not]->SetMarkerStyle(kFullCircle);
     fdNdeta[weighted_or_not]->Sumw2();
     fdNdeta[weighted_or_not]->SetDirectory(0);
@@ -75,22 +75,22 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     // Setup counter histograms
     // Use double in order to not saturate!
     fEventcounter[weighted_or_not] = new TH1D ("fEventcounter" + postfix,
-					       Form("Multiplicity\\ distribution\\ %s", GetTitlePostfix().Data()),
+					       Form("Multiplicity distribution %s", GetTitlePostfix().Data()),
 					       festimator_bins, 0.0, festimator_bins);
     fEventcounter[weighted_or_not]->Sumw2();
-    fEventcounter[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity\\ in\\ estimator");
+    fEventcounter[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity in estimator");
     fEventcounter[weighted_or_not]->GetYaxis()->SetTitle("Events");
     curr_est->Add(fEventcounter[weighted_or_not]);
 
     // 3D: Mult, pT, PID
     festi_pT_pid[weighted_or_not] =
       new TH3F("festi_pT_pid" + postfix,
-	       Form("Event\\ class\\ vs.\\ p_{T}\\ vs.\\ pid,\\ %s", GetTitlePostfix().Data()),
+	       Form("Event class vs. p_{T} vs. pid, %s", GetTitlePostfix().Data()),
 	       festimator_bins, 0.0, festimator_bins,
 	       20, 0, 20,
 	       kNPID, -.5, kNPID - 0.5);
     festi_pT_pid[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity");
-    festi_pT_pid[weighted_or_not]->GetYaxis()->SetTitle("p_{T}\\ [GeV]}");
+    festi_pT_pid[weighted_or_not]->GetYaxis()->SetTitle("p_{T} [GeV]}");
     festi_pT_pid[weighted_or_not]->GetZaxis()->SetTitle("PID");
     // Name bins with pdg code:
     for (Int_t ipid = 0; ipid < kNPID; ipid++) {
