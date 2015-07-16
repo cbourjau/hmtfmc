@@ -223,7 +223,7 @@ void EtaBase::PostEvent(){
   fweight_esti->Fill(feventWeight, fnch_in_estimator_region);
 }
 
-void EtaBase::Terminate(TList* outputlist,TList* results){
+void EtaBase::Terminate(TList* outputlist){
   // recover pointers to histograms since they are null on master
   std::cout << "Terminate " << fName << std::endl;
   TList *curr_est = static_cast<TList*>(outputlist->FindObject(GetName()));

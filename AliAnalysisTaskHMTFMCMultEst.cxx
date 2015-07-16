@@ -106,7 +106,7 @@ AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name)
   AliPDG::AddParticlesToPdgDataBase();
 
   DefineOutput(1, TList::Class());
-  DefineOutput(2, TList::Class());
+  //DefineOutput(2, TList::Class());
 }
 
 void AliAnalysisTaskHMTFMCMultEst::AddEstimator(const char* n)
@@ -244,7 +244,7 @@ void AliAnalysisTaskHMTFMCMultEst::Terminate(Option_t *)
   MultiplicityEstimatorBase* e = 0;
   while ((e = static_cast<MultiplicityEstimatorBase*>(nextEst()))) {
     std::cout << "Terminating estimator " << e->GetTitle() << std::endl;
-    e->Terminate(fMyOut, results);
+    e->Terminate(fMyOut);
   }
-  PostData(2, results);
+  PostData(1, fMyOut);
 }
