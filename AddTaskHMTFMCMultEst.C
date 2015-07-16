@@ -14,8 +14,9 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
     "Sums",
     TList::Class(), 
     AliAnalysisManager::kOutputContainer,
-    mgr->GetCommonFileName() );
-  AliAnalysisTaskHMTFMCMultEst *multEstTask = new AliAnalysisTaskHMTFMCMultEst("AliAnalysisTaskHMTFMCMultEst");
+    mgr->GetCommonFileName());
+
+  AliAnalysisTaskHMTFMCMultEst *multEstTask = new AliAnalysisTaskHMTFMCMultEst("TaskHMTFMCMultEst");
   if (!multEstTask) {
       Error("CreateTasks", "Failed to make my task!");  
       return NULL;

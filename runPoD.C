@@ -45,7 +45,7 @@ void runPoD(
   gProof->UploadPackage(aliceVafPar.Data());
   gProof->EnablePackage(aliceVafPar.Data(), list);  // this "list" is the same as always
 
-  AliAnalysisManager *mgr  = new AliAnalysisManager("Analysis Train");
+  AliAnalysisManager *mgr  = new AliAnalysisManager("HMTFMCMultEst");
 
   AliAODInputHandler *aodH = new AliAODInputHandler();
   mgr->SetInputEventHandler(aodH);
