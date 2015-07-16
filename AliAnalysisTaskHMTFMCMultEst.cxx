@@ -134,7 +134,7 @@ void AliAnalysisTaskHMTFMCMultEst::InitEstimators()
 MultiplicityEstimatorBase*
 AliAnalysisTaskHMTFMCMultEst::MakeEstimator(const TString& name)
 {
-  if (name.BeginsWith("Total")) return new EtaBase("Total", "full #eta coverage ", -20, 0.0, 0.0, 20);
+  if (name.BeginsWith("Total")) return new EtaBase("Total", "full #eta coverage ");
   if (name.BeginsWith("EtaLt05")) return new EtaBase("EtaLt05", "| #eta| #leq 0.5", -0.5, 0.0, 0.0, 0.5);
   if (name.BeginsWith("EtaLt08")) return new EtaBase("EtaLt08", "| #eta| #leq 0.8", -0.8, 0.0, 0.0, 0.8);
   if (name.BeginsWith("EtaLt15")) return new EtaBase("EtaLt15", "| #eta| #leq 1.5", -1.5, 0.0, 0.0, 1.5);

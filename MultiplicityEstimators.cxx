@@ -148,7 +148,18 @@ EtaBase::EtaBase(const char* name, const char* title,
 		 Float_t feta_min_forwards, Float_t feta_max_forwards)
   : MultiplicityEstimatorBase(name, title),
     feta_min_backwards(feta_min_backwards), feta_max_backwards(feta_max_backwards),
-    feta_min_forwards(feta_min_forwards), feta_max_forwards(feta_max_forwards)
+    feta_min_forwards(feta_min_forwards), feta_max_forwards(feta_max_forwards),
+    fbypass_eta_selection(false)
+{
+  festimator_bins = 100;
+}
+
+// Constructor for bypassing the eta selection to get the full range
+EtaBase::EtaBase(const char* name, const char* title)
+  : MultiplicityEstimatorBase(name, title),
+    feta_min_backwards(0), feta_max_backwards(0),
+    feta_min_forwards(0), feta_max_forwards(0),
+    fbypass_eta_selection(true)
 {
   festimator_bins = 100;
 }
@@ -167,10 +178,11 @@ void EtaBase::PreEvent(AliMCEvent *event){
 */
 void EtaBase::ProcessTrackForMultiplicityEstimation(AliMCParticle *track){
   if (track->Charge() != 0){
-    if((track->Eta() >= feta_min_backwards &&
+    if(fbypass_eta_selection ||
+       ((track->Eta() >= feta_min_backwards &&
        track->Eta() <= feta_max_backwards) ||
        (track->Eta() >= feta_min_forwards &&
-	track->Eta() <= feta_max_forwards))
+	track->Eta() <= feta_max_forwards)))
       {
 	fnch_in_estimator_region++;
       }

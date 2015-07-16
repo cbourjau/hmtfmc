@@ -85,6 +85,7 @@ class EtaBase : public MultiplicityEstimatorBase {
   EtaBase();
   EtaBase(const char* name, const char* title, Float_t eta_min_backwards, Float_t eta_max_backwards,
 	  Float_t eta_min_forwards, Float_t eta_max_forwards);
+  EtaBase(const char* name, const char* title);
  protected:
   void PreEvent(AliMCEvent* event);
   void ProcessTrackForMultiplicityEstimation(AliMCParticle* track);
@@ -95,6 +96,7 @@ class EtaBase : public MultiplicityEstimatorBase {
   Int_t fn_pid_in_event[kNPID];     // counter for PID'ed particles in this event
   Float_t feta_min_forwards, feta_max_forwards;  // range in eta for mult. estimation (positive values)
   Float_t feta_min_backwards, feta_max_backwards;  // range in eta for mult. estimation (positive values)
+  Bool_t fbypass_eta_selection;  // bypass the eta selection (used to get full eta range
   ClassDef(EtaBase, 1)
 };
 
