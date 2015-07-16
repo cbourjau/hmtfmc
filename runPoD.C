@@ -10,7 +10,7 @@
 
 void runPoD(
   TString dataset = "Find;"
-                    "BasePath=/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1/%/;"
+                    "BasePath=/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1/000%/;"
                     "FileName=root_archive.zip;"
                     "Anchor=galice.root;"
                     "Tree=/TE;"

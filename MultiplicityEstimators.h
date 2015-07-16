@@ -48,7 +48,7 @@ class MultiplicityEstimatorBase : public TNamed {
   virtual void ProcessTrackForMultiplicityEstimation(AliMCParticle* track) = 0;
   virtual void ProcessTrackWithKnownMultiplicity(AliMCParticle* track) = 0;
   virtual void PostEvent() = 0;
-  virtual void Terminate(TList* sum, TList* results) = 0;
+  virtual void Terminate(TList* sum) = 0;
   
  protected:
   /*
@@ -90,7 +90,7 @@ class EtaBase : public MultiplicityEstimatorBase {
   void ProcessTrackForMultiplicityEstimation(AliMCParticle* track);
   void ProcessTrackWithKnownMultiplicity(AliMCParticle *track);
   void PostEvent();
-  void Terminate(TList* sum, TList* results);
+  void Terminate(TList* sum);
   Int_t fnch_in_estimator_region;   // counter for charged particles in current event
   Int_t fn_pid_in_event[kNPID];     // counter for PID'ed particles in this event
   Float_t feta_min_forwards, feta_max_forwards;  // range in eta for mult. estimation (positive values)
