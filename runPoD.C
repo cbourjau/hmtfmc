@@ -1,12 +1,14 @@
-// #include "TList.h"
-// #include "TNamed.h"
-// #include "TProof.h"
-// #include "TROOT.h"
+#ifndef __CINT__
+#include "TList.h"
+#include "TNamed.h"
+#include "TProof.h"
+#include "TROOT.h"
 
-// #include "AliAnalysisManager.h"
-// #include "AliAODInputHandler.h"
+#include "AliAnalysisManager.h"
 
-// #include "AliAnalysisTaskHMTFMCMultEst.h"
+#include "AliAnalysisTaskHMTFMCMultEst.h"
+#include "AddTaskHMTFMCMultEst.C"
+#endif
 
 void runPoD(
   TString dataset = "Find;"
@@ -47,9 +49,15 @@ void runPoD(
 
   AliAnalysisManager *mgr  = new AliAnalysisManager("HMTFMCMultEst");
 
-  AliAODInputHandler *aodH = new AliAODInputHandler();
-  mgr->SetInputEventHandler(aodH);
+  AliVEventHandler* esdH = new AliESDInputHandler;
+  mgr->SetInputEventHandler(esdH);
 
+  // Enable MC event handler
+  AliMCEventHandler* handler = new AliMCEventHandler;
+  handler->SetReadTR(kFALSE);
+  mgr->SetMCtruthEventHandler(handler);
+
+  
   // DON'T use double '+' when running multiple times: it uselessly recompiles everything!
   gProof->Load("MultiplicityEstimators.cxx+");
   gProof->Load("AliAnalysisTaskHMTFMCMultEst.cxx+");  
