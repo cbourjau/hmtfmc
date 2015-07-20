@@ -1,9 +1,10 @@
-//#include "AliAnalysisManager.h"
-
-//#include "AliAnalysisTaskHMTFMCMultEst.h"
+#ifndef __CINT__
+#include "AliAnalysisManager.h"
+#include "AliAnalysisDataContainer.h"
+#include "AliAnalysisTaskHMTFMCMultEst.h"
+#endif
 
 AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
-
   AliAnalysisManager *mgr = AliAnalysisManager::GetAnalysisManager();
   if (!mgr) {
     ::Error("AddTaskHMTFMCMultEst", "No analysis manager to connect to.");
