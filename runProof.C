@@ -4,25 +4,38 @@
 #include "TProof.h"
 #include "TChain.h"
 #include "TObject.h"
+#include "TList.h"
 
 #include "AliAnalysisManager.h"
 #include "AliESDInputHandler.h"
 #endif
 
-void loadLibs(const TString extralibs){
-  // for running with root only
-  gSystem->Load("libTree.so");
-  gSystem->Load("libGeom.so");
-  gSystem->Load("libVMC.so");
-  gSystem->Load("libSTEERBase.so");
-  gSystem->Load("libESD.so");
-  gSystem->Load("libAOD.so"); 
+void loadLibs(const TString extralibs, const TString runmode){
+  if (!(runmode.BeginsWith("pod"))){
+    // for running with root only
+    gSystem->Load("libTree.so");
+    gSystem->Load("libGeom.so");
+    gSystem->Load("libVMC.so");
+    gSystem->Load("libSTEERBase.so");
+    gSystem->Load("libESD.so");
+    gSystem->Load("libAOD.so"); 
 
-  // load extra analysis libs
-  TIter it(extralibs.Tokenize(":"));
-  TObjString *lib = 0;
-  while ((lib = dynamic_cast<TObjString *>(it()))){
-    gSystem->Load(lib->String());
+    // load extra analysis libs
+    TIter it(extralibs.Tokenize(":"));
+    TObjString *lib = 0;
+    while ((lib = dynamic_cast<TObjString *>(it()))){
+      gSystem->Load(lib->String());
+    }
+  }
+  if (runmode.BeginsWith("pod")){
+    TList *list = new TList(); 
+    list->Add(new TNamed("ALIROOT_EXTRA_LIBS", extralibs.Data()));
+    list->Add(new TNamed("ALIROOT_ENABLE_ALIEN", "1"));  // important: creates token on every PROOF worker
+
+    // A single AliRoot package for *all* AliRoot versions: new on VAF
+    TString aliceVafPar = "/afs/cern.ch/alice/offline/vaf/AliceVaf.par";
+    gProof->UploadPackage(aliceVafPar.Data());
+    gProof->EnablePackage(aliceVafPar.Data(), list);  // this "list" is the same as always
   }
 }
 
@@ -44,6 +57,17 @@ TChain* makeChain(const char* incollection) {
     chain->Add(line.Data());
   }
   return chain;
+}
+
+TString getDatasetString() {
+  TString dataset = ("Find;"
+		     "BasePath=/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1/000%/;"
+		     "FileName=root_archive.zip;"
+		     "Anchor=galice.root;"
+		     "Tree=/TE;"
+		     "Mode=remote;"  // <-- much faster dataset creation
+		     );
+  return dataset;
 }
 
 void loadAnalysisFiles(const TString files, TString runmode ) {
@@ -70,6 +94,7 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
 
 void runProof(const TString runmode_str  = "lite",
 	      Int_t max_events = -1,
+	      Int_t first_event= 0,
 	      const char * incollection = "./input/input_files.dat",
 	      const char * analysisName = "hmtf_mc_mult",
 	      const char * aliceExtraLibs=("libANALYSIS:"
@@ -85,10 +110,11 @@ void runProof(const TString runmode_str  = "lite",
     std::cout << "invalid runmode given" << std::endl;
     return;
   }
+  // start proof if necessary
   if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
   else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
   
-  loadLibs(aliceExtraLibs);
+  loadLibs(aliceExtraLibs, runmode_str);
   TChain *chain = makeChain(incollection);
 
   gSystem->AddIncludePath("-I$ALICE_ROOT/include");
@@ -118,6 +144,15 @@ void runProof(const TString runmode_str  = "lite",
 
   if (!mgr->InitAnalysis()) return;
   mgr->PrintStatus();
-  if (runmode_str.BeginsWith("lite")) mgr->StartAnalysis("proof", chain, max_events);
-  else if (runmode_str.BeginsWith("local")) mgr->StartAnalysis("local", chain, max_events);
+  if (!(runmode_str.BeginsWith("pod"))) {
+      // Process with chain
+      TChain *chain = makeChain(incollection);
+      if (runmode_str.BeginsWith("lite")) mgr->StartAnalysis("proof", chain, max_events);
+      else if (runmode_str.BeginsWith("local")) mgr->StartAnalysis("local", chain, max_events);
+    }
+    else {
+      // process with dataset string
+      TString dataset = getDatasetString();
+      mgr->StartAnalysis("proof", dataset, max_events, first_event);
+    }
 }
