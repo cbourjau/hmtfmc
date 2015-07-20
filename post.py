@@ -72,10 +72,9 @@ with root_open(sys.argv[1], 'update') as f_post:
             c = plot_histogram_stack(hs)
             c.name = "dNdeta_summary"
             c.write()
-            quit()
 
             # P(N_ch)
-            h_PN_ch = asrootpy(h_event_counter.clone("PN_ch"))
+            h_PN_ch = asrootpy(h_event_counter.clone("PN_ch_from_event_counter"))
             h_PN_ch.Scale(1.0/h_PN_ch.Integral())
             h_PN_ch.title = "P(N_{ch})" + esti_title
             h_PN_ch.yaxis.title = "P(N_{ch})"
@@ -187,48 +186,52 @@ with root_open(sys.argv[1], 'update') as f:
         pNch_summary = HistStack()  # One HistStack!
         pNch_summary.title = "P(N_{ch}^{est}) summary "
 
-        step_size = 40  # binning in Nch^est
-        ref_ests = ['Total', 'EtaLt05']
+        step_size = 10  # binning in Nch^est
+        ref_ests = ['EtaLt08']
 
         # make ntuples:
         nt0 = f.Sums[0].FindObject("fevent_counter")
         nt0.SetAlias(f.Sums[0].GetName(), "fevent_counter")
-        previous_estimator_names = [f.Sums[0].GetName(), ]
+        #previous_estimator_names = [f.Sums[0].GetName(), ]
         for est_dir in f.Sums[1:]:
             nt0.AddFriend(est_dir.FindObject("fevent_counter"), est_dir.GetName())
         for est_dir in f.Sums:
             ############################################################
             # Summary plot:
-            name = "PNch_"+est_dir.GetName()
+            name = "PNch_"+est_dir.GetName()+ postfix
             axis_title = ";N_{ch}^{est}"
             h_summary = Hist1D(200, 0, 400, name=name,
                                title=est_dir.GetName() + axis_title)
             nt0.Project(h_summary.name,
-                        "{}.nch".format(est_dir.GetName()))
+                        "{}.nch".format(est_dir.GetName()),
+                        "{}.ev_weight".format(est_dir.GetName()))
             h_summary.Scale(1.0/h_summary.Integral())
             pNch_summary.Add(h_summary)
 
             #############################################################
-            # Plot binned in mult_est vs. mutl_total
+            # Plot binned in mult_ref vs. mutl_est
             for ref_est in ref_ests:
                 axis_title = ";N_{{ch}}^{{{}}}".format(ref_est)
                 pNch_per_est_vs_total = HistStack()
                 hists = []
-                pNch_per_est_vs_total.title = "P(N_{{ch}}^{}) for {}".format(ref_est, est_dir.GetName())
+                pNch_per_est_vs_total.title = "P(N_{{ch}}^{{{}}}) for {}".format(ref_est, est_dir.GetName())
                 for nch_est_min in range(0, 401, step_size):
                     nch_est_max = nch_est_min + step_size
-                    name = "PNch_{}_lt_mult_tot_lt_{}".format(nch_est_min, nch_est_max)
-                    h_tmp = Hist1D(50, 0, 100, name=name)
-                    h_tmp.title = "{} < N_{{ch}}^{{est}} < {}".format(nch_est_min, nch_est_max) + axis_title
+                    name = "PNch_{}_lt_mult_ref_lt_{}".format(nch_est_min, nch_est_max)
+                    h_tmp = Hist1D(200, 0, 400, name=name)
+                    h_tmp.title = "{} < N_{{ch}}^{} < {}".\
+                         format(nch_est_min, est_dir.GetName(), nch_est_max) + axis_title
                     nt0.Project(h_tmp.name,
                                 "{}.nch".format(est_dir.GetName()),
-                                "{0} < {2}.nch && {2}.nch < {1}".format(nch_est_min, nch_est_max, ref_est))
+                                "{2}.ev_weight*({0} < {2}.nch && {2}.nch < {1})".format(nch_est_min, nch_est_max, ref_est))
                     try:
                         h_tmp.Scale(1.0/h_tmp.Integral())
                     except ZeroDivisionError:
                         pass
-                    pNch_per_est_vs_total.Add(h_tmp)
-                    hists.append(h_tmp)
+                    else:
+                        # only add to stack if there are values in this Nch interval
+                        pNch_per_est_vs_total.Add(h_tmp)
+                        hists.append(h_tmp)
                 c = plot_histogram_stack(pNch_per_est_vs_total)
                 c.name = "PNch_vs_mult_{}_for_{}".format(ref_est, est_dir.GetName())
                 c.FindObject("plot").SetLogy(1)
@@ -311,8 +314,8 @@ with root_open(sys.argv[1], 'update') as f:
     for est_dir in f.Sums[1:]:
         nt0.AddFriend(est_dir.FindObject("fevent_counter"), est_dir.GetName())
         for est_name in previous_estimator_names:
-            corr_hist = Hist2D(200, 0, 200,
-                               200, 0, 200,
+            corr_hist = Hist2D(200, 0, 400,
+                               200, 0, 400,
                                name="corr_hist_{}_vs_{}".format(est_name, est_dir.GetName()))
             # Lables are deliberatly swaped, see Projection below!
             corr_hist.title = ("Correlation N_{{ch}} in {0} and {1};N_{{ch}} {1};N_{{ch}} {0}"\
