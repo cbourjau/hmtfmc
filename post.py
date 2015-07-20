@@ -256,8 +256,8 @@ with root_open(sys.argv[1], 'update') as f:
         # the cannonical average for all _other_ estimators later on
         # P(N_ch): one stack containing all estimators!
         dNdeta_stacks = []        # List of stacks!
-        pNch_stack = HistStack()  # One HistStack!
-        pNch_stack.name = "P(N_{ch}^{est}) summary "
+        #pNch_stack = HistStack()  # One HistStack!
+        #pNch_stack.name = "P(N_{ch}^{est}) summary "
         for est_dir in f.Sums:
             dNdeta_stacks.append(asrootpy(f.Get("results_post")\
                                    .Get(est_dir.GetName() + postfix)\
