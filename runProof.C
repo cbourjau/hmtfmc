@@ -7,6 +7,7 @@
 #include "TList.h"
 
 #include "AliAnalysisManager.h"
+#include "AliMCEventHandler.h"
 #include "AliESDInputHandler.h"
 #endif
 
@@ -102,7 +103,7 @@ void runProof(const TString runmode_str  = "lite",
 					   "libpythia6_4_25"),
 	      const char * analysisFiles=("MultiplicityEstimators.cxx+g:"
 					  "AliAnalysisTaskHMTFMCMultEst.cxx+g"),
-	      const TString addAnalysisFiles=("AddTaskHMTFMCMultEst.C"))
+	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
        runmode_str.BeginsWith("lite") ||
@@ -113,14 +114,15 @@ void runProof(const TString runmode_str  = "lite",
   // start proof if necessary
   if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
   else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
-  
-  loadLibs(aliceExtraLibs, runmode_str);
-  TChain *chain = makeChain(incollection);
 
   gSystem->AddIncludePath("-I$ALICE_ROOT/include");
+  loadLibs(aliceExtraLibs, runmode_str);
 
   // Create  and setup the analysis manager
   AliAnalysisManager *mgr = new AliAnalysisManager(analysisName);
+  // Enable debug printouts
+  mgr->SetDebugLevel(0);
+
   mgr->SetCommonFileName(TString(analysisName) + TString(".root"));
 
   // Set Handlers
@@ -133,22 +135,26 @@ void runProof(const TString runmode_str  = "lite",
   loadAnalysisFiles(analysisFiles, runmode_str);
 
   // Add tasks
-  TIter it(addAnalysisFiles.Tokenize(":"));
+  TIter it(adderFiles.Tokenize(":"));
   TObjString *adder = 0;
   while ((adder = dynamic_cast<TObjString *>(it()))){
     mgr->AddTask(reinterpret_cast<AliAnalysisTask*>(gROOT->Macro(adder->String())));    
   }
 
-  // Enable debug printouts
-  mgr->SetDebugLevel(0);
-
   if (!mgr->InitAnalysis()) return;
   mgr->PrintStatus();
+
   if (!(runmode_str.BeginsWith("pod"))) {
       // Process with chain
       TChain *chain = makeChain(incollection);
+
       if (runmode_str.BeginsWith("lite")) mgr->StartAnalysis("proof", chain, max_events);
-      else if (runmode_str.BeginsWith("local")) mgr->StartAnalysis("local", chain, max_events);
+
+      else if (runmode_str.BeginsWith("local")) {
+	// in order to be inconvinient, aliroot does interprete max_events differently for proof and local :P
+	if (max_events == -1) mgr->StartAnalysis("local", chain);
+	else mgr->StartAnalysis("local", chain, max_events);
+      }
     }
     else {
       // process with dataset string
