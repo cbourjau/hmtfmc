@@ -124,9 +124,9 @@ void AliAnalysisTaskHMTFMCMultEst::InitEstimators()
   TObjArray* arr = fEstimatorNames.Tokenize(",");
   TObject*   obj = 0;
   TIter      next(arr);
+  std::cout << "Init estimators... " << std::endl;
   while ((obj = next())) {
     MultiplicityEstimatorBase* e = MakeEstimator(obj->GetName());
-    std::cout << "Init estimtor: " << obj->GetName() << std::endl;
     fEstimatorsList->Add(e);
   }
 }
@@ -242,8 +242,8 @@ void AliAnalysisTaskHMTFMCMultEst::Terminate(Option_t *)
 
   TIter nextEst(fEstimatorsList);
   MultiplicityEstimatorBase* e = 0;
+  std::cout << "Terminating estimators..." << std::endl;
   while ((e = static_cast<MultiplicityEstimatorBase*>(nextEst()))) {
-    std::cout << "Terminating estimator " << e->GetTitle() << std::endl;
     e->Terminate(fMyOut);
   }
   PostData(1, fMyOut);
