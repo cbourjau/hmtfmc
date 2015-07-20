@@ -76,17 +76,19 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
   // first file in string is loaded first (OBS: dependencies)
   // The function does the right thing regardless if local, lite or pod
   // Do not use ++ in the string to avoid unnecessary recompiles on nodes
-  
+
+  // Set the include directories
+  // gProof is without -I :P and gSystem has to be set for all runmodes
+  gSystem->AddIncludePath("-I$ALICE_ROOT/include");
+  if (runmode.BeginsWith("lite")) gProof->AddIncludePath("$ALICE_ROOT/include", kTRUE);
+
+  // loop over analysis files given by the user
   TIter it(files.Tokenize(":"));
   TObjString *lib = 0;
   while ((lib = dynamic_cast<TObjString *>(it()))){
     Int_t status;
-    if (runmode.BeginsWith("local")){
-      status = gROOT->LoadMacro(lib->String());
-    }
-    else {
-      status = gProof->Load(lib->String());
-    }
+    if (runmode.BeginsWith("local")) status = gROOT->LoadMacro(lib->String());
+    else status = gProof->Load(lib->String());
     if (status !=0){
 	std::cout << "Error loading " << lib->String() << std::endl;
     }
@@ -115,7 +117,6 @@ void runProof(const TString runmode_str  = "lite",
   if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
   else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
 
-  gSystem->AddIncludePath("-I$ALICE_ROOT/include");
   loadLibs(aliceExtraLibs, runmode_str);
 
   // Create  and setup the analysis manager
