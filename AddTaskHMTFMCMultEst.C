@@ -19,16 +19,25 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
 
   AliAnalysisTaskHMTFMCMultEst *multEstTask = new AliAnalysisTaskHMTFMCMultEst("TaskHMTFMCMultEst");
   if (!multEstTask) {
-      Error("CreateTasks", "Failed to make my task!");  
+      Error("CreateTasks", "Failed to add task!");
       return NULL;
   }
   // add estimators:
+  multEstTask->AddEstimator("Total");
   multEstTask->AddEstimator("EtaLt05");
+  multEstTask->AddEstimator("EtaLt08");
+  multEstTask->AddEstimator("EtaLt15");
+  multEstTask->AddEstimator("Eta08_15");
+  multEstTask->AddEstimator("V0A");
+  multEstTask->AddEstimator("V0M");
 
   mgr->AddTask(multEstTask);
-
+  AliAnalysisDataContainer *inputContainer = mgr->GetCommonInputContainer();
+  if(!inputContainer) {
+      Error("CreateTasks", "No input container available. Failed to add task!");
+      return NULL;
+  }
   mgr->ConnectInput(multEstTask, 0, mgr->GetCommonInputContainer());
   mgr->ConnectOutput(multEstTask, 1, coutput1);
-
   return multEstTask;
 }
