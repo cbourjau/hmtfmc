@@ -96,13 +96,15 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
 }
 
 void runProof(const TString runmode_str  = "lite",
-	      Int_t max_events = 999999999,
+	      Int_t max_events = -1,
 	      Int_t first_event= 0,
 	      const char * incollection = "./input/input_files.dat",
 	      const char * analysisName = "hmtf_mc_mult",
 	      const char * aliceExtraLibs=("libANALYSIS:"
 					   "libANALYSISalice:"
-					   "libpythia6_4_25"),
+					   "libpythia6_4_25:"
+					   "libAliPythia6"
+					   ),
 	      const char * analysisFiles=("MultiplicityEstimators.cxx+g:"
 					  "AliAnalysisTaskHMTFMCMultEst.cxx+g"),
 	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
