@@ -40,11 +40,11 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
   Int_t ist = p->GetStatusCode();
 
   // Initial state particle
-  if (ist > 1) return kFALSE;
-    
-  Int_t pdg = TMath::Abs(p->GetPdgCode());
+  //if (ist > 1) return kFALSE; // pi0 are not initial state (?)
   // pi0 are unstable and thus this returned false in the original implementation.
   //if (!stack->IsStable(pdg)) return kFALSE;
+
+  Int_t pdg = TMath::Abs(p->GetPdgCode());
 
   // The function is only for pi0's so I'm out of here if its not a pi'0 we are looking at
   if (pdg != kPi0) return kFALSE;
@@ -209,7 +209,8 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
       Printf("ERROR: Could not receive track %d", iTrack);
       continue;
     }
-    if (mcEvent->Stack()->IsPhysicalPrimary(iTrack)){
+    if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
+	IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
       for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
 	festimators[i]->ProcessTrackWithKnownMultiplicity(track);
       }//estimator loop
