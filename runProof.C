@@ -69,7 +69,7 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
 }
 
 void runProof(const TString runmode_str  = "lite",
-	      Int_t max_events = 1000,
+	      Int_t max_events = -1,
 	      const char * incollection = "./input/input_files.dat",
 	      const char * analysisName = "hmtf_mc_mult",
 	      const char * aliceExtraLibs=("libANALYSIS:"
@@ -85,9 +85,8 @@ void runProof(const TString runmode_str  = "lite",
     std::cout << "invalid runmode given" << std::endl;
     return;
   }
-  if (runmode_str.BeginsWith("lite")){
-    TProof::Open("lite://");
-  }
+  if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
+  else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
   
   loadLibs(aliceExtraLibs);
   TChain *chain = makeChain(incollection);
