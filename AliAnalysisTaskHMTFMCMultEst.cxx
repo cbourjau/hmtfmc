@@ -186,7 +186,8 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
     festimators[i]->PreEvent(mcEvent);
   }//estimator loop
 
-  // Track loop for establishing multiplicity
+  // Track loop for establishing multiplicity and checking for INEL > 0
+  Bool_t isINEL_lt_0(kFALSE);
   for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
     AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
     if (!track) {
@@ -196,6 +197,7 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
     // Pass the particle on to the estimators if it is a primary. Extra check for pi0's is needed since they are unstable
     if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
 	IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
+      if (TMath::Abs(track->Eta()) < 1) isINEL_lt_0 = kTRUE;
       for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
 	festimators[i]->ProcessTrackForMultiplicityEstimation(track);
       }//estimator loop
@@ -203,25 +205,27 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
   }  //track loop
 
   // Track loop with known multiplicity in each estimator
-  for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
-    AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
-    if (!track) {
-      Printf("ERROR: Could not receive track %d", iTrack);
-      continue;
-    }
-    if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
-	IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
-      for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
-	festimators[i]->ProcessTrackWithKnownMultiplicity(track);
-      }//estimator loop
-    }
-  }  //track loop
-
-  // Increment eventcounters etc.
-  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
-    festimators[i]->PostEvent();
-  }//estimator loop
-
+  // Skip this if event is not INEL>0
+  if (isINEL_lt_0){
+    for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
+      AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
+      if (!track) {
+	Printf("ERROR: Could not receive track %d", iTrack);
+	continue;
+      }
+      if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
+	  IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
+	for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
+	  festimators[i]->ProcessTrackWithKnownMultiplicity(track);
+	}//estimator loop
+      }
+    }  //track loop
+  
+    // Increment eventcounters etc.
+    for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
+      festimators[i]->PostEvent();
+    }//estimator loop
+  }
   // Post output data.
   PostData(1, fMyOut);
 }      
