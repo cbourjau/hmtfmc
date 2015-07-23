@@ -1,5 +1,5 @@
 from rootpy import asrootpy
-from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D
+from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D, Graph
 import ROOT
 
 
@@ -52,7 +52,7 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
             continue
         tmp.name = tmp.name + str(ibin)
         tmp.set_title(str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
-                      + '#leq N_{ch} #leq '
+                      + '#leq N_{ch}^{est} #leq '
                       + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
         stack.Add(tmp)
     return stack
@@ -85,6 +85,43 @@ def plot_histogram_stack(stack):
     stack.Draw('nostack')
     stack.xaxis.SetTitle(stack.GetHists()[0].GetXaxis().GetTitle())
     stack.yaxis.SetTitle(stack.GetHists()[0].GetYaxis().GetTitle())
+    c.cd()
+    pad2.cd()
+    leg.Draw()
+    return c
+
+def plot_list_of_plottables(l, title=''):
+    """
+    Plot the plottable objects, given as a list in a nice graph with legend. Legend is the plottables' titles.
+    `title` is an optional title for the entire plot.
+    """
+    c = Canvas(width=1620, height=1000)
+    pad1 = Pad(0., 0., .62, 1., name="plot")
+    pad2 = Pad(.62, 0, 1., 1., name="legend")
+    pad1.Draw()
+    pad2.Draw()
+    ntot = len(l)
+
+    c.cd()
+    pad1.cd(0)
+    leg = Legend(entries=ntot, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04)
+    leg.SetBorderSize(0)
+    #maximum, minimum = 0, 0  # extreme values of all plottables
+    isfirst = True           # switch to turn on drawingoption 'same'
+    for i, p in enumerate(l):
+        p.color = 800 + int(100.0/len(l))*(i) + 1
+        p.markerstyle = 'circle'
+        leg.AddEntry(p)
+        # if p.GetMaximum() > maximum:
+        #    maximum = p.GetMaximum()
+        if isfirst:
+            p.title = title
+            p.Draw()
+        else:
+            p.Draw('same')
+    # stack.SetMaximum(maximum + maximum * 0.1)
+    # stack.xaxis.SetTitle(stack.GetHists()[0].GetXaxis().GetTitle())
+    # stack.yaxis.SetTitle(stack.GetHists()[0].GetYaxis().GetTitle())
     c.cd()
     pad2.cd()
     leg.Draw()
@@ -171,3 +208,36 @@ def divide_stacks(stack1, stack2):
         outstack.Add(tmp)
     outstack.Draw('nostack')
     return outstack
+
+
+def create_graph_pided_refest_vs_pidcount(h3d, corr_hist, pids):
+    """Creates a graph with the count of the given pids (iterable) vs Nch of the REF mult.
+    The mapping from Nch_est to Nch_ref is done using the correlation hist. 
+    The ref est needs to be on the y axis of the correlation histogram.
+    pids are given as strings.
+    """
+    profx = asrootpy(corr_hist.ProfileX())
+    graphs =[]
+    for pid in pids:
+        # set pid
+        graphs.append(Graph())
+        pid_bin = h3d.zaxis.find_bin(pid)
+        if pid_bin==0:
+            raise ValueError("given pid does not exist")
+        h3d.GetZaxis().SetRange(pid_bin, pid_bin)
+
+        h2d = h3d.Project3D("yx", )
+        count = asrootpy(h2d.ProjectionX())
+        # start counting at 1 since the first bin is empty with INEL>0
+        prof_bins = [b for b in profx.bins()]
+        count_bins= [b for b in count.bins()]
+        for i, (nch_ref_bin, counter_bin) in enumerate(zip(prof_bins[1:], count_bins[1:])): 
+            if (counter_bin.value == 0.0):
+                break
+            graphs[-1].SetPoint(i, nch_ref_bin.value, counter_bin.value)
+            xerr, yerr = nch_ref_bin.error/2,counter_bin.error/2
+            graphs[-1].SetPointError(i,xerr, xerr,yerr, yerr)
+    sgraphs = sum(graphs)
+    sgraphs.title = ", ".join(pids)
+    sgraphs.xaxis.title = "N_{{ch}}^{{{}}}".format(corr_hist.yaxis.title[7:])
+    return sgraphs
