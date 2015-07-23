@@ -94,14 +94,16 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
 
 
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
-: AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0) 
+  : AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
+    festimators(0)
 {
 
 }
 
 //________________________________________________________________________
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name) 
-  : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0)
+  : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
+    festimators(0)
 {
   AliPDG::AddParticlesToPdgDataBase();
 
