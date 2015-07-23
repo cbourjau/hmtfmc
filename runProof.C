@@ -12,7 +12,7 @@
 #endif
 
 void loadLibs(const TString extralibs, const TString runmode){
-  if (!(runmode.BeginsWith("pod"))){
+  if ((runmode.BeginsWith("local"))){
     // for running with root only
     gSystem->Load("libTree.so");
     gSystem->Load("libGeom.so");
@@ -25,18 +25,29 @@ void loadLibs(const TString extralibs, const TString runmode){
     TIter it(extralibs.Tokenize(":"));
     TObjString *lib = 0;
     while ((lib = dynamic_cast<TObjString *>(it()))){
-      gSystem->Load(lib->String());
+      if (gSystem->Load(lib->String()) < 0) {
+	std::cout << "Error loading " << lib->String() << std::endl;
+      }
     }
   }
-  if (runmode.BeginsWith("pod")){
-    TList *list = new TList(); 
+  else{
+    TList *list = new TList();
     list->Add(new TNamed("ALIROOT_EXTRA_LIBS", extralibs.Data()));
-    list->Add(new TNamed("ALIROOT_ENABLE_ALIEN", "1"));  // important: creates token on every PROOF worker
-
-    // A single AliRoot package for *all* AliRoot versions: new on VAF
-    TString aliceVafPar = "/afs/cern.ch/alice/offline/vaf/AliceVaf.par";
-    gProof->UploadPackage(aliceVafPar.Data());
-    gProof->EnablePackage(aliceVafPar.Data(), list);  // this "list" is the same as always
+    TString alicePar;
+    
+    if ((runmode.BeginsWith("lite"))){
+      alicePar  = "$ALICE_ROOT/ANALYSIS/macros/AliRootProofLite.par";
+    }
+    
+    if (runmode.BeginsWith("pod")){
+      // A single AliRoot package for *all* AliRoot versions: new on VAF
+      alicePar = "/afs/cern.ch/alice/offline/vaf/AliceVaf.par";
+      list->Add(new TNamed("ALIROOT_ENABLE_ALIEN", "1"));  // important: creates token on every PROOF worker
+    }
+    gProof->UploadPackage(alicePar.Data());
+    gProof->EnablePackage(alicePar.Data(), list);  // this "list" is the same as always
+    std::cout << "enabled packages: " << std::endl;
+    gProof->ShowEnabledPackages();
   }
 }
 
@@ -60,14 +71,26 @@ TChain* makeChain(const char* incollection) {
   return chain;
 }
 
-TString getDatasetString() {
-  TString dataset = ("Find;"
-		     "BasePath=/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1/%/;"
-		     "FileName=root_archive.zip;"
-		     "Anchor=galice.root;"
-		     "Tree=/TE;"
-		     "Mode=remote;"  // <-- much faster dataset creation
-		     );
+TString getDatasetString(const char* incollection) {
+  TString dataset("");
+  if (TString(incollection).BeginsWith("pythia")){
+    TString dataset = ("Find;"
+		       "BasePath=/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1/%/;"
+		       "FileName=root_archive.zip;"
+		       "Anchor=galice.root;"
+		       "Tree=/TE;"
+		       "Mode=remote;"  // <-- much faster dataset creation
+		       );
+  }
+  else if (TString(incollection).BeginsWith("phojet")){
+    TString dataset = ("Find;"
+		       "BasePath=/alice/cern.ch/user/p/pwgpp_mc/2015/17_Week/TestMultiplicity/Test2/Test_1M_events_iter1/%/;"
+		       "FileName=root_archive.zip;"
+		       "Anchor=galice.root;"
+		       "Tree=/TE;"
+		       "Mode=remote;"  // <-- much faster dataset creation
+		       );
+  }
   return dataset;
 }
 
@@ -97,16 +120,17 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
 
 void runProof(const TString runmode_str  = "lite",
 	      Int_t max_events = -1,
-	      Int_t first_event= 0,
+	      //Int_t first_event= 0,
+	      Int_t debug = 0,
 	      const char * incollection = "./input/input_files.dat",
 	      const char * analysisName = "hmtf_mc_mult",
-	      const char * aliceExtraLibs=("libANALYSIS:"
-					   "libANALYSISalice:"
+	      const char * aliceExtraLibs=(//"libANALYSIS:"
+					   //"libANALYSISalice:"
 					   "libpythia6_4_25:"
 					   "libAliPythia6"
 					   ),
-	      const char * analysisFiles=("MultiplicityEstimators.cxx+g:"
-					  "AliAnalysisTaskHMTFMCMultEst.cxx+g"),
+	      const char * analysisFiles=("MultiplicityEstimators.cxx+:"
+					  "AliAnalysisTaskHMTFMCMultEst.cxx+"),
 	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
@@ -123,8 +147,10 @@ void runProof(const TString runmode_str  = "lite",
 
   // Create  and setup the analysis manager
   AliAnalysisManager *mgr = new AliAnalysisManager(analysisName);
+
   // Enable debug printouts
-  mgr->SetDebugLevel(0);
+  mgr->SetDebugLevel(debug);
+  
 
   mgr->SetCommonFileName(TString(analysisName) + TString(".root"));
 
@@ -141,7 +167,8 @@ void runProof(const TString runmode_str  = "lite",
   TIter it(adderFiles.Tokenize(":"));
   TObjString *adder = 0;
   while ((adder = dynamic_cast<TObjString *>(it()))){
-    mgr->AddTask(reinterpret_cast<AliAnalysisTask*>(gROOT->Macro(adder->String())));    
+    // adder files include logic to add the task to the manager, no need to do it again here
+    gROOT->Macro(adder->String());    
   }
 
   if (!mgr->InitAnalysis()) return;
@@ -161,7 +188,7 @@ void runProof(const TString runmode_str  = "lite",
     }
     else {
       // process with dataset string
-      TString dataset = getDatasetString();
+      TString dataset = getDatasetString(incollection);
       mgr->StartAnalysis("proof", dataset, max_events, first_event);
     }
 }
