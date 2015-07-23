@@ -222,7 +222,7 @@ def _make_PNch_plots():
                 nt0.AddFriend(est_dir.FindObject("fevent_counter"), est_dir.GetName())
             for est_dir in f.Sums:
                 ############################################################
-                # Summary plot:
+                # Summary plot P(Nch^{est}):
                 name = "PNch_"+est_dir.GetName()+ postfix
                 axis_title = ";N_{ch}^{est}"
                 h_summary = Hist1D(400, 0, 400, name=name,
@@ -236,34 +236,60 @@ def _make_PNch_plots():
                 #############################################################
                 # Plot binned in mult_ref vs. mutl_est and vice versa
                 for ref_est in ref_ests:
-                    axis_title = ";N_{{ch}}^{{{}}}".format(ref_est)
+                    axis_title_vs_ref = ";N_{{ch}}^{{{}}}".format(ref_est)
+                    axis_title_vs_est = ";N_{{ch}}^{{{}}}".format(est_dir.GetName())
                     pNch_ref_binned_Nch_est = HistStack()
-                    hists = []
+                    pNch_est_binned_Nch_ref = HistStack()
                     pNch_ref_binned_Nch_est.title = "P(N_{{ch}}^{{{}}}) binned in N_{{ch}}^{{{}}}"\
                                                     .format(ref_est, est_dir.GetName())
-                    for nch_est_min in range(0, 401, step_size):
-                        nch_est_max = nch_est_min + step_size
-                        name = "PNch_{}_lt_mult_ref_lt_{}".format(nch_est_min, nch_est_max)
-                        h_tmp = Hist1D(400, 0, 400, name=name)
-                        h_tmp.title = "{} < N_{{ch}}^{{{}}} < {}".\
-                             format(nch_est_min, est_dir.GetName(), nch_est_max) + axis_title
-                        nt0.Project(h_tmp.name,
+                    pNch_est_binned_Nch_ref.title = "P(N_{{ch}}^{{{}}}) binned in N_{{ch}}^{{{}}}"\
+                                           .format(est_dir.GetName(), ref_est)
+
+                    for nch_interv_min in range(0, 401, step_size):
+                        nch_interv_max = nch_interv_min + step_size
+                        name = "PNch_{}_lt_mult_ref_lt_{}".format(nch_interv_min, nch_interv_max)
+                        h_tmp_vs_ref = Hist1D(400, 0, 400, name=name)
+                        name = "PNch_{}_lt_mult_est_lt_{}".format(nch_interv_min, nch_interv_max)
+                        h_tmp_vs_est = Hist1D(400, 0, 400, name=name)
+                        h_tmp_vs_ref.title = "{} < N_{{ch}}^{{{}}} < {}".\
+                                             format(nch_interv_min, est_dir.GetName(), nch_interv_max) + axis_title_vs_ref
+                        h_tmp_vs_est.title = "{} < N_{{ch}}^{{{}}} < {}".\
+                                             format(nch_interv_min, ref_est, nch_interv_max) + axis_title_vs_est
+                        nt0.Project(h_tmp_vs_ref.name,
                                     "{}.nch".format(ref_est),
                                     "{2}.ev_weight*({0} < {2}.nch && {2}.nch < {1})"\
-                                    .format(nch_est_min, nch_est_max, est_dir.GetName()))
+                                    .format(nch_interv_min, nch_interv_max, est_dir.GetName()))
+                        nt0.Project(h_tmp_vs_est.name,
+                                    "{}.nch".format(est_dir.GetName()),
+                                    "{2}.ev_weight*({0} < {2}.nch && {2}.nch < {1})"\
+                                    .format(nch_interv_min, nch_interv_max, ref_est))
                         try:
-                            h_tmp.Scale(1.0/h_tmp.Integral())
+                            h_tmp_vs_ref.Scale(1.0/h_tmp_vs_ref.Integral())
                         except ZeroDivisionError:
                             pass
                         else:
                             # only add to stack if there are values in this Nch interval
-                            pNch_ref_binned_Nch_est.Add(h_tmp)
-                            hists.append(h_tmp)
+                            pNch_ref_binned_Nch_est.Add(h_tmp_vs_ref)
+                        try:
+                            h_tmp_vs_est.Scale(1.0/h_tmp_vs_est.Integral())
+                        except ZeroDivisionError:
+                            pass
+                        else:
+                            # only add to stack if there are values in this Nch interval
+                            pNch_est_binned_Nch_ref.Add(h_tmp_vs_est)
+                    f.results_post.cd(est_dir.GetName() + postfix)
+                    # plot vs ref mult 
                     c = plot_histogram_stack(pNch_ref_binned_Nch_est)
                     c.name = "PNch{}_binned_in_Nch{}".format(ref_est, est_dir.GetName())
                     c.FindObject("plot").SetLogy(1)
-                    f.results_post.cd(est_dir.GetName() + postfix)
                     c.write()
+
+                    # plot vs est mult 
+                    c = plot_histogram_stack(pNch_est_binned_Nch_ref)
+                    c.name = "PNch{}_binned_in_Nch{}".format(est_dir.GetName(), ref_est)
+                    c.FindObject("plot").SetLogy(1)
+                    c.write()
+
 
             # Write summary to disk
             c = plot_histogram_stack(pNch_summary)
@@ -410,11 +436,11 @@ if __name__ == "__main__":
     rebin_mult = 10
     ref_ests = ['EtaLt05',]
     postfixes = ["",]  # "_unweighted"]
-    #_reset_results_dir()
-    #_make_dNdeta_and_event_counter()
-    #_make_hists_vs_pt()
+    _reset_results_dir()
+    _make_dNdeta_and_event_counter()
+    _make_hists_vs_pt()
     _make_PNch_plots()
     #_make_dNdeta_andPNch_ratio_plots()
-    #_make_correlation_plots()
+   # _make_correlation_plots()
     #_make_pid_ratio_plots()
 
