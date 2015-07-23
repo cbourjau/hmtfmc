@@ -87,7 +87,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
       new TH3F("festi_pT_pid" + postfix,
 	       Form("Event class vs. p_{T} vs. pid, %s", GetTitlePostfix().Data()),
 	       festimator_bins, 0.0, festimator_bins,
-	       20, 0, 20,
+	       400, 0, 20,
 	       kNPID, -.5, kNPID - 0.5);
     festi_pT_pid[weighted_or_not]->GetXaxis()->SetTitle("Multiplicity");
     festi_pT_pid[weighted_or_not]->GetYaxis()->SetTitle("p_{T} [GeV]}");
@@ -151,7 +151,7 @@ EtaBase::EtaBase(const char* name, const char* title,
     feta_min_forwards(feta_min_forwards), feta_max_forwards(feta_max_forwards),
     fbypass_eta_selection(false)
 {
-  festimator_bins = 100;
+  festimator_bins = 400;
 }
 
 // Constructor for bypassing the eta selection to get the full range
@@ -161,7 +161,7 @@ EtaBase::EtaBase(const char* name, const char* title)
     feta_min_forwards(0), feta_max_forwards(0),
     fbypass_eta_selection(true)
 {
-  festimator_bins = 100;
+  festimator_bins = 400;
 }
 
 void EtaBase::PreEvent(AliMCEvent *event){
