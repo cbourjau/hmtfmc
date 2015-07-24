@@ -1,3 +1,4 @@
+from array import array
 from rootpy import asrootpy
 from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D, Graph
 import ROOT
@@ -13,16 +14,20 @@ def create_dNdeta_stack(h2d, event_counter):
     nbins = h2d.yaxis.GetNbins()
     for mult_bin in range(1, nbins):
         h2d.yaxis.set_range(mult_bin, mult_bin)
-        stack.Add(asrootpy(h2d.projection_x()))
+        h = asrootpy(h2d.projection_x())
+
         # named colors of the ROOT TColor colorwheel are between 800 and 900, +1 to make them look better
-        stack[-1].color = 800 + int(100.0/nbins)*(mult_bin-1) + 1
-        stack[-1].name = str(mult_bin)
-        stack[-1].title = (str(h2d.yaxis.get_bin_low_edge(mult_bin))
+        h.color = 800 + int(100.0/nbins)*(mult_bin-1) + 1
+        h.name = str(mult_bin)
+        h.title = (str(h2d.yaxis.get_bin_low_edge(mult_bin))
                            +' #leq N_{ch} #leq ' +
                            str(h2d.yaxis.get_bin_up_edge(mult_bin)))
         # scale by the number of events in this mult_bin
-        # import ipdb; ipdb.set_trace()
-        stack[-1].Scale(1.0/float(event_counter.Integral(mult_bin, mult_bin)))
+        try:
+            h.Scale(1.0/float(event_counter.Integral(mult_bin, mult_bin)))
+        except ZeroDivisionError:
+            break
+        stack.Add(h)
     stack.Draw('nostack')
     stack.xaxis.SetTitle("#eta")
     stack.yaxis.SetTitle('1/N dN_{ch}/d#eta')
@@ -48,13 +53,19 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
     for ibin in range(1, n_mult_classes):
         pid_sum_hist.yaxis.set_range(ibin, ibin)
         tmp = asrootpy(pid_sum_hist.projection_x())
-        if tmp.GetEntries() < 1:
+        # skip if there are too few entries
+        if tmp.GetEntries() < 1000:
             continue
-        tmp.name = tmp.name + str(ibin)
-        tmp.set_title(str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
-                      + '#leq N_{ch}^{est} #leq '
-                      + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
-        stack.Add(tmp)
+        # rebin with davids binning
+        bin_edges = [0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8, 0.9,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.,
+                     2.2,2.4,2.6,2.8,3.0,3.3,3.6,3.9,4.2,4.6,5,5.4,5.9,
+                     6.5,7,7.5,8,8.5,9.2,10,11,12,13.5,15,17,20]
+        tmp_rebinned = asrootpy(tmp.rebin(len(bin_edges)-1, tmp.name+"rebinned", array("d", bin_edges)))
+        tmp_rebinned.name = tmp_rebinned.name + str(ibin)
+        tmp_rebinned.set_title(str(pid_sum_hist.yaxis.get_bin_low_edge(ibin))
+                               + '#leq N_{ch}^{est} #leq '
+                               + str(pid_sum_hist.yaxis.get_bin_up_edge(ibin)))
+        stack.Add(tmp_rebinned)
     return stack
 
 
@@ -64,15 +75,17 @@ def plot_histogram_stack(stack):
     """
     stack = asrootpy(stack)
     c = Canvas()
-    pad1 = Pad(0., 0., .7, 1., name="plot")
-    pad2 = Pad(.7, 0, 1., 1., name="legend")
+    pad1 = Pad(0., 0., .8, 1., name="plot")
+    pad2 = Pad(.8, 0, 1., 1., name="legend")
+    pad2.SetLeftMargin(.03)
     pad1.Draw()
     pad2.Draw()
+
     nesti = len(stack.GetHists())
 
     c.cd()
     pad1.cd(0)
-    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04)
+    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04, textsize=.1)
     leg.SetBorderSize(0)
     maximum = 0
     for mult_bin, h in enumerate(stack):
@@ -95,16 +108,17 @@ def plot_list_of_plottables(l, title=''):
     Plot the plottable objects, given as a list in a nice graph with legend. Legend is the plottables' titles.
     `title` is an optional title for the entire plot.
     """
-    c = Canvas(width=1620, height=1000)
-    pad1 = Pad(0., 0., .62, 1., name="plot")
-    pad2 = Pad(.62, 0, 1., 1., name="legend")
+    c = Canvas()
+    pad1 = Pad(0., 0., .8, 1., name="plot")
+    pad2 = Pad(.8, 0, 1., 1., name="legend")
+    pad2.SetLeftMargin(.03)
     pad1.Draw()
     pad2.Draw()
     ntot = len(l)
 
     c.cd()
     pad1.cd(0)
-    leg = Legend(entries=ntot, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04)
+    leg = Legend(entries=ntot, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04, textsize=.15)
     leg.SetBorderSize(0)
     #maximum, minimum = 0, 0  # extreme values of all plottables
     isfirst = True           # switch to turn on drawingoption 'same'
@@ -134,7 +148,7 @@ def create_stack_pid_ratio_over_pt(h3d, pid1, pid2):
     binned in multiplicity bins.
     pidx must be a list, these particles are added together befor dividing (eg. pi charged)
     """
-    h3d = asrootpy(h3d)   
+    h3d = asrootpy(h3d)
     stack1 = make_stack_of_mult_bins_for_pids(h3d, pid1)
     stack2 = make_stack_of_mult_bins_for_pids(h3d, pid2)
     outstack = HistStack()
