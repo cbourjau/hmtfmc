@@ -16,6 +16,7 @@ from post_utils import create_dNdeta_stack,\
     divide_stacks, create_graph_pided_refest_vs_pidcount,\
     plot_list_of_plottables
 
+
 def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2):
     """
     plot and write to file the ratio of the two pid-lists (pids1/pids2). Plot is vs refmult.
@@ -57,19 +58,13 @@ def _make_dNdeta_and_event_counter(f, sums, results_post):
         # and do everything for weighted and unweighted:
         for postfix in postfixes:
             h3d = asrootpy(est_dir.FindObject('festi_pT_pid' + postfix))
-            #h3d = h3d_orig.RebinX(rebin_mult, h3d_orig.name+"rebinned")
-            #h3d.Scale(1.0/rebin_mult)
-
-            h2d = est_dir.FindObject('fdNdeta' + postfix)
-            h2d = asrootpy(h2d)
-            h2d.RebinY(rebin_mult)
-
+            h2d = asrootpy(est_dir.FindObject('fdNdeta' + postfix))
             nt = asrootpy(est_dir.FindObject("fevent_counter"))
 
             f.cd("results_post/" + est_dir.GetName() + postfix)
 
             # Write out event counters vs. multiplicity
-            h_event_counter = Hist1D(100, 0, 100,
+            h_event_counter = Hist1D(400, 0, 400,
                                      name=("event_counter" + postfix),
                                      title="Event counter vs. multiplicity in est region")
             if postfix:  # empty string is falsy
@@ -77,9 +72,6 @@ def _make_dNdeta_and_event_counter(f, sums, results_post):
             else:
                 nt.Project(h_event_counter.name, "nch", "ev_weight")
             h_event_counter.write()
-
-            # rescale for later operations
-            h_event_counter.Rebin(rebin_mult)
 
             esti_title = "({0})".format(h3d.GetTitle()[31:])
             ###########################################################
@@ -91,12 +83,6 @@ def _make_dNdeta_and_event_counter(f, sums, results_post):
             c.name = "dNdeta_summary"
             c.write()
 
-            # P(N_ch)
-            #h_PN_ch = asrootpy(h_event_counter.clone("PN_ch_from_event_counter"))
-            #h_PN_ch.Scale(1.0/h_PN_ch.Integral())
-            #h_PN_ch.title = "P(N_{ch})" + esti_title
-            #h_PN_ch.yaxis.title = "P(N_{ch})"
-            #h_PN_ch.write()
 
 def _make_hists_vs_pt(f, sums, results_post):
     ###########################################################
@@ -286,57 +272,86 @@ def _make_PNch_plots(f, sums, results_post):
         f.cd("results_post")
         c.write()
 
-def _make_dNdeta_andPNch_ratio_plots(f, sums, results_post):
+def _create_ratio_to_mb_stack(stack):
+    """Given a stack of histograms, create the ratio of each multiplicity bin to the MB (all binns combined)"""
+    mb_name = 'mb_dNdeta'
+    mb_hist = next(h for h in stack.GetHists() if h.name==mb_name)
+    ratio_stack = HistStack()
+    for h in stack:
+        if h.name == mb_name:
+            break
+        h_tmp = h / mb_hist
+        ratio_stack.Add(h_tmp)
+    return ratio_stack
+
+        
+def _make_dNdeta_and_PNch_ratio_plots(f, sums, results_post):
     # Create ratio plots; depends on the previously created histograms
     log.info("Creating ratios of dN/deta plots for each multiplicity bin")
     for postfix in postfixes:
-        # Get the  dN/deta stack for each estimator in order to calc 
-        # the cannonical average for all _other_ estimators later on
-        # P(N_ch): one stack containing all estimators!
-        dNdeta_stacks = []        # List of stacks!
-        #pNch_stack = HistStack()  # One HistStack!
-        #pNch_stack.name = "P(N_{ch}^{est}) summary "
         for est_dir in sums:
             if est_dir.GetName() == "Total":
                 continue
-            dNdeta_stacks.append(asrootpy(f.results_post\
-                                   .Get(est_dir.GetName() + postfix)\
-                                   .Get("dNdeta_summary")\
-                                   .FindObject('dNdeta_stack')))
-
-        # looping over file again in order to have the estimator name handy,
-        for i, est_dir in enumerate(sums):
-            res_dir_str = "results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
-            try:
-                f.mkdir(res_dir_str, recurse=True)
-            except:
-                pass
-            # calc cannonical avg withouth the current hist
-            other_dNdeta_stacks = dNdeta_stacks[:i] + dNdeta_stacks[i+1:]
-            avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
-            ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
-            ratio.title = ('Ratio of '
-                           + dNdeta_stacks[i].title
-                           + ' to cannonical average')
-
-            c = plot_histogram_stack(ratio)
-            c.name = dNdeta_stacks[i].name + '_ratio_cannonical_avg'
-            c.Update()
+            res_dir_str = "results_post/" + est_dir.GetName() + postfix
+            stack = asrootpy(results_post\
+                             .Get(est_dir.GetName() + postfix)\
+                             .Get("dNdeta_summary")\
+                             .FindObject('dNdeta_stack'))
+            ratio_stack = _create_ratio_to_mb_stack(stack)
+            ratio_stack.title = 'dN/d#eta|_{mult} / dN/d#eta|_{MB} '
+            #ratio_stack.name = "dNdeta_ratio_to_mb"
+            c = plot_histogram_stack(ratio_stack)
+            c.name = "dNdeta_ratio_to_mb_canvas"
             f.cd(res_dir_str)
             c.Write()
+            
+        
+        # # Get the  dN/deta stack for each estimator in order to calc 
+        # # the cannonical average for all _other_ estimators later on
+        # # P(N_ch): one stack containing all estimators!
+        # dNdeta_stacks = []        # List of stacks!
+        # #pNch_stack = HistStack()  # One HistStack!
+        # #pNch_stack.name = "P(N_{ch}^{est}) summary "
+        # for est_dir in sums:
+        #     
+        #     dNdeta_stacks.append(asrootpy(f.results_post\
+        #                            .Get(est_dir.GetName() + postfix)\
+        #                            .Get("dNdeta_summary")\
+        #                            .FindObject('dNdeta_stack')))
 
-            # create ratio between P(N_ch) and cannonical_avg
-            # avg = pNch_stack[0].Clone()
-            # avg.Clear()
-            # other_PNch = pNch_stack[:i] + pNch_stack[i+1:]
-            # [avg.Add(h) for h in other_PNch]
-            # avg.Scale(1.0/(len(other_PNch)))
+        # # looping over file again in order to have the estimator name handy,
+        # for i, est_dir in enumerate(sums):
+        #     res_dir_str = "results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
+        #     try:
+        #         f.mkdir(res_dir_str, recurse=True)
+        #     except:
+        #         pass
+        #     # calc cannonical avg withouth the current hist
+        #     other_dNdeta_stacks = dNdeta_stacks[:i] + dNdeta_stacks[i+1:]
+        #     avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
+        #     ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
+        #     ratio.title = ('Ratio of '
+        #                    + dNdeta_stacks[i].title
+        #                    + ' to cannonical average')
 
-            # ratio = pNch_stack[i] / avg
-            # ratio.name = "{0}_div_by_can_avg".format(pNch_stack[i].name)
-            # ratio.title = "Ratio of {} over cannonical avg".format(pNch_stack[i].title)
-            # f.cd(res_dir_str)
-            # ratio.Write()
+        #     c = plot_histogram_stack(ratio)
+        #     c.name = dNdeta_stacks[i].name + '_ratio_cannonical_avg'
+        #     c.Update()
+        #     f.cd(res_dir_str)
+        #     c.Write()
+
+        #     # create ratio between P(N_ch) and cannonical_avg
+        #     # avg = pNch_stack[0].Clone()
+        #     # avg.Clear()
+        #     # other_PNch = pNch_stack[:i] + pNch_stack[i+1:]
+        #     # [avg.Add(h) for h in other_PNch]
+        #     # avg.Scale(1.0/(len(other_PNch)))
+
+        #     # ratio = pNch_stack[i] / avg
+        #     # ratio.name = "{0}_div_by_can_avg".format(pNch_stack[i].name)
+        #     # ratio.title = "Ratio of {} over cannonical avg".format(pNch_stack[i].title)
+        #     # f.cd(res_dir_str)
+        #     # ratio.Write()
 
 def _make_correlation_plots(f, sums, results_post):
     # Make correlations between estimators
@@ -444,9 +459,9 @@ if __name__ == "__main__":
                 pass
         results_post = f.results_post
         _make_dNdeta_and_event_counter(f, sums, results_post)
+        _make_dNdeta_and_PNch_ratio_plots(f, sums, results_post)
         _make_hists_vs_pt(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
-        #_make_dNdeta_andPNch_ratio_plots(f, sums, results_post)
         _make_correlation_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
 
