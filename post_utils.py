@@ -267,8 +267,9 @@ def create_graph_pided_refest_vs_pidcount(h3d, corr_hist, pids):
         # start counting at 1 since the first bin is empty with INEL>0
         prof_bins = [b for b in profx.bins()]
         count_bins= [b for b in count.bins()]
-        for i, (nch_ref_bin, counter_bin) in enumerate(zip(prof_bins[1:], count_bins[1:])): 
-            if (counter_bin.value == 0.0):
+        for i, (nch_ref_bin, counter_bin) in enumerate(zip(prof_bins[1:], count_bins[1:])):
+            print pids, counter_bin.value
+            if (counter_bin.value < 1000):
                 break
             graphs[-1].SetPoint(i, nch_ref_bin.value, counter_bin.value)
             xerr, yerr = nch_ref_bin.error/2,counter_bin.error/2
