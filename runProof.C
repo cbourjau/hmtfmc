@@ -129,8 +129,8 @@ void runProof(const TString runmode_str  = "lite",
 					   "libpythia6_4_25:"
 					   "libAliPythia6"
 					   ),
-	      const char * analysisFiles=("MultiplicityEstimators.cxx++g:"
-					  "AliAnalysisTaskHMTFMCMultEst.cxx++g"),
+	      const char * analysisFiles=("MultiplicityEstimators.cxx+g:"
+					  "AliAnalysisTaskHMTFMCMultEst.cxx+g"),
 	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
@@ -140,7 +140,7 @@ void runProof(const TString runmode_str  = "lite",
     return;
   }
   // start proof if necessary
-  if (runmode_str.BeginsWith("lite")) TProof::Open("workers=2");
+  if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
   else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
 
   loadLibs(aliceExtraLibs, runmode_str);
