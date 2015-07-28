@@ -19,7 +19,7 @@
 #include "AliHeader.h"
 #include "AliLog.h"
 #include "AliMCEvent.h"
-#include "AliPDG.h"
+//#include "AliPDG.h"
 #include "AliStack.h"
 #include "AliVEvent.h"
 
@@ -105,7 +105,7 @@ AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name)
   : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
     festimators(0)
 {
-  AliPDG::AddParticlesToPdgDataBase();
+  //AliPDG::AddParticlesToPdgDataBase();
 
   DefineOutput(1, TList::Class());
   //DefineOutput(2, TList::Class());
@@ -237,7 +237,7 @@ void AliAnalysisTaskHMTFMCMultEst::Terminate(Option_t *)
 {
   // recreates the fEstimatorsList
   InitEstimators();
-
+  
   // This list is associated to a read only file
   fMyOut = static_cast<TList*> (GetOutputData(1));
   if (!fMyOut) {

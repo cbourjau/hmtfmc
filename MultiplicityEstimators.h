@@ -18,7 +18,9 @@ class AliMCParticle;
 
 enum {
   kPROTON,
+  kANTIPROTON,
   kLAMBDA,
+  kANTILAMBDA,
   kK0S,
   kKPLUS,
   kKMINUS,
@@ -26,6 +28,7 @@ enum {
   kPIMINUS,
   kPI0,
   kXI,
+  kANTIXI,
   kOMEGAMINUS,
   kOMEGAPLUS,
   kNPID
@@ -36,9 +39,7 @@ class MultiplicityEstimatorBase : public TNamed {
   MultiplicityEstimatorBase();
   MultiplicityEstimatorBase(const char* name, const char* title);
   virtual ~MultiplicityEstimatorBase() {}
-  // Available estimators
-  enum {kEtaLt05,
-	kEtaLt08};
+
   void RegisterHistograms(TList* outputList);
   //get the ending of the name common to all histograms from this estimator:
   TString GetNamePostfix() {return TString("_") + fName;};
@@ -49,6 +50,7 @@ class MultiplicityEstimatorBase : public TNamed {
   virtual void ProcessTrackWithKnownMultiplicity(AliMCParticle* track) = 0;
   virtual void PostEvent() = 0;
   virtual void Terminate(TList* sum) = 0;
+  const Bool_t fuseWeights;   // Use event weights?
   
  protected:
   /*
@@ -58,11 +60,9 @@ class MultiplicityEstimatorBase : public TNamed {
   void ReadEventHeaders(AliMCEvent* event);
   Int_t festimator_bins;
   // histograms for weighted [0] and unweighted [1] are created where appropriate
-  enum {kWeighted,
-	kUnweighted};
-  TH2F  *fdNdeta[2];          // dNdEta distributions; multiplicity is on the y-axis
-  TH3F  *festi_pT_pid[2];  // multiplicity class; pT; pid
-  TH1D  *fEventcounter[2];
+  TH2F  *fdNdeta;          // dNdEta distributions; multiplicity is on the y-axis
+  TH3F  *festi_pT_pid;  // multiplicity class; pT; pid
+  TH1D  *fEventcounter;
   TNtuple *fNchInEstimatorRegion;
 
   TH2D  *fweight_esti;  // Distribution of weights in each multiplicity class
@@ -70,6 +70,7 @@ class MultiplicityEstimatorBase : public TNamed {
   AliMCEvent *fevent;       // current event
   AliStack  *fstack;
   Float_t feventWeight;        // weight of the event read from the header
+  Int_t fnMPI;          // Number of parton interactions
 
  private:
   MultiplicityEstimatorBase(const MultiplicityEstimatorBase&);           // not implemented

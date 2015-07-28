@@ -122,15 +122,15 @@ void runProof(const TString runmode_str  = "lite",
 	      Int_t max_events = -1,
 	      //Int_t first_event= 0,
 	      Int_t debug = 0,
-	      const char * incollection = "./input/input_files.dat",
+	      const char * incollection = "./pythia/input_files.dat",
 	      const char * analysisName = "hmtf_mc_mult",
 	      const char * aliceExtraLibs=(//"libANALYSIS:"
 					   //"libANALYSISalice:"
 					   "libpythia6_4_25:"
 					   "libAliPythia6"
 					   ),
-	      const char * analysisFiles=("MultiplicityEstimators.cxx+:"
-					  "AliAnalysisTaskHMTFMCMultEst.cxx+"),
+	      const char * analysisFiles=("MultiplicityEstimators.cxx++g:"
+					  "AliAnalysisTaskHMTFMCMultEst.cxx++g"),
 	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
@@ -140,7 +140,7 @@ void runProof(const TString runmode_str  = "lite",
     return;
   }
   // start proof if necessary
-  if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
+  if (runmode_str.BeginsWith("lite")) TProof::Open("workers=2");
   else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
 
   loadLibs(aliceExtraLibs, runmode_str);
