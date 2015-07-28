@@ -29,6 +29,7 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
   multEstTask->AddEstimator("EtaLt15");
   multEstTask->AddEstimator("Eta08_15");
   multEstTask->AddEstimator("V0A");
+  multEstTask->AddEstimator("V0C");
   multEstTask->AddEstimator("V0M");
 
   mgr->AddTask(multEstTask);
