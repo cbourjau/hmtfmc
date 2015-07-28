@@ -27,21 +27,21 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2):
         h3d = asrootpy(est_dir.FindObject("festi_pT_pid"))
         chist = asrootpy(results_post.correlations.Get("corr_hist_EtaLt05_vs_{}".format(est_dir.GetName())))
         try:
-            h1 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids1)
-            h2 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids2)
+            g1 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids1)
+            g2 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids2)
         except IndexError:
             log.info("Could not process pid ratio for {} for estimator {}".format(
                 "_".join(pids1) + "_div_" + "_".join(pids2),
                 est_dir.GetName()))
             continue
         try:
-            ratio = h1 / h2
+            ratio = g1 / g2
         except ZeroDivisionError:
             print "ZeroDivisionError in {}".format(est_dir.GetName())
             continue
-        title = h1.title + " / " + h2.title
+        title = g1.title + " / " + g2.title
         ratio.title = est_dir.GetName()
-        ratio.xaxis.title = h1.xaxis.title
+        ratio.xaxis.title = g1.xaxis.title
         ratio.SetColor(800 + int(100.0/3)*(i) + 1)
         ratios.append(ratio)
     c = plot_list_of_plottables(ratios, title)
