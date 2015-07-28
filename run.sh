@@ -1,8 +1,9 @@
 #!/bin/bash
 incoll=""
+mc=$2
 case x$1 in
     xlocal)
-	name="local"
+	runmode="local"
 	case x$2 in
 	    xpythia)
 		incoll="${PWD}/pythia/input_files.dat"
@@ -13,7 +14,7 @@ case x$1 in
 	esac
 	;;
     xlite)
-	name="lite"
+	runmode="lite"
 	case x$2 in
 	    xpythia)
 		incoll="${PWD}/pythia/input_files.dat"
@@ -24,7 +25,7 @@ case x$1 in
 	esac
 	;;
     xpod)
-	name="pod"
+	runmode="pod"
 	case x$2 in
 	    xpythia)
 		incoll="pythia"
@@ -43,9 +44,14 @@ case x$1 in
 esac
 shift
 
-#rm -rf $name
+
+#rm -rf $runmode
 #set -x
-root -l -x "runProof.C(\"${name}\", -1, 0, \"${incoll}\")"
+# runmode, nmax, debug, outfilename
+
+
+outfile="hmtf_mc_mult_${mc}"
+root -l -x "runProof.C(\"${runmode}\", -1, 0, \"${incoll}\", \"${outfile}\")"
 #runTrain --class=HMTFMCMultEstTrain --name=$name --type=ESD --url="$url" $@ 
 
 #
