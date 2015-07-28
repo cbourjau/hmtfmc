@@ -23,7 +23,7 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
       return NULL;
   }
   // add estimators:
-  multEstTask->AddEstimator("Total");
+  //multEstTask->AddEstimator("Total");
   multEstTask->AddEstimator("EtaLt05");
   multEstTask->AddEstimator("EtaLt08");
   multEstTask->AddEstimator("EtaLt15");

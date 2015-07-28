@@ -172,7 +172,7 @@ EtaBase::EtaBase(const char* name, const char* title,
     feta_min_forwards(feta_min_forwards), feta_max_forwards(feta_max_forwards),
     fbypass_eta_selection(false)
 {
-  festimator_bins = 400;
+  festimator_bins = 200;
 }
 
 // Constructor for bypassing the eta selection to get the full range
@@ -182,7 +182,7 @@ EtaBase::EtaBase(const char* name, const char* title)
     feta_min_forwards(0), feta_max_forwards(0),
     fbypass_eta_selection(true)
 {
-  festimator_bins = 400;
+  festimator_bins = 200;
 }
 
 void EtaBase::PreEvent(AliMCEvent *event){
