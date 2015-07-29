@@ -189,6 +189,6 @@ void runProof(const TString runmode_str  = "lite",
     else {
       // process with dataset string
       TString dataset = getDatasetString(incollection);
-      mgr->StartAnalysis("proof", dataset, max_events, first_event);
+      mgr->StartAnalysis("proof", dataset, max_events, 0 /*first_event*/);
     }
 }
