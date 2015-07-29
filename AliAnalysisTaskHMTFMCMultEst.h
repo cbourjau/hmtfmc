@@ -21,6 +21,7 @@ class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
 
   void AddEstimator(const char* n);
   void InitEstimators();
+  void SetRequireINELgt0(Bool_t b){fRequireINELgt0 = b;};
   MultiplicityEstimatorBase* MakeEstimator(const TString& name);
   virtual void   UserCreateOutputObjects();
   virtual void   UserExec(Option_t *option);
@@ -30,6 +31,7 @@ class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
   TList *fMyOut;             // Output list
   TList *fEstimatorsList;   // List to get the estimators out in terminate
   TString fEstimatorNames;
+  Bool_t fRequireINELgt0;
   // MultiplicityEstimatorBase* festi;
 
   std::vector<MultiplicityEstimatorBase*> festimators;

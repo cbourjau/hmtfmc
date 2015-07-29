@@ -32,6 +32,9 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
   multEstTask->AddEstimator("V0C");
   multEstTask->AddEstimator("V0M");
 
+  // Other options
+  multEstTask->SetRequireINELgt0(kFALSE);
+
   mgr->AddTask(multEstTask);
   AliAnalysisDataContainer *inputContainer = mgr->GetCommonInputContainer();
   if(!inputContainer) {
