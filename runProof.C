@@ -189,6 +189,8 @@ void runProof(const TString runmode_str  = "lite",
     else {
       // process with dataset string
       TString dataset = getDatasetString(incollection);
+      // Check the dataset before running the analysis!
+      gProof->ShowDataSet( dataset.Data() );
       mgr->StartAnalysis("proof", dataset, max_events, 0 /*first_event*/);
     }
 }
