@@ -16,6 +16,11 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
     TList::Class(), 
     AliAnalysisManager::kOutputContainer,
     mgr->GetCommonFileName());
+  AliAnalysisDataContainer *coutput2 = mgr->CreateContainer(
+    "runconditions",
+    TList::Class(),
+    AliAnalysisManager::kParamContainer,  // important, apparently...
+    mgr->GetCommonFileName());
 
   AliAnalysisTaskHMTFMCMultEst *multEstTask = new AliAnalysisTaskHMTFMCMultEst("TaskHMTFMCMultEst");
   if (!multEstTask) {
@@ -43,5 +48,6 @@ AliAnalysisTaskHMTFMCMultEst *AddTaskHMTFMCMultEst() {
   }
   mgr->ConnectInput(multEstTask, 0, mgr->GetCommonInputContainer());
   mgr->ConnectOutput(multEstTask, 1, coutput1);
+  mgr->ConnectOutput(multEstTask, 2, coutput2);
   return multEstTask;
 }

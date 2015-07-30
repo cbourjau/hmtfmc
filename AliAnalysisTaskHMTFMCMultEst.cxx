@@ -95,7 +95,7 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
 
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
   : AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
-    festimators(0), fRequireINELgt0(kTRUE)
+    festimators(0), fRequireINELgt0(kTRUE), fRunconditions(0)
 {
 
 }
@@ -103,9 +103,10 @@ AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
 //________________________________________________________________________
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name) 
   : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
-    festimators(0), fRequireINELgt0(kTRUE)
+    festimators(0), fRequireINELgt0(kTRUE), fRunconditions(0)
 {
   DefineOutput(1, TList::Class());
+  DefineOutput(2, TList::Class());
 }
 
 void AliAnalysisTaskHMTFMCMultEst::AddEstimator(const char* n)
@@ -251,4 +252,13 @@ void AliAnalysisTaskHMTFMCMultEst::Terminate(Option_t *)
     e->Terminate(fMyOut);
   }
   PostData(1, fMyOut);
+
+  fRunconditions = new TList;
+  fRunconditions->SetName("rclist");
+  fRunconditions->SetOwner(0);
+  TObjString *rcinfo = new TObjString;
+  if (fRequireINELgt0) rcinfo->SetString("INELgt0_true");
+  else rcinfo->SetString("INELgt0_false");
+  fRunconditions->Add(rcinfo);
+  PostData(2, fRunconditions);
 }

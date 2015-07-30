@@ -29,6 +29,7 @@ class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
 
  private:
   TList *fMyOut;             // Output list
+  TList *fRunconditions;     // TString with run conditions
   TList *fEstimatorsList;   // List to get the estimators out in terminate
   TString fEstimatorNames;
   Bool_t fRequireINELgt0;
