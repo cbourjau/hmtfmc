@@ -58,7 +58,7 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
   curr_est->SetName(GetName());
   outputList->Add(curr_est);
 
-  TString postfix = fuseWeights?"":postfix = fuseWeights?"":"_unweighted";
+  TString postfix = fuseWeights?"":"_unweighted";
   fdNdeta = new TH2F("fdNdeta" + postfix ,
 		     "dN/d#eta Inel, " + GetTitlePostfix(),
 		     200, -10.0, 10.0,
