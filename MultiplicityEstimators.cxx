@@ -33,8 +33,8 @@ Int_t pid_enum_to_pdg(Int_t pid_enum) {
   else if (pid_enum == kPIPLUS) return 211;
   else if (pid_enum == kPIMINUS) return -211;
   else if (pid_enum == kPI0) return 111;
-  else if (pid_enum == kXI) return 3322;
-  else if (pid_enum == kANTIXI) return -3322;
+  else if (pid_enum == kXI) return 3312;
+  else if (pid_enum == kANTIXI) return -3312;
   else if (pid_enum == kOMEGAMINUS) return 3334;
   else if (pid_enum == kOMEGAPLUS) return -3334;
   else return 99999;
