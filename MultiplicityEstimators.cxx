@@ -220,21 +220,26 @@ void EtaBase::ProcessTrackWithKnownMultiplicity(AliMCParticle *track){
   // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
   // value for the pid.
   Int_t pdgCode = track->PdgCode();
-  for (Int_t ipid = 0; ipid < kNPID; ipid++) {
-    // these tracks might be uncharged!
-    if (pdgCode == pid_enum_to_pdg(ipid)){
-      festi_pT_pid->Fill(fnch_in_estimator_region,
-			 track->Pt(),
-			 ipid,
-			 fuseWeights?feventWeight:1);
-      break;
+  if(fbypass_eta_selection ||
+     ((track->Eta() >= feta_min_backwards &&
+       track->Eta() <= feta_max_backwards) ||
+      (track->Eta() >= feta_min_forwards &&
+       track->Eta() <= feta_max_forwards))) {
+    for (Int_t ipid = 0; ipid < kNPID; ipid++) {
+      // these tracks might be uncharged!
+      if (pdgCode == pid_enum_to_pdg(ipid)){
+	festi_pT_pid->Fill(fnch_in_estimator_region,
+			   track->Pt(),
+			   ipid,
+			   fuseWeights?feventWeight:1);
+	break;
+      }
     }
   }
 }
 
 void EtaBase::PostEvent(){
   // Fill event counters
-  fEventcounter->Fill(fnch_in_estimator_region);
   fEventcounter->Fill(fnch_in_estimator_region, fuseWeights?feventWeight:1);
   fNchInEstimatorRegion->Fill(fnch_in_estimator_region, feventWeight, fnMPI);
   fweight_esti->Fill(feventWeight, fnch_in_estimator_region);
