@@ -129,8 +129,8 @@ void runProof(const TString runmode_str  = "lite",
 					   "libpythia6_4_25:"
 					   "libAliPythia6"
 					   ),
-	      const char * analysisFiles=("MultiplicityEstimators.cxx+g:"
-					  "AliAnalysisTaskHMTFMCMultEst.cxx+g"),
+	      const char * analysisFiles=("MultiplicityEstimators.cxx+:"
+					  "AliAnalysisTaskHMTFMCMultEst.cxx+"),
 	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
