@@ -26,6 +26,13 @@ class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
   virtual void   UserCreateOutputObjects();
   virtual void   UserExec(Option_t *option);
   virtual void   Terminate(Option_t *);
+  TProfile  *fdebugk0;  // debug K0/kch ratios
+  TProfile  *fdebugkp;  // debug K0/kch ratios
+  TProfile  *fdebugkm;  // debug K0/kch ratios
+  TH2F  *fdebugk0_vs_kch;  // debug K0/kch ratios
+  TH2F  *fdebugnch_vs_kch;  // debug K0/kch ratios
+  TH2F  *fdebugnch_vs_k0;  // debug K0/kch ratios
+  TH1F  *fdebugnch_gt_30;
 
  private:
   TList *fMyOut;             // Output list
