@@ -60,12 +60,10 @@ class MultiplicityEstimatorBase : public TNamed {
   void ReadEventHeaders(AliMCEvent* event);
   Int_t festimator_bins;
   // histograms for weighted [0] and unweighted [1] are created where appropriate
-  TH2F  *fdNdeta;          // dNdEta distributions; multiplicity is on the y-axis
-  TH3F  *festi_pT_pid;  // multiplicity class; pT; pid
-  TH1D  *fEventcounter;
-  TNtuple *fNchInEstimatorRegion;
+  TH2F  *feta_Nch;          // dNdEta distributions; multiplicity is on the y-axis
+  TH3F  *fNch_pT_pid;  // multiplicity class; pT; pid
+  TNtuple *fEventTuple;
 
-  TH2D  *fweight_esti;  // Distribution of weights in each multiplicity class
   AliHeader *fheader;       // Event header
   AliMCEvent *fevent;       // current event
   AliStack  *fstack;

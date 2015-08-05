@@ -42,12 +42,14 @@ Int_t pid_enum_to_pdg(Int_t pid_enum) {
 
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase()
-  : TNamed(), fweight_esti(0), fuseWeights(kTRUE)
+  : TNamed(), feta_Nch(0), fNch_pT_pid(0), fEventTuple(0),
+    fuseWeights(kTRUE)
 {
 }
 
 MultiplicityEstimatorBase::MultiplicityEstimatorBase(const char* name, const char* title)
-  : TNamed(name, title), fweight_esti(0), fuseWeights(kTRUE)
+  : TNamed(name, title), feta_Nch(0), fNch_pT_pid(0), fEventTuple(0),
+    fuseWeights(kTRUE)
 {
 }
 
@@ -58,28 +60,21 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
   curr_est->SetName(GetName());
   outputList->Add(curr_est);
 
+  /////////////////////////////////////////////
+  // Histograms to be filled in a track loop //
+  /////////////////////////////////////////////
   TString postfix = fuseWeights?"":"_unweighted";
-  fdNdeta = new TH2F("fdNdeta" + postfix ,
-		     "dN/d#eta Inel, " + GetTitlePostfix(),
+  feta_Nch = new TH2F("feta_Nch" + postfix ,
+		     "N_{ch} vs. #eta, " + GetTitlePostfix(),
 		     200, -10.0, 10.0,
 		     festimator_bins, 0, festimator_bins);
-  fdNdeta->GetXaxis()->SetTitle("#eta");
-  fdNdeta->GetYaxis()->SetTitle("N_{ch} in " + GetTitlePostfix());
-  fdNdeta->GetZaxis()->SetTitle("N_{ch} per #eta bin");
-  fdNdeta->SetMarkerStyle(kFullCircle);
-  fdNdeta->Sumw2();
-  fdNdeta->SetDirectory(0);
-  curr_est->Add(fdNdeta);
-
-  // Setup counter histograms
-  // Use double in order to not saturate!
-  fEventcounter = new TH1D ("fEventcounter" + postfix,
-			    Form("Multiplicity distribution %s", GetTitlePostfix().Data()),
-			    festimator_bins, 0.0, festimator_bins);
-  fEventcounter->Sumw2();
-  fEventcounter->GetXaxis()->SetTitle("Multiplicity in estimator");
-  fEventcounter->GetYaxis()->SetTitle("Events");
-  curr_est->Add(fEventcounter);
+  feta_Nch->GetXaxis()->SetTitle("#eta");
+  feta_Nch->GetYaxis()->SetTitle("N_{ch} in " + GetTitlePostfix());
+  feta_Nch->GetZaxis()->SetTitle("N_{ch} per #eta bin");
+  feta_Nch->SetMarkerStyle(kFullCircle);
+  feta_Nch->Sumw2();
+  feta_Nch->SetDirectory(0);
+  curr_est->Add(feta_Nch);
 
   // 3D: Mult, pT, PID
   Float_t mult_bin_edges[festimator_bins + 1];
@@ -104,33 +99,28 @@ void MultiplicityEstimatorBase::RegisterHistograms(TList *outputList){
     pid_bin_edges[idx] = Float_t(idx) - 0.5;  // shift bins to center around int values
   }
 
-  festi_pT_pid = new TH3F("festi_pT_pid" + postfix,
+  fNch_pT_pid = new TH3F("fNch_pT_pid" + postfix,
 			  Form("Event class vs. p_{T} vs. pid, %s", GetTitlePostfix().Data()),
 			  festimator_bins, mult_bin_edges,
 			  sizeof(pt_bin_edges)/sizeof(*pt_bin_edges) - 1, pt_bin_edges,
 			  kNPID, pid_bin_edges);
-  festi_pT_pid->GetXaxis()->SetTitle("Multiplicity");
-  festi_pT_pid->GetYaxis()->SetTitle("p_{T} [GeV]}");
-  festi_pT_pid->GetZaxis()->SetTitle("PID");
+  fNch_pT_pid->GetXaxis()->SetTitle("Multiplicity");
+  fNch_pT_pid->GetYaxis()->SetTitle("p_{T} [GeV]}");
+  fNch_pT_pid->GetZaxis()->SetTitle("PID");
   // Name bins with pdg code:
   for (Int_t ipid = 0; ipid < kNPID; ipid++) {
-    festi_pT_pid->GetZaxis()->SetBinLabel(ipid + 1, Form("%d",pid_enum_to_pdg(ipid)));
+    fNch_pT_pid->GetZaxis()->SetBinLabel(ipid + 1, Form("%d",pid_enum_to_pdg(ipid)));
   }
-  festi_pT_pid->Sumw2();
-  festi_pT_pid->SetDirectory(0);			    
-  curr_est->Add(festi_pT_pid);
+  fNch_pT_pid->Sumw2();
+  fNch_pT_pid->SetDirectory(0);			    
+  curr_est->Add(fNch_pT_pid);
 
-  fNchInEstimatorRegion = new TNtuple("fevent_counter", "Nch in estimator region", "nch:ev_weight:nmpi");
-  curr_est->Add(fNchInEstimatorRegion);
 
-  fweight_esti = new TH2D("fweight_esti", "Distribution of weights in each mult class",
-			  10000, 0, 10000,
-			  festimator_bins, 0.0, festimator_bins);
-  fweight_esti->SetDirectory(0);
-  fweight_esti->Sumw2();
-  fweight_esti->GetXaxis()->SetTitle("Event weight");
-  fweight_esti->GetYaxis()->SetTitle("Multiplicity in estimator region");
-  curr_est->Add(fweight_esti);
+  //////////////////////////////////////////////////////////////////////
+  // Objects to be filled on the event loop (ie not in the track loop //
+  //////////////////////////////////////////////////////////////////////
+  fEventTuple = new TNtuple("fEventTuple", "N_{ch}^{est}, ev_weight, nMPI", "nch:ev_weight:nmpi");
+  curr_est->Add(fEventTuple);
 }
 
 void MultiplicityEstimatorBase::ReadEventHeaders(AliMCEvent *event){
@@ -199,11 +189,12 @@ void EtaBase::PreEvent(AliMCEvent *event){
 */
 void EtaBase::ProcessTrackForMultiplicityEstimation(AliMCParticle *track){
   if (track->Charge() != 0){
+    Double_t eta = track->Eta();
     if(fbypass_eta_selection ||
-       ((track->Eta() >= feta_min_backwards &&
-       track->Eta() <= feta_max_backwards) ||
-       (track->Eta() >= feta_min_forwards &&
-	track->Eta() <= feta_max_forwards)))
+       ((eta >= feta_min_backwards &&
+       eta <= feta_max_backwards) ||
+       (eta >= feta_min_forwards &&
+	eta <= feta_max_forwards)))
       {
 	fnch_in_estimator_region++;
       }
@@ -214,21 +205,16 @@ void EtaBase::ProcessTrackForMultiplicityEstimation(AliMCParticle *track){
 void EtaBase::ProcessTrackWithKnownMultiplicity(AliMCParticle *track){
   if (track->Charge() != 0){
     // only enforce charged tracks for dN/deta!
-    fdNdeta->Fill(track->Eta(), fnch_in_estimator_region, fuseWeights?feventWeight:1);
+    feta_Nch->Fill(track->Eta(), fnch_in_estimator_region, fuseWeights?feventWeight:1);
   }
-  // y axis are the different particles defined as enum in the header file.
+  // z axis are the different particles defined as enum in the header file.
   // ipid is not the histogram bin number! The bins of the histogram are chosen to consume the enum
   // value for the pid.
   Int_t pdgCode = track->PdgCode();
-  if(fbypass_eta_selection ||
-     ((track->Eta() >= feta_min_backwards &&
-       track->Eta() <= feta_max_backwards) ||
-      (track->Eta() >= feta_min_forwards &&
-       track->Eta() <= feta_max_forwards))) {
+  if(((TMath::Abs(track->Y()) < 0.5))) {  //y since this is for identified particles. Region is TPC+ITS
     for (Int_t ipid = 0; ipid < kNPID; ipid++) {
-      // these tracks might be uncharged!
       if (pdgCode == pid_enum_to_pdg(ipid)){
-	festi_pT_pid->Fill(fnch_in_estimator_region,
+	fNch_pT_pid->Fill(fnch_in_estimator_region,
 			   track->Pt(),
 			   ipid,
 			   fuseWeights?feventWeight:1);
@@ -240,17 +226,14 @@ void EtaBase::ProcessTrackWithKnownMultiplicity(AliMCParticle *track){
 
 void EtaBase::PostEvent(){
   // Fill event counters
-  fEventcounter->Fill(fnch_in_estimator_region, fuseWeights?feventWeight:1);
-  fNchInEstimatorRegion->Fill(fnch_in_estimator_region, feventWeight, fnMPI);
-  fweight_esti->Fill(feventWeight, fnch_in_estimator_region);
+  fEventTuple->Fill(fnch_in_estimator_region, feventWeight, fnMPI);
 }
 
 void EtaBase::Terminate(TList* outputlist){
   // recover pointers to histograms since they are null on master
   std::cout << "Terminate " << fName << std::endl;
   TList *curr_est = static_cast<TList*>(outputlist->FindObject(GetName()));
-  fEventcounter = static_cast<TH1D*>(curr_est->FindObject("fEventcounter" ));
-  fdNdeta = static_cast<TH2F*>(curr_est->FindObject("fdNdeta" ));
+  feta_Nch = static_cast<TH2F*>(curr_est->FindObject("feta_Nch" ));
 }
 
 

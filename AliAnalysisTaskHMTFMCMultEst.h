@@ -40,6 +40,7 @@ class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
   TList *fEstimatorsList;   // List to get the estimators out in terminate
   TString fEstimatorNames;
   Bool_t fRequireINELgt0;
+  TNtuple *fParticleCounter;
   // MultiplicityEstimatorBase* festi;
 
   std::vector<MultiplicityEstimatorBase*> festimators;

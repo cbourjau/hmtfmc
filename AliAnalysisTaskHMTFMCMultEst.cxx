@@ -105,7 +105,7 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
 
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
   : AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
-    festimators(0), fRequireINELgt0(kTRUE), fRunconditions(0)
+    festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0),
     fdebugk0(0),fdebugkm(0), fdebugkp(0), fdebugnch_gt_30(0), fdebugk0_vs_kch(0),
     fdebugnch_vs_k0(0), fdebugnch_vs_kch(0)
 {
@@ -115,7 +115,7 @@ AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
 //________________________________________________________________________
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name) 
   : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
-    festimators(0), fRequireINELgt0(kTRUE), fRunconditions(0)
+    festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0),
     fdebugk0(0),fdebugkm(0), fdebugkp(0), fdebugnch_gt_30(0), fdebugk0_vs_kch(0),
     fdebugnch_vs_k0(0), fdebugnch_vs_kch(0)
 {
@@ -209,9 +209,9 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
      Printf("ERROR: Could not retrieve MC event");
      return;
   }
-
-  for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) {//estimator loop
-    festimators[i]->PreEvent(mcEvent);
+  std::vector<MultiplicityEstimatorBase*>::iterator iter, end;
+  for (iter =festimators.begin(), end = festimators.end(); iter != end; ++iter) {//estimator loop
+    (*iter)->PreEvent(mcEvent);
   }//estimator loop
 
   // Track loop for establishing multiplicity and checking for INEL > 0
