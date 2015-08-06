@@ -5,8 +5,6 @@
 #include "TGraphErrors.h"
 #include "TH1F.h"
 #include "TH2F.h"
-#include "TProfile.h"
-#include "TNtuple.h"
 #include "TTree.h"
 #include "TParticle.h"
 
@@ -31,14 +29,6 @@
 using namespace std;
 
 ClassImp(AliAnalysisTaskHMTFMCMultEst)
-
-Int_t pdg_2_pid_enum(Int_t pdg) {
-  if (pdg == 310) return kK0S;
-  else if (pdg == 321) return kKPLUS;
-  else if (pdg == -321) return kKMINUS;
-  return -99999;
-}
-
 
 Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
 {
@@ -105,9 +95,7 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
 
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
   : AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
-    festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0),
-    fdebugk0(0),fdebugkm(0), fdebugkp(0), fdebugnch_gt_30(0), fdebugk0_vs_kch(0),
-    fdebugnch_vs_k0(0), fdebugnch_vs_kch(0)
+    festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0)
 {
 
 }
@@ -115,9 +103,7 @@ AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
 //________________________________________________________________________
 AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst(const char *name) 
   : AliAnalysisTaskSE(name), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
-    festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0),
-    fdebugk0(0),fdebugkm(0), fdebugkp(0), fdebugnch_gt_30(0), fdebugk0_vs_kch(0),
-    fdebugnch_vs_k0(0), fdebugnch_vs_kch(0)
+    festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0)
 {
   DefineOutput(1, TList::Class());
   DefineOutput(2, TList::Class());
@@ -183,21 +169,7 @@ void AliAnalysisTaskHMTFMCMultEst::UserCreateOutputObjects()
   
   // Suppress annoying printout
   AliLog::SetGlobalLogLevel(AliLog::kError);
-
-  fdebugk0 = new TProfile("debug_nch_k0", "debug nch K0", 100, 0, 100);
-  fdebugkp = new TProfile("debug_nch_kplus", "debug nch K+", 100, 0, 100);
-  fdebugkm = new TProfile("debug_nch_kminus", "debug nch K-", 100, 0, 100);
-  fdebugnch_gt_30 = new TH1F("debug_nch_gt_30", "debug nch > 30", kNPID, 0, kNPID);
-  fdebugk0_vs_kch = new TH2F("debug_k0_vs_kch", "fdebugk0_vs_kch", 100, -.5, 99.5, 100, -.5, 99.5);
-  fdebugnch_vs_kch = new TH2F("debug_nch_vs_kch", "fdebugnch_vs_kch", 100, -.5, 99.5, 100, -.5, 99.5);
-  fdebugnch_vs_k0 = new TH2F("debug_nch_vs_k0", "fdebugnch_vs_k0", 100, -.5, 99.5, 100, -.5, 99.5);
-  // fdebugk0->Sumw2(); fdebugk0->SetDirectory(0); fMyOut->Add(fdebugk0);
-  // fdebugkp->Sumw2(); fdebugkp->SetDirectory(0); fMyOut->Add(fdebugkp);
-  // fdebugkm->Sumw2(); fdebugkm->SetDirectory(0); fMyOut->Add(fdebugkm);
-  // fdebugnch_gt_30->Sumw2(); fdebugnch_gt_30->SetDirectory(0); fMyOut->Add(fdebugnch_gt_30);
-  // fdebugk0_vs_kch->Sumw2(); fdebugk0_vs_kch->SetDirectory(0); fMyOut->Add(fdebugk0_vs_kch);
-  // fdebugnch_vs_kch->Sumw2(); fdebugnch_vs_kch->SetDirectory(0); fMyOut->Add(fdebugnch_vs_kch);
-  // fdebugnch_vs_k0->Sumw2(); fdebugnch_vs_k0->SetDirectory(0); fMyOut->Add(fdebugnch_vs_k0);
+  
   PostData(1, fMyOut);
 }
 
@@ -216,10 +188,6 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
 
   // Track loop for establishing multiplicity and checking for INEL > 0
   Bool_t isINEL_gt_0(kFALSE);
-  Int_t nch_05 = 0;
-  Int_t nch_05_k0 = 0;
-  Int_t nch_05_kplus = 0;
-  Int_t nch_05_kminus = 0;
   for (Int_t iTrack = 0; iTrack < mcEvent->GetNumberOfTracks(); iTrack++) {
     AliMCParticle *track = (AliMCParticle*)mcEvent->GetTrack(iTrack);
     if (!track) {
@@ -230,31 +198,12 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
     if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
 	IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
       if (TMath::Abs(track->Eta()) < 1) isINEL_gt_0 = kTRUE;
-
-      // Debug for K0 ratios -----------------------
-      if (TMath::Abs(track->Eta()) < .5){
-	if (track->Charge() != 0) nch_05++;
-	if (track->PdgCode() == 310) nch_05_k0++;
-	if (track->PdgCode() == 321) nch_05_kplus++;
-	if (track->PdgCode() == -321) nch_05_kminus++;
-      }
-      // Debug ends here ----------------------------
-      
       for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
 	festimators[i]->ProcessTrackForMultiplicityEstimation(track);
       }//estimator loop
     }
   }  //track loop
 
-  // Debug for K0 ratios -----------------------
-  fdebugk0->Fill(nch_05, nch_05_k0);
-  fdebugkp->Fill(nch_05, nch_05_kplus);
-  fdebugkm->Fill(nch_05, nch_05_kminus);
-  fdebugk0_vs_kch->Fill(nch_05_k0, (nch_05_kplus+nch_05_kminus));
-  fdebugnch_vs_kch->Fill(nch_05, (nch_05_kplus+nch_05_kminus));
-  fdebugnch_vs_k0->Fill(nch_05, (nch_05_k0));
-  // Debug ends here ----------------------------
-  
   // Track loop with known multiplicity in each estimator
   // Skip this if event is not INEL>0 and it is required to be so
   if (!fRequireINELgt0 || isINEL_gt_0){
@@ -264,15 +213,8 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
 	Printf("ERROR: Could not receive track %d", iTrack);
 	continue;
       }
-      // Debug starts here ----------------------------
-      if (nch_05 > 30) {
-	fdebugnch_gt_30->Fill(pdg_2_pid_enum(track->PdgCode()), mcEvent->GenEventHeader()->EventWeight());
-      }
-      // Debug ends here ----------------------------
-
       if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
 	  IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
-
 	for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
 	  festimators[i]->ProcessTrackWithKnownMultiplicity(track);
 	}//estimator loop
