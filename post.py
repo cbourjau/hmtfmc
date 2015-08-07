@@ -1,5 +1,5 @@
 """Run post analysis on the given file"""
-import sys
+import sys, os, string, random
 import ipdb
 
 if len(sys.argv) != 2:
@@ -8,23 +8,80 @@ if len(sys.argv) != 2:
 
 from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log
-from rootpy.plotting import HistStack, Hist1D, Hist2D
+from rootpy.plotting import HistStack, Hist1D, Hist2D, Canvas
 from post_utils import create_dNdeta_stack,\
     plot_histogram_stack, create_stack_pid_ratio_over_pt,\
     create_hist_pid_ratio_over_mult,\
     create_canonnical_avg_from_stacks,\
     divide_stacks, create_graph_pided_refest_vs_pidcount,\
-    plot_list_of_plottables
+    plot_list_of_plottables, remove_zero_value_points, remove_non_mutual_points,\
+    remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
+
+def gen_random_name():
+    """Generate a random name for temp hists"""
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
+
+kPROTON = str(2212)
+kANTIPROTON = str(-2212)
+kLAMBDA = str(3122)
+kANTILAMBDA = str(-3122)
+kK0S = str(310)
+kKPLUS = str(321)
+kKMINUS = str(-321)
+kPIPLUS = str(211)
+kPIMINUS = str(-211)
+kPI0 = str(111)
+kXI = str(3312)
+kANTIXI = str(-3312)
+kOMEGAMINUS = str(3334)
+kOMEGAPLUS = str(-3334)
 
 
-def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2):
+def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, title=''):
+    stack = list()
+    nesti = len(sums)
+    for i, est_dir in enumerate(sums):
+        h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
+        pids1hists = []
+        pids2hists = []
+        for pid in pids1:
+            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid),h3d.zaxis.FindBin(pid))
+            h = asrootpy(h3d.Project3D("yx"))
+            h.SetName(gen_random_name())
+            pids1hists.append(h)
+
+        for pid in pids2:
+            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid),h3d.zaxis.FindBin(pid))
+            h = asrootpy(h3d.Project3D("yx"))
+            h.SetName(gen_random_name())
+            pids2hists.append(h)
+            
+        # sum up each histogram
+        pids1_px = asrootpy(sum(pids1hists).ProjectionX())
+        pids2_px = asrootpy(sum(pids2hists).ProjectionX())
+        ratio1d = pids1_px / pids2_px
+        ratio1d.SetTitle(est_dir.GetName())
+        ratio1d.color = int(800 + i*100.0/nesti) +1
+        if scale:
+            ratio1d.Scale(scale)
+        stack.append(ratio1d)
+
+    if not title:
+        title = "{} div {}".format(str(pids1), str(pids2))
+    c = plot_list_of_plottables(stack, title)
+    c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    
+    c.Write()
+
+
+def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
     """
     plot and write to file the ratio of the two pid-lists (pids1/pids2). Plot is vs refmult.
     This function depends on the correlation histograms to be present in f
     """
     ratios = []
-    for i, est_dir in enumerate(sums[1:]):
-        h3d = asrootpy(est_dir.FindObject("festi_pT_pid"))
+    for i, est_dir in enumerate(sums):
+        h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
         chist = asrootpy(results_post.correlations.Get("corr_hist_EtaLt05_vs_{}".format(est_dir.GetName())))
         try:
             g1 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids1)
@@ -34,18 +91,36 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2):
                 "_".join(pids1) + "_div_" + "_".join(pids2),
                 est_dir.GetName()))
             continue
+        remove_zero_value_points(g1)
+        remove_zero_value_points(g2)
+        remove_points_with_x_err_gt_1NchRef(g1)
+        remove_points_with_x_err_gt_1NchRef(g2)
+        remove_points_with_equal_x(g1)
+        remove_points_with_equal_x(g2)
+        remove_non_mutual_points(g1, g2)
         try:
             ratio = g1 / g2
         except ZeroDivisionError:
             print "ZeroDivisionError in {}".format(est_dir.GetName())
             continue
-        title = g1.title + " / " + g2.title
+        if not ytitle:
+            title = g1.title + " / " + g2.title
+        else:
+            title = ''
+        if scale:
+            ratio.Scale(scale)
+        ratio.yaxis.title = ytitle
         ratio.title = est_dir.GetName()
         ratio.xaxis.title = g1.xaxis.title
         ratio.SetColor(800 + int(100.0/3)*(i) + 1)
         ratios.append(ratio)
     c = plot_list_of_plottables(ratios, title)
     c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    try:
+        os.makedirs("./figures/pid_ratios_vs_ref_mult/")
+    except OSError:
+        pass
+    #c.SaveAs("./figures/pid_ratios_vs_ref_mult/"+c.name+".pdf")
     c.Write()
 
 
@@ -57,9 +132,9 @@ def _make_dNdeta_and_event_counter(f, sums, results_post):
         log.info("Computing histograms for {0}".format(est_dir.GetName()))
         # and do everything for weighted and unweighted:
         for postfix in postfixes:
-            h3d = asrootpy(est_dir.FindObject('festi_pT_pid' + postfix))
-            h2d = asrootpy(est_dir.FindObject('fdNdeta' + postfix))
-            nt = asrootpy(est_dir.FindObject("fevent_counter"))
+            h3d = asrootpy(est_dir.FindObject('fNch_pT_pid' + postfix))
+            h2d = asrootpy(est_dir.FindObject('feta_Nch' + postfix))
+            nt = asrootpy(est_dir.FindObject("fEventTuple"))
 
             f.cd("results_post/" + est_dir.GetName() + postfix)
 
@@ -81,6 +156,12 @@ def _make_dNdeta_and_event_counter(f, sums, results_post):
             hs.SetTitle("dN/d#eta vs. #eta " + esti_title)
             c = plot_histogram_stack(hs)
             c.name = "dNdeta_summary"
+            path = "./figures/results_post/{}/".format(est_dir.GetName())
+            try:
+                os.makedirs(path)
+            except OSError:
+                pass
+            #c.SaveAs(path+c.name+".pdf")
             c.write()
 
 
@@ -101,33 +182,34 @@ def _make_hists_vs_pt(f, sums, results_post):
             except:
                 pass
             f.cd(dirname)            
-            h3d_orig = asrootpy(est_dir.FindObject('festi_pT_pid' + postfix))
+            h3d_orig = asrootpy(est_dir.FindObject('fNch_pT_pid' + postfix))
             h3d = asrootpy(h3d_orig.RebinX(rebin_mult, h3d_orig.name+"rebinned"))
             esti_title = "({0})".format(h3d.title[31:])
-            hs = create_stack_pid_ratio_over_pt(h3d, [0], [5,6])
+            
+            hs = create_stack_pid_ratio_over_pt(h3d, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS])
             hs.title = "p/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "proton_over_pich__vs__pt"
             c.write()
 
-            # hs = create_stack_pid_ratio_over_pt(h3d, [8], [5,6])
-            # hs.title= "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            # c = plot_histogram_stack(hs)
-            # c.name = "Xi_over_pich__vs__pt"
-            # c.write()
+            hs = create_stack_pid_ratio_over_pt(h3d, [kANTIXI, kXI], [kPIMINUS, kPIPLUS])
+            hs.title= "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "Xi_over_pich__vs__pt"
+            c.write()
 
-            # hs = create_stack_pid_ratio_over_pt(h3d, [9,10], [5,6])
-            # hs.title= "\Omega_{ch}/\pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            # c = plot_histogram_stack(hs)
-            # c.name = "OmegaCh_over_pich__vs__pt"
-            # c.write()
+            hs = create_stack_pid_ratio_over_pt(h3d, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS])
+            hs.title= "\Omega_{ch}/\pi^{+-} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "OmegaCh_over_pich__vs__pt"
+            c.write()
 
-            # # Ratios to pi0
-            # # hs = create_stack_pid_ratio_over_pt(h3d, [5,6], [7])
-            # # hs.title = "p^{+-}/\pi^{0} vs. p_{T} " + "{}".format(esti_title)
-            # # c = plot_histogram_stack(hs)
-            # # c.name = "pich_over_pi0__vs__pt"
-            # # c.write()
+            # Ratios to pi0
+            hs = create_stack_pid_ratio_over_pt(h3d, [kPIMINUS, kPIPLUS], [kPI0])
+            hs.title = "p^{+-}/\pi^{0} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "pich_over_pi0__vs__pt"
+            c.write()
 
             # # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [0], [7]))
             # # c.name = "proton_over_pi0__vs__pt"
@@ -189,11 +271,11 @@ def _make_PNch_plots(f, sums, results_post):
         step_size = 10  # binning in Nch^est
         #ipdb.set_trace()
         # make ntuples:
-        nt0 = sums[0].FindObject("fevent_counter")
-        nt0.SetAlias(sums[0].GetName(), "fevent_counter")
+        nt0 = sums[0].FindObject("fEventTuple")
+        nt0.SetAlias(sums[0].GetName(), "fEventTuple")
         #previous_estimator_names = [sums[0].GetName(), ]
         for est_dir in sums[1:]:
-            nt0.AddFriend(est_dir.FindObject("fevent_counter"), est_dir.GetName())
+            nt0.AddFriend(est_dir.FindObject("fEventTuple"), est_dir.GetName())
         for est_dir in sums:
             ############################################################
             # Summary plot P(Nch^{est}):
@@ -285,7 +367,7 @@ def _create_ratio_to_mb_stack(stack):
     return ratio_stack
 
         
-def _make_dNdeta_and_PNch_ratio_plots(f, sums, results_post):
+def _make_PNch_ratio_plots(f, sums, results_post):
     # Create ratio plots; depends on the previously created histograms
     log.info("Creating ratios of dN/deta plots for each multiplicity bin")
     for postfix in postfixes:
@@ -363,12 +445,12 @@ def _make_correlation_plots(f, sums, results_post):
         pass
     # only for weighted case
     # Take ntuple from the first estimator and then add friends to this one
-    nt0 = sums[0].FindObject("fevent_counter")
-    nt0.SetAlias(sums[0].GetName(), "fevent_counter")
+    nt0 = sums[0].FindObject("fEventTuple")
+    nt0.SetAlias(sums[0].GetName(), "fEventTuple")
     #previous_estimator_names = [sums[0].GetName(), ]
     # build ntuple
     for est_dir in sums[1:]:
-        nt0.AddFriend(est_dir.FindObject("fevent_counter"), est_dir.GetName())
+        nt0.AddFriend(est_dir.FindObject("fEventTuple"), est_dir.GetName())
     for ref_est in ref_ests:
         for est_dir in sums:
             corr_hist = Hist2D(400, 0, 400,
@@ -387,45 +469,65 @@ def _make_correlation_plots(f, sums, results_post):
 
 def _make_pid_ratio_plots(f, sums, results_post):
     log.info("Correlating identified particle ratios")
-    ratio_dir = 'results_post/pid_ratios'
+    ratio_vs_ref_dir = 'results_post/pid_ratios_vs_refmult'
+    ratio_vs_est_dir = 'results_post/pid_ratios_vs_estmult'
     try:
-        f.mkdir(ratio_dir, recurse=True)
+        f.mkdir(ratio_vs_ref_dir, recurse=True)
     except:
         pass
-    f.cd(ratio_dir)
+    f.cd(ratio_vs_ref_dir)
 
     # Proton / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['2212'], ['-211', '211'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212','2212'], ['-211', '211'],
+                                     ytitle="p/#pi^{+-}")
     # K / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['-211', '211'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['-211', '211'],
+                                     ytitle="K^{*}/#pi^{+-}")
     # Lambda / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3122'], ['-211', '211'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3122'], ['-211', '211'],
+                                     ytitle="#Lambda / #pi^{+-}")
     # Xi / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3322'], ['-211', '211'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3312'], ['-211', '211'],
+                                     ytitle="#Xi / #pi^{+-}")
     # Omega / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['-211', '211'])
-
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['-211', '211'],
+                                     ytitle="#Omega / #pi^{+-}")
     # pi_ch/pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-211', '211'], ['111',])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-211', '211'], ['111',],
+                                     ytitle="#pi^{+-}/#pi^{0}")
     # proton / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['2212'], ['111',])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['111',],
+                                     ytitle="p/#pi^{0}")
     # K / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['111'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['111'],
+                                     ytitle="K^{*}/#pi^{0}")
     # Lambda / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3122'], ['111'])
-
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3122'], ['111'],
+                                     ytitle="#Lambda/#pi^{0}")
     # Xi / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3322'], ['111'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3312'], ['111'],
+                                     ytitle="#Xi/#pi^{0}")
     # Omega / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['111'])
-    # K0_S / K_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['321', '-321'])
-
-    # Currently not working, needs investigation!
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['111'],
+                                     ytitle="#Omega/#pi^{0}")
+    # K_ch / K0_S
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['321', '-321'], ['310'], scale=.5,
+                                     ytitle="(K^{+}+K^{-}) / (2#timesK^{0}_{S})")
     # K0_S / Lambda
-    #_plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['3122'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['-3122', '3122'],
+                                     ytitle="K^{0}_{S} / #Lambda")
     # K0_S / Xi
-    #_plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['3322'])
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['3312'],
+                                     ytitle="K^{0}_{S} / #Xi")
+
+    try:
+        f.mkdir(ratio_vs_est_dir, recurse=True)
+    except:
+        pass
+    f.cd(ratio_vs_est_dir)
+    _plot_particle_ratios_vs_estmult(f, sums, results_post, ['321', '-321'], ['310'],
+                                     scale=.5, title="(K^{+} + K^{-}) / (2*K_{S}^{0})")
+
 
 def _reset_results_dir():
     with root_open(sys.argv[1], 'update') as f:
@@ -459,7 +561,7 @@ if __name__ == "__main__":
                 pass
         results_post = f.results_post
         _make_dNdeta_and_event_counter(f, sums, results_post)
-        _make_dNdeta_and_PNch_ratio_plots(f, sums, results_post)
+        _make_PNch_ratio_plots(f, sums, results_post)
         _make_hists_vs_pt(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
         _make_correlation_plots(f, sums, results_post)
