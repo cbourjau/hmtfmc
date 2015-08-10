@@ -19,61 +19,32 @@ Python development should best be done in virtual environments. Thus, virtualenv
 #+end_src
 should set up rootpy.
 ** Really running the analysis
-The analysis is set up to run with the runTrain facility ([[http://hehi00.nbi.dk:8888/pwglfforward/train_setup_doc.html][link]]) in order to avoid having to maintain individual scripts for local or proof deployment. The analysis is easiest run by just executing the script `run.sh`. Namely:
+The entry point to running the analysis is always `run.sh', together with the platform it should b deployed at and the type of data it should use. Take a look at `run.sh` to see what is happening. For running the analysis locally, you need to first download the needed files, and then change the `run.sh` file to point to a `input_files.dat` file with the paths to the galice.root files. This sounds more complicated than it is. Again, see `run.sh`
+
+Examples:
 #+begin_src sh
-  $ ./run.sh local [OPTIONS]
-  $ ./run.sh lite [OPTIONS]
-  $ ./run.sh proof [OPTIONS]
+  $ ./run.sh local pythia
+  $ ./run.sh lite pythia
+  $ ./run.sh pod pythia
 #+end_src
 
-Available options can be found with `--help`. Eg.:
+
+So, deploying the analysis on vaf should be as easy as:
+
 #+begin_src sh
-  $ ./run.sh local --help
-  + runTrain --class=HMTFMCTrain --name=local --type=ESD --url=local:///home/hehi/cbourjau/phd/service_task/input?mc&pattern=galice.root&recursive#TE --help
-  Warning in <TUnixSystem::SetDisplay>: DISPLAY not set, setting it to top.nbi.dk:0.0
-  Usage: runTrain --class=CLASS --name=NAME --url=URI [OPTIONS]
-
-  runTrain specific options:
-    --class=CLASS                    Train class
-    --name=NAME                      Name of train
-    --include=DIRECTORY              Append dir to macro/header path
-    --define=DEFINE                  Set a preprocessor macro
-    --batch                          Batch mode
-    --spawn                          Spawn interactive ROOT shell
-  Error in <TGClient::TGClient>: only one instance of TGClient allowed
-
-
-  Train Options:
-    --branches                    Load only requested branches [false]
-    --date=YYYY-MM-DD HH:MM       Set date [now]
-    --events=N                    Number of events to analyse [-1]
-    --help                        Show help [true]
-    --overwrite                   Allow overwrite [false]
-    --ps=MODE                     Physics selection mode []
-    --setup                       Only do the setup [false]
-    --tender=WHICH                Specify tender supplies []
-    --type=ESD|AOD|USER           Input data stype [ESD]
-    --url=URL                     Job location & input URL [local:///home/hehi/cbourjau/phd/service_task/input?mc&pattern=galice.root&recursive#TE]
-    --verbose=LEVEL               Set verbosity level [0]
-    --version                     Print version and exit [false]
-
-  Local URL form:
-
-      local://<datadir or list>[?<options>][#<treeName>]
-
-  Options:
-      clean           Clean chain elements [false]
-      mc              Assume simulation input [true]
-      pattern=GLOB    File name pattern [galice.root]
-      recursive       Scan recursive [true]
-      scan            Scan for number of events in chain [false]
-      trackref        For MC input, check TrackRef.root presence [false]
-
+    $ git clone https://github.com/cbourjau/hmtfmc
+    $ cd hmtfmc
+    $ sh run.sh pod pythia
 #+end_src
+
+(To be executed on vaf after requesting your workers and such)
+
+However, for some reason the analysis does run very slow on vaf. I would appreciate feedback on why this might be the case very much!
+
 ** Running the post analysis
 If rootpy is installed running the postanalysis should be as easy as:
 #+begin_src sh
-  $ python post.py ./lite/MC_estimators.root
+  $ python post.py hmtf_mc_mult_pythia.root
 #+end_src
 
 The results of the post analysis are saved in the same file but in the "folder" `results_post`
