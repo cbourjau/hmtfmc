@@ -8,7 +8,6 @@
 #include "TTree.h"
 #include "TParticle.h"
 
-
 #include "AliAODEvent.h"
 #include "AliAnalysisManager.h"
 #include "AliAnalysisTask.h"
@@ -19,7 +18,6 @@
 #include "AliHeader.h"
 #include "AliLog.h"
 #include "AliMCEvent.h"
-//#include "AliPDG.h"
 #include "AliStack.h"
 #include "AliVEvent.h"
 
@@ -97,7 +95,6 @@ AliAnalysisTaskHMTFMCMultEst::AliAnalysisTaskHMTFMCMultEst()
   : AliAnalysisTaskSE(), fMyOut(0), fEstimatorsList(0), fEstimatorNames(0),
     festimators(0), fRequireINELgt0(0), fRunconditions(0), fParticleCounter(0)
 {
-
 }
 
 //________________________________________________________________________
@@ -198,8 +195,8 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
     if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
 	IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
       if (TMath::Abs(track->Eta()) < 1) isINEL_gt_0 = kTRUE;
-      for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
-	festimators[i]->ProcessTrackForMultiplicityEstimation(track);
+      for (iter =festimators.begin(), end = festimators.end(); iter != end; ++iter) { //estimator loop
+	(*iter)->ProcessTrackForMultiplicityEstimation(track);
       }//estimator loop
     }
   }  //track loop
@@ -215,15 +212,15 @@ void AliAnalysisTaskHMTFMCMultEst::UserExec(Option_t *)
       }
       if (mcEvent->Stack()->IsPhysicalPrimary(iTrack) ||
 	  IsPi0PhysicalPrimary(iTrack, mcEvent->Stack())){
-	for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
-	  festimators[i]->ProcessTrackWithKnownMultiplicity(track);
+	for (iter =festimators.begin(), end = festimators.end(); iter != end; ++iter) { //estimator loop
+	  (*iter)->ProcessTrackWithKnownMultiplicity(track);
 	}//estimator loop
       }
     }  //track loop
   
     // Increment eventcounters etc.
-    for (std::vector<MultiplicityEstimatorBase*>::size_type i = 0; i < festimators.size(); i++) { //estimator loop
-      festimators[i]->PostEvent();
+    for (iter =festimators.begin(), end = festimators.end(); iter != end; ++iter) { //estimator loop
+      (*iter)->PostEvent();
     }//estimator loop
   }
   // Post output data.
