@@ -1,7 +1,15 @@
 from array import array
+import sys, os, string, random
+
 from rootpy import asrootpy
 from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D, Graph
+
 import ROOT
+
+
+def gen_random_name():
+    """Generate a random name for temp hists"""
+    return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
 
 
 def create_dNdeta_stack(h2d, event_counter, with_mb=True):
@@ -166,22 +174,59 @@ def plot_list_of_plottables(l, title=''):
     return c
 
 
-def create_stack_pid_ratio_over_pt(h3d, pid1, pid2):
+def create_stack_pid_ratio_over_pt(mult_pt_dir, pids1, pids2, nch_max):
     """
     Create a hist stack, where hists are the ratio of particles of species 1 over 2 vs. pt, stack is
     binned in multiplicity bins.
     pidx must be a list, these particles are added together befor dividing (eg. pi charged)
     """
-    h3d = asrootpy(h3d)
-    stack1 = make_stack_of_mult_bins_for_pids(h3d, pid1)
-    stack2 = make_stack_of_mult_bins_for_pids(h3d, pid2)
-    outstack = HistStack()
-    for ibin, (hpid1, hpid2) in enumerate(zip(stack1.GetHists(), stack2.GetHists())):
-        tmp = hpid1/hpid2
-        tmp.title = hpid1.title
-        outstack.Add(tmp)
+    mult_bin_size = 10
+    nmult_bins = mult_pt_dir.FindObject(pids1[0]).GetNbinsX()
+
+    def make_list_of_pt_plots_binned_in_multclasses(pids, nch_max):
+        pt_hists_in_multclasses_in_pids = []
+        for ipid, pid in enumerate(pids):
+            h2d = asrootpy(mult_pt_dir.FindObject(pid))
+            pt_hists_in_multclasses = []
+            is_last_bin = False
+            for mult_bin_lower in range(0, nmult_bins, 10):
+                mult_bin_upper = mult_bin_lower + mult_bin_size
+                if mult_bin_upper > nch_max:
+                    mult_bin_upper = h2d.xaxis.GetNbins()
+                    is_last_bin = True
+                h2d.xaxis.SetRange(mult_bin_lower, mult_bin_lower + mult_bin_size)
+                pt_hists_in_multclasses.append(asrootpy(h2d.ProjectionY(gen_random_name())))
+                pt_hists_in_multclasses[-1].title = "{} #leq N_{{ch}}^{{est}} #leq {}".\
+                                                    format(mult_bin_lower, mult_bin_upper)
+                if is_last_bin:
+                    pt_hists_in_multclasses[-1].title = "{} #leq N_{{ch}}^{{est}}".\
+                                                        format(mult_bin_lower)
+                    break
+            pt_hists_in_multclasses_in_pids.append(pt_hists_in_multclasses)
+        # sum over pids -> list of length multclass
+        # for that, I make convert the npid lists with length nmultclass to
+        # nmultclass tuples of lenghtn npid
+        return map(sum, zip(*pt_hists_in_multclasses_in_pids))
+    pt_hists_pids1 = make_list_of_pt_plots_binned_in_multclasses(pids1, nch_max)
+    pt_hists_pids2 = make_list_of_pt_plots_binned_in_multclasses(pids2, nch_max)
+
+    # divide the sum of the two pids lists; results in list of ratios for each mutlclass
+    outstack = HistStack()    
+    for h1,h2 in zip(pt_hists_pids1, pt_hists_pids2):
+        #tmp = hpid1/hpid2
+        #tmp.title = hpid1.title
+        #outstack.Add(tmp)
+        if h1.Integral()==0.0 or h2.Integral()==0.0:
+            # break if one of the histograms is empty
+            break
+        try:
+            outstack.Add(h1/h2)
+        except ZeroDivisionError:
+            # break at first zero division
+            break
+
     outstack.Draw('nostack')
-    outstack.title = "pid{0} / pid{1}".format(pid1, pid2)
+    outstack.title = "pid{0} / pid{1}".format(pids1, pids2)
     outstack.xaxis.SetTitle("p_{T}")
     return outstack
 

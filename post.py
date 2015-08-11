@@ -37,6 +37,10 @@ kOMEGAMINUS = str(3334)
 kOMEGAPLUS = str(-3334)
 
 
+# use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
+mean_mult_cutoff_factor = 4
+
+
 def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, title=''):
     stack = list()
     nesti = len(sums)
@@ -45,17 +49,17 @@ def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=
         pids1hists = []
         pids2hists = []
         for pid in pids1:
-            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid),h3d.zaxis.FindBin(pid))
+            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid), h3d.zaxis.FindBin(pid))
             h = asrootpy(h3d.Project3D("yx"))
             h.SetName(gen_random_name())
             pids1hists.append(h)
 
         for pid in pids2:
-            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid),h3d.zaxis.FindBin(pid))
+            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid), h3d.zaxis.FindBin(pid))
             h = asrootpy(h3d.Project3D("yx"))
             h.SetName(gen_random_name())
             pids2hists.append(h)
-            
+
         # sum up each histogram
         pids1_px = asrootpy(sum(pids1hists).ProjectionX())
         pids2_px = asrootpy(sum(pids2hists).ProjectionX())
@@ -70,7 +74,7 @@ def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=
         title = "{} div {}".format(str(pids1), str(pids2))
     c = plot_list_of_plottables(stack, title)
     c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
-    
+
     c.Write()
 
 
@@ -184,82 +188,94 @@ def _make_hists_vs_pt(f, sums, results_post):
             f.cd(dirname)            
             h3d_orig = asrootpy(est_dir.FindObject('fNch_pT_pid' + postfix))
             h3d = asrootpy(h3d_orig.RebinX(rebin_mult, h3d_orig.name+"rebinned"))
+            mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
+            # bin in standard step size up to max_nch; from there ibs all in one bin:
+            max_nch = mean_nch * mean_mult_cutoff_factor
             esti_title = "({0})".format(h3d.title[31:])
+
+            mult_pt_dir = results_post.FindObject(est_dir.GetName()).FindObject("mult_pt")
             
-            hs = create_stack_pid_ratio_over_pt(h3d, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS])
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], max_nch)
             hs.title = "p/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "proton_over_pich__vs__pt"
             c.write()
 
-            hs = create_stack_pid_ratio_over_pt(h3d, [kANTIXI, kXI], [kPIMINUS, kPIPLUS])
-            hs.title= "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPIMINUS, kPIPLUS], max_nch)
+            hs.title = "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "Xi_over_pich__vs__pt"
             c.write()
 
-            hs = create_stack_pid_ratio_over_pt(h3d, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS])
-            hs.title= "\Omega_{ch}/\pi^{+-} vs. p_{T} " + "{}".format(esti_title)
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS], max_nch)
+            hs.title = "#Omega_{ch}/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "OmegaCh_over_pich__vs__pt"
             c.write()
 
             # Ratios to pi0
-            hs = create_stack_pid_ratio_over_pt(h3d, [kPIMINUS, kPIPLUS], [kPI0])
-            hs.title = "p^{+-}/\pi^{0} vs. p_{T} " + "{}".format(esti_title)
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kPIMINUS, kPIPLUS], [kPI0], max_nch)
+            hs.title = "#pi^{+-}/#pi^{0} vs. p_{T} " + "{}".format(esti_title)
             c = plot_histogram_stack(hs)
             c.name = "pich_over_pi0__vs__pt"
             c.write()
 
-            # # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [0], [7]))
-            # # c.name = "proton_over_pi0__vs__pt"
-            # # c.title= "p/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            # # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPI0], max_nch)
+            hs.title = "p/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
+            c = plot_histogram_stack(hs)
+            c.name = "proton_over_pi0__vs__pt"
 
-            # # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [2], [7]))
-            # # c.name = "K0S_over_pi0__vs__pt"
-            # # c.title= "K0S/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            # # c.write()
+            c.write()
 
-            # # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [1], [7]))
-            # # c.name = "Lambda_over_pi0__vs__pt"
-            # # c.title= "#Lambda/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            # # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kK0S], [kPI0], max_nch)
+            hs.title = "K0S/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
+            c = plot_histogram_stack(hs)
+            c.name = "K0S_over_pi0__vs__pt"
+            c.write()
 
-            # # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [8], [7]))
-            # # c.name = "Xi_over_pi0__vs__pt"
-            # # c.title= "#Xi/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            # # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kPI0], max_nch)
+            hs.title = "#Lambda/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
+            c = plot_histogram_stack(hs)
+            c.name = "Lambda_over_pi0__vs__pt"
+            c.write()
 
-            # # c = plot_histogram_stack(create_stack_pid_ratio_over_pt(h3d, [9,10], [7]))
-            # # c.name = "OmegaCh_over_pi0__vs__pt"
-            # # c.title= "#Omega_{ch}/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            # # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPI0], max_nch)
+            hs.title = "#Xi/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
+            c = plot_histogram_stack(hs)
+            c.name = "Xi_over_pi0__vs__pt"
+            c.write()
 
-            # # Ratios to K0S
-            # hs = create_stack_pid_ratio_over_pt(h3d, [0], [2])
-            # hs.title= "p/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            # c = plot_histogram_stack(hs)
-            # c.name = "proton_over_K0S__vs__pt"
-            # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPI0], max_nch)
+            hs.title = "#Omega_{ch}/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
+            c = plot_histogram_stack(hs)
+            c.name = "OmegaCh_over_pi0__vs__pt"
+            c.write()
 
-            # hs = create_stack_pid_ratio_over_pt(h3d, [1], [2])
-            # hs.title= "#Lambda/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            # c = plot_histogram_stack(hs)
-            # c.name = "Lambda_over_K0S__vs__pt"
-            # c.write()
+            # Ratios to K0S
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kK0S], max_nch)
+            hs.title = "p/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "proton_over_K0S__vs__pt"
+            c.write()
 
-            # hs = create_stack_pid_ratio_over_pt(h3d, [8], [2])
-            # hs.title= "#Xi/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            # c = plot_histogram_stack(hs)
-            # c.name = "Xi_over_K0S__vs__pt"
-            # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kK0S], max_nch)
+            hs.title = "#Lambda/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "Lambda_over_K0S__vs__pt"
+            c.write()
 
-            # hs = create_stack_pid_ratio_over_pt(h3d, [9,10], [2])
-            # hs.title= "#Omega_{ch}/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            # c = plot_histogram_stack(hs)
-            # c.name = "OmegaCh_over_K0S__vs__pt"
-            # c.write()
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kK0S], max_nch)
+            hs.title = "#Xi/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "Xi_over_K0S__vs__pt"
+            c.write()
+
+            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kK0S], max_nch)
+            hs.title = "#Omega_{ch}/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
+            c = plot_histogram_stack(hs)
+            c.name = "OmegaCh_over_K0S__vs__pt"
+            c.write()
+
 
 def _make_PNch_plots(f, sums, results_post):
     # Create P(Nch) plots
@@ -269,7 +285,6 @@ def _make_PNch_plots(f, sums, results_post):
         pNch_summary.title = "P(N_{ch}^{est}) summary "
 
         step_size = 10  # binning in Nch^est
-        #ipdb.set_trace()
         # make ntuples:
         nt0 = sums[0].FindObject("fEventTuple")
         nt0.SetAlias(sums[0].GetName(), "fEventTuple")
@@ -353,6 +368,29 @@ def _make_PNch_plots(f, sums, results_post):
         c.name = "PNch_summary" + postfix
         f.cd("results_post")
         c.write()
+
+
+def _make_mult_vs_pt_plots(f, sums, results_post):
+    log.info("Makeing 2D mult pt plots for each particle kind")
+    for est_dir in sums:
+        if est_dir.GetName() == "Total":
+            continue
+        dir_name = "results_post/" + est_dir.GetName() + "/mult_pt"
+        try:
+            f.mkdir(dir_name, recurse=True)
+        except ValueError:
+            pass
+        f.cd(dir_name)
+
+        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+        # loop through all particle kinds:
+        nPIDs = h3d.zaxis.GetNbins()
+        for ibin in range(1, nPIDs + 1):
+            h3d.zaxis.SetRange(ibin, ibin)
+            mult_pt = asrootpy(h3d.Project3D("yx"))
+            mult_pt.name = h3d.zaxis.GetBinLabel(ibin)
+            mult_pt.Write()
+
 
 def _create_ratio_to_mb_stack(stack):
     """Given a stack of histograms, create the ratio of each multiplicity bin to the MB (all binns combined)"""
@@ -561,9 +599,11 @@ if __name__ == "__main__":
                 pass
         results_post = f.results_post
         _make_dNdeta_and_event_counter(f, sums, results_post)
+        _make_mult_vs_pt_plots(f, sums, results_post)
         _make_PNch_ratio_plots(f, sums, results_post)
         _make_hists_vs_pt(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
         _make_correlation_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
+
 
