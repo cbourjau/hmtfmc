@@ -1,17 +1,12 @@
 #ifndef AliAnalysisTaskHMTFMCMultEst_cxx
 #define AliAnalysisTaskHMTFMCMultEst_cxx
 
-
 class TH1F;
 class TH1I;
 class TGraphErrors;
 
-enum {kHistINEL,kHistNSD,kHistND,kHistSiD,kNHist};
 #include "AliAnalysisTaskSE.h"
 #include "AliMultiplicityEstimators.h"
-#include <iostream>
-#include <stdio.h>
-
 
 class AliAnalysisTaskHMTFMCMultEst : public AliAnalysisTaskSE {
  public:

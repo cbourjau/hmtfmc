@@ -3,16 +3,9 @@
 #include "TList.h"
 #include "TH1F.h"
 #include "TH2F.h"
-#include "TCanvas.h"
-#include "TPad.h"
-#include "TLegend.h"
-#include "TString.h"
 
-// #include "AliLog.h"
 #include "AliMCEvent.h"
-#include "AliStack.h"
 #include "AliHeader.h"
-#include "AliGenEventHeader.h"
 #include "AliGenPythiaEventHeader.h"
 #include "AliGenDPMjetEventHeader.h"
 

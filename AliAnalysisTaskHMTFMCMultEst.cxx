@@ -1,25 +1,10 @@
 #include <iostream>
 
-#include "TCanvas.h"
-#include "TChain.h"
-#include "TGraphErrors.h"
-#include "TH1F.h"
-#include "TH2F.h"
-#include "TTree.h"
 #include "TParticle.h"
 
-#include "AliAODEvent.h"
-#include "AliAnalysisManager.h"
-#include "AliAnalysisTask.h"
-#include "AliESDEvent.h"
-#include "AliGenDPMjetEventHeader.h"
-#include "AliGenEventHeader.h"
-#include "AliGenPythiaEventHeader.h"
-#include "AliHeader.h"
 #include "AliLog.h"
 #include "AliMCEvent.h"
 #include "AliStack.h"
-#include "AliVEvent.h"
 
 #include "AliAnalysisTaskHMTFMCMultEst.h"
 #include "AliMultiplicityEstimators.h"
@@ -45,7 +30,7 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
   Int_t pdg = TMath::Abs(p->GetPdgCode());
 
   // The function is only for pi0's so I'm out of here if its not a pi'0 we are looking at
-  if (pdg != kPi0) return kFALSE;
+  if (pdg != 111) return kFALSE;
   
   if (index < stack->GetNprimary()) {
     // Particle produced by generator
@@ -60,7 +45,7 @@ Bool_t IsPi0PhysicalPrimary(Int_t index, AliStack *stack)
     if ((mpdg == 3212) &&  (imo <  stack->GetNprimary())) return kTRUE;
     
     // Check if it comes from a pi0 decay
-    if ((mpdg == kPi0) && (imo < stack->GetNprimary()))   return kTRUE; 
+    if ((mpdg == 111) && (imo < stack->GetNprimary()))   return kTRUE;
 
     // Check if this is a heavy flavor decay product
     Int_t mfl  = Int_t (mpdg / TMath::Power(10, Int_t(TMath::Log10(mpdg))));
