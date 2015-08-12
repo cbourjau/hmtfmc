@@ -129,7 +129,7 @@ void runProof(const TString runmode_str  = "lite",
 					   "libpythia6_4_25:"
 					   "libAliPythia6"
 					   ),
-	      const char * analysisFiles=("MultiplicityEstimators.cxx+:"
+	      const char * analysisFiles=("AliMultiplicityEstimators.cxx+:"
 					  "AliAnalysisTaskHMTFMCMultEst.cxx+"),
 	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {

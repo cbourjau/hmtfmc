@@ -22,7 +22,7 @@
 #include "AliVEvent.h"
 
 #include "AliAnalysisTaskHMTFMCMultEst.h"
-#include "MultiplicityEstimators.h"
+#include "AliMultiplicityEstimators.h"
 
 using namespace std;
 

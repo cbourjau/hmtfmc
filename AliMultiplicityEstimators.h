@@ -1,5 +1,5 @@
-#ifndef MultiplicityEstimators_cxx
-#define MultiplicityEstimators_cxx
+#ifndef AliMultiplicityEstimators_cxx
+#define AliMultiplicityEstimators_cxx
 
 //class TH1F;
 //class TH1I;

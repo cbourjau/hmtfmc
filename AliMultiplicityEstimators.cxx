@@ -16,7 +16,7 @@
 #include "AliGenPythiaEventHeader.h"
 #include "AliGenDPMjetEventHeader.h"
 
-#include "MultiplicityEstimators.h"
+#include "AliMultiplicityEstimators.h"
 
 using namespace std;
 

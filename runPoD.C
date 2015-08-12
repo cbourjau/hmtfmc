@@ -59,7 +59,7 @@ void runPoD(
 
   
   // DON'T use double '+' when running multiple times: it uselessly recompiles everything!
-  gProof->Load("MultiplicityEstimators.cxx+");
+  gProof->Load("AliMultiplicityEstimators.cxx+");
   gProof->Load("AliAnalysisTaskHMTFMCMultEst.cxx+");  
   gROOT->LoadMacro("AddTaskHMTFMCMultEst.C");
 

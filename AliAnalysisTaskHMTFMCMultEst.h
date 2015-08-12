@@ -8,7 +8,7 @@ class TGraphErrors;
 
 enum {kHistINEL,kHistNSD,kHistND,kHistSiD,kNHist};
 #include "AliAnalysisTaskSE.h"
-#include "MultiplicityEstimators.h"
+#include "AliMultiplicityEstimators.h"
 #include <iostream>
 #include <stdio.h>
 
