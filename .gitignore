@@ -11,3 +11,4 @@ build.log
 /local/*
 /mwe/*
 *.zip
+/pythia/*
