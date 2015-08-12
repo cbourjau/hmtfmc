@@ -118,7 +118,7 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
   }
 }
 
-void runProof(const TString runmode_str  = "lite",
+void run(const TString runmode_str  = "lite",
 	      Int_t max_events = -1,
 	      //Int_t first_event= 0,
 	      Int_t debug = 0,

@@ -61,7 +61,7 @@ shift
 
 
 outfile="hmtf_mc_mult_${mc}"
-root -l -x "runProof.C(\"${runmode}\", -1, 0, \"${incoll}\", \"${outfile}\")"
+root -l -x "run.C(\"${runmode}\", -1, 0, \"${incoll}\", \"${outfile}\")"
 
 #igprof -pp -z -o profiling.pp.gz root -l -x "\"runProof.C(\"${runmode}\", -1, 0, \"${incoll}\", \"${outfile}\")\""
 #runTrain --class=HMTFMCMultEstTrain --name=$name --type=ESD --url="$url" $@ 
