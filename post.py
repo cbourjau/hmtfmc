@@ -1,5 +1,14 @@
-"""Run post analysis on the given file"""
-import sys, os, string, random
+"""
+This is the entry point to run the post analysis. This file contains the steering part.
+Ie. it does define which plots to make, but not how. The logic which extracts the data from the
+primary generated "Sums" is in the post_data_extractor.py. These functions provide (lists of) plottables.
+These plottables are then plotted with the plotting functions in plotting_util.py
+"""
+
+import sys
+import os
+import string
+import random
 import ipdb
 
 if len(sys.argv) != 2:
@@ -8,18 +17,62 @@ if len(sys.argv) != 2:
 
 from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log
-from rootpy.plotting import HistStack, Hist1D, Hist2D, Canvas
-from post_utils import create_dNdeta_stack,\
-    plot_histogram_stack, create_stack_pid_ratio_over_pt,\
-    create_hist_pid_ratio_over_mult,\
-    create_canonnical_avg_from_stacks,\
-    divide_stacks, create_graph_pided_refest_vs_pidcount,\
+from rootpy.plotting import Hist1D, Hist2D, Canvas
+
+from post_data_extractors import get_dNdeta_binned_in_mult, get_identified_vs_mult,\
+    get_NchEst1_vs_NchEst2, get_PNch_vs_estmult
+from post_utils import create_stack_pid_ratio_over_pt,\
+    remap_x_values,\
     plot_list_of_plottables, remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
+
 
 def gen_random_name():
     """Generate a random name for temp hists"""
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
+
+
+def get_color_generator(ncolors):
+    """Returns a generator for n colors"""
+    # return (int(800 + idx*100.0/ncolors) + 1 for idx in xrange(ncolors))
+
+    # generated with sns.palplot(sns.color_palette("colorblind", 10))
+    colorblind_colors = [(0.0, 0.4470588235294118, 0.6980392156862745),
+                         (0.0, 0.6196078431372549, 0.45098039215686275),
+                         (0.8352941176470589, 0.3686274509803922, 0.0),
+                         (0.8, 0.4745098039215686, 0.6549019607843137),
+                         (0.9411764705882353, 0.8941176470588236, 0.25882352941176473),
+                         (0.33725490196078434, 0.7058823529411765, 0.9137254901960784),
+                         (0.0, 0.4470588235294118, 0.6980392156862745),
+                         (0.0, 0.6196078431372549, 0.45098039215686275),
+                         (0.8352941176470589, 0.3686274509803922, 0.0),
+                         (0.8, 0.4745098039215686, 0.6549019607843137)]
+    # return iter(colorblind_colors)
+    set2 = [(0.40000000596046448, 0.7607843279838562, 0.64705884456634521),
+            (0.98131487965583808, 0.55538641635109398, 0.38740485135246722),
+            (0.55432528607985565, 0.62711267120697922, 0.79595541393055635),
+            (0.90311419262605563, 0.54185316071790801, 0.76495195557089413),
+            (0.65371782148585622, 0.84708959004458262, 0.32827375098770734),
+            (0.9986312957370983, 0.85096502233954041, 0.18488274134841617),
+            (0.89573241682613591, 0.76784315109252932, 0.58182240093455595),
+            (0.70196080207824707, 0.70196080207824707, 0.70196080207824707),
+            (0.40000000596046448, 0.7607843279838562, 0.64705884456634521),
+            (0.98131487965583808, 0.55538641635109398, 0.38740485135246722)]
+    return iter(set2)
+
+
+def make_estimator_title(name):
+    if name == 'EtaLt05':
+        return '|#eta| #leq 0.5'
+    elif name == 'EtaLt08':
+        return '|#eta| #leq 0.8'
+    elif name == 'EtaLt15':
+        return '|#eta| #leq 1.5'
+    elif name == 'Eta08_15':
+        return '0.8 #leq |#eta| #leq 1.5'
+    else:
+        return name
+
 
 kPROTON = str(2212)
 kANTIPROTON = str(-2212)
@@ -41,40 +94,31 @@ kOMEGAPLUS = str(-3334)
 mean_mult_cutoff_factor = 4
 
 
-def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, title=''):
+def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
     stack = list()
-    nesti = len(sums)
-    for i, est_dir in enumerate(sums):
+    colors = get_color_generator(10)
+    if not ytitle:
+        ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
+
+    for est_dir in sums:
+        if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
+            continue
         h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
-        pids1hists = []
-        pids2hists = []
-        for pid in pids1:
-            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid), h3d.zaxis.FindBin(pid))
-            h = asrootpy(h3d.Project3D("yx"))
-            h.SetName(gen_random_name())
-            pids1hists.append(h)
+        pids1hists = [get_identified_vs_mult(h3d, pdg) for pdg in pids1]
+        pids2hists = [get_identified_vs_mult(h3d, pdg) for pdg in pids2]
 
-        for pid in pids2:
-            h3d.zaxis.SetRange(h3d.zaxis.FindBin(pid), h3d.zaxis.FindBin(pid))
-            h = asrootpy(h3d.Project3D("yx"))
-            h.SetName(gen_random_name())
-            pids2hists.append(h)
-
-        # sum up each histogram
-        pids1_px = asrootpy(sum(pids1hists).ProjectionX())
-        pids2_px = asrootpy(sum(pids2hists).ProjectionX())
+        pids1_px = sum(pids1hists)
+        pids2_px = sum(pids2hists)
         ratio1d = pids1_px / pids2_px
-        ratio1d.SetTitle(est_dir.GetName())
-        ratio1d.color = int(800 + i*100.0/nesti) +1
+        ratio1d.SetTitle(make_estimator_title(est_dir.GetName()))
+        ratio1d.xaxis.title = "N_{ch}|_{" + make_estimator_title(est_dir.GetName()) + "}"
+        ratio1d.yaxis.title = ytitle
+        ratio1d.color = colors.next()
         if scale:
             ratio1d.Scale(scale)
         stack.append(ratio1d)
-
-    if not title:
-        title = "{} div {}".format(str(pids1), str(pids2))
-    c = plot_list_of_plottables(stack, title)
+    c = plot_list_of_plottables(stack)
     c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
-
     c.Write()
 
 
@@ -84,89 +128,88 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     This function depends on the correlation histograms to be present in f
     """
     ratios = []
-    for i, est_dir in enumerate(sums):
-        h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
-        chist = asrootpy(results_post.correlations.Get("corr_hist_EtaLt05_vs_{}".format(est_dir.GetName())))
-        try:
-            g1 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids1)
-            g2 = create_graph_pided_refest_vs_pidcount(h3d, chist, pids2)
-        except IndexError:
-            log.info("Could not process pid ratio for {} for estimator {}".format(
-                "_".join(pids1) + "_div_" + "_".join(pids2),
-                est_dir.GetName()))
+    colors = get_color_generator(10)
+    refest = "EtaLt05"
+    if not ytitle:
+        ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
+
+    for est_dir in sums:
+        if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
             continue
-        remove_zero_value_points(g1)
-        remove_zero_value_points(g2)
-        remove_points_with_x_err_gt_1NchRef(g1)
-        remove_points_with_x_err_gt_1NchRef(g2)
-        remove_points_with_equal_x(g1)
-        remove_points_with_equal_x(g2)
-        remove_non_mutual_points(g1, g2)
+        h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
+        corr_hist = asrootpy(results_post.correlations.Get("corr_hist_{}_vs_{}".format(refest, est_dir.GetName())))
+
+        pids1_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids1])
+        pids2_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids2])
+
+        # remap histograms using the correlation between the current estimator and the reference one
+        pids1_vs_refmult = remap_x_values(pids1_vs_estmult, corr_hist)
+        pids2_vs_refmult = remap_x_values(pids2_vs_estmult, corr_hist)
+
+        # sanitize
+        for g in [pids1_vs_refmult, pids2_vs_refmult]:
+            remove_zero_value_points(g)
+            remove_points_with_x_err_gt_1NchRef(g)
+            remove_points_with_equal_x(g)
+        remove_non_mutual_points(pids1_vs_refmult, pids2_vs_refmult)
+
         try:
-            ratio = g1 / g2
+            ratio = pids1_vs_refmult / pids2_vs_refmult
         except ZeroDivisionError:
             print "ZeroDivisionError in {}".format(est_dir.GetName())
             continue
-        if not ytitle:
-            title = g1.title + " / " + g2.title
-        else:
-            title = ''
         if scale:
             ratio.Scale(scale)
+        ratio.xaxis.title = "N_{ch}|_{" + refest + "}"
         ratio.yaxis.title = ytitle
-        ratio.title = est_dir.GetName()
-        ratio.xaxis.title = g1.xaxis.title
-        ratio.SetColor(800 + int(100.0/3)*(i) + 1)
+        ratio.title = make_estimator_title(est_dir.GetName())
+
+        ratio.SetColor(colors.next())
         ratios.append(ratio)
-    c = plot_list_of_plottables(ratios, title)
+    c = plot_list_of_plottables(ratios)
     c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
     try:
         os.makedirs("./figures/pid_ratios_vs_ref_mult/")
     except OSError:
         pass
-    #c.SaveAs("./figures/pid_ratios_vs_ref_mult/"+c.name+".pdf")
+    # c.SaveAs("./figures/pid_ratios_vs_ref_mult/"+c.name+".pdf")
     c.Write()
 
 
-def _make_dNdeta_and_event_counter(f, sums, results_post):
+def _make_dNdeta_and_event_counter(f, sums):
     # Loop over all estimators in the Sums list:
+    log.info("Creating event counter and dN/deta plots")
     for est_dir in sums:
         if est_dir.GetName() == "Total":
             continue
-        log.info("Computing histograms for {0}".format(est_dir.GetName()))
-        # and do everything for weighted and unweighted:
-        for postfix in postfixes:
-            h3d = asrootpy(est_dir.FindObject('fNch_pT_pid' + postfix))
-            h2d = asrootpy(est_dir.FindObject('feta_Nch' + postfix))
-            nt = asrootpy(est_dir.FindObject("fEventTuple"))
+        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+        h2d = asrootpy(est_dir.FindObject('feta_Nch'))
+        nt = asrootpy(est_dir.FindObject("fEventTuple"))
 
-            f.cd("results_post/" + est_dir.GetName() + postfix)
+        f.cd("results_post/" + est_dir.GetName())
 
-            # Write out event counters vs. multiplicity
-            h_event_counter = Hist1D(400, 0, 400,
-                                     name=("event_counter" + postfix),
-                                     title="Event counter vs. multiplicity in est region")
-            if postfix:  # empty string is falsy
-                nt.Project(h_event_counter.name, "nch")
-            else:
-                nt.Project(h_event_counter.name, "nch", "ev_weight")
-            h_event_counter.write()
+        # Write out event counters vs. multiplicity
+        h_event_counter = Hist1D(400, 0, 400,
+                                 name=("event_counter"),
+                                 title="Event counter vs. multiplicity in est region")
+        nt.Project(h_event_counter.name, "nch", "ev_weight")
+        h_event_counter.write()
 
-            esti_title = "({0})".format(h3d.GetTitle()[31:])
-            ###########################################################
-            # Category 1 on TWiki
-            # create dN/deta stack for the current estimator
-            hs = create_dNdeta_stack(h2d, h_event_counter)
-            hs.SetTitle("dN/d#eta vs. #eta " + esti_title)
-            c = plot_histogram_stack(hs)
-            c.name = "dNdeta_summary"
-            path = "./figures/results_post/{}/".format(est_dir.GetName())
-            try:
-                os.makedirs(path)
-            except OSError:
-                pass
-            #c.SaveAs(path+c.name+".pdf")
-            c.write()
+        esti_title = "({0})".format(h3d.GetTitle()[31:])
+
+        mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
+        # bin in standard step size up to max_nch; from there ibs all in one bin:
+        max_nch = mean_nch * mean_mult_cutoff_factor
+        l = get_dNdeta_binned_in_mult(h2d, h_event_counter, nch_max=max_nch, with_mb=True)
+        c = plot_list_of_plottables(l, title="dN/d#eta vs. #eta " + esti_title)
+        c.name = "dNdeta_summary"
+        path = "./figures/results_post/{}/".format(est_dir.GetName())
+        try:
+            os.makedirs(path)
+        except OSError:
+            pass
+        # c.SaveAs(path+c.name+".pdf")
+        c.write()
 
 
 def _make_hists_vs_pt(f, sums, results_post):
@@ -180,21 +223,21 @@ def _make_hists_vs_pt(f, sums, results_post):
     for est_dir in sums:
         # and do everything for weighted and unweighted:
         for postfix in postfixes:
-            dirname = 'results_post/{}/pid_ratios'.format(est_dir.GetName()+postfix)
+            dirname = 'results_post/{}/pid_ratios'.format(est_dir.GetName() + postfix)
             try:
                 f.mkdir(dirname, recurse=True)
             except:
                 pass
-            f.cd(dirname)            
+            f.cd(dirname)
             h3d_orig = asrootpy(est_dir.FindObject('fNch_pT_pid' + postfix))
-            h3d = asrootpy(h3d_orig.RebinX(rebin_mult, h3d_orig.name+"rebinned"))
+            h3d = asrootpy(h3d_orig.RebinX(rebin_mult, h3d_orig.name + "rebinned"))
             mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
             # bin in standard step size up to max_nch; from there ibs all in one bin:
             max_nch = mean_nch * mean_mult_cutoff_factor
             esti_title = "({0})".format(h3d.title[31:])
 
             mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
-            
+
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], max_nch)
             hs.title = "p/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
             c = plot_list_of_plottables(hs)
@@ -353,9 +396,7 @@ def _make_PNch_plots(f, sums, results_post):
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
     log.info("Makeing 2D mult pt plots for each particle kind")
-    for est_dir in sums:
-        if est_dir.GetName() == "Total":
-            continue
+    for est_dir in (somedir for somedir in sums if somedir.GetName() in considered_ests):
         dir_name = "results_post/" + est_dir.GetName() + "/mult_pt"
         try:
             f.mkdir(dir_name, recurse=True)
@@ -373,86 +414,29 @@ def _make_mult_vs_pt_plots(f, sums, results_post):
             mult_pt.Write()
 
 
-def _create_ratio_to_mb_stack(stack):
-    """Given a stack of histograms, create the ratio of each multiplicity bin to the MB (all binns combined)"""
-    mb_name = 'mb_dNdeta'
-    mb_hist = next(h for h in stack.GetHists() if h.name==mb_name)
-    ratio_stack = HistStack()
-    for h in stack:
-        if h.name == mb_name:
-            break
-        h_tmp = h / mb_hist
-        ratio_stack.Add(h_tmp)
-    return ratio_stack
-
-        
-def _make_PNch_ratio_plots(f, sums, results_post):
+def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
     # Create ratio plots; depends on the previously created histograms
     log.info("Creating ratios of dN/deta plots for each multiplicity bin")
-    for postfix in postfixes:
-        for est_dir in sums:
-            if est_dir.GetName() == "Total":
-                continue
-            res_dir_str = "results_post/" + est_dir.GetName() + postfix
-            stack = asrootpy(results_post\
-                             .Get(est_dir.GetName() + postfix)\
-                             .Get("dNdeta_summary")\
-                             .FindObject('dNdeta_stack'))
-            ratio_stack = _create_ratio_to_mb_stack(stack)
-            ratio_stack.title = 'dN/d#eta|_{mult} / dN/d#eta|_{MB} '
-            #ratio_stack.name = "dNdeta_ratio_to_mb"
-            c = plot_histogram_stack(ratio_stack)
-            c.name = "dNdeta_ratio_to_mb_canvas"
-            f.cd(res_dir_str)
-            c.Write()
-            
-        
-        # # Get the  dN/deta stack for each estimator in order to calc 
-        # # the cannonical average for all _other_ estimators later on
-        # # P(N_ch): one stack containing all estimators!
-        # dNdeta_stacks = []        # List of stacks!
-        # #pNch_stack = HistStack()  # One HistStack!
-        # #pNch_stack.name = "P(N_{ch}^{est}) summary "
-        # for est_dir in sums:
-        #     
-        #     dNdeta_stacks.append(asrootpy(f.results_post\
-        #                            .Get(est_dir.GetName() + postfix)\
-        #                            .Get("dNdeta_summary")\
-        #                            .FindObject('dNdeta_stack')))
+    for est_dir in (somedir for somedir in results_post if somedir.GetName() in considered_ests):
+        res_dir_str = "results_post/" + est_dir.GetName()
+        # get the histograms out of the summary plot, even if it is hackish...
+        plot_pad = est_dir.Get("dNdeta_summary").FindObject("plot")
+        # some of the hists are just the frames, neglect those
+        hists = [asrootpy(h) for h in plot_pad.GetListOfPrimitives()
+                 if (isinstance(h, ROOT.TH1) and h.Integral() > 0)]
+        # find the first histogram with name mb_dNdeta
+        mb_hist_name = 'mb_dNdeta'
+        try:
+            mb_hist = next(h for h in hists if h.name == mb_hist_name)
+        except StopIteration:
+            raise StopIteration("no histogram named {} was found in dNdeta summary plot".format(mb_hist_name))
+        ratios = [h / mb_hist for h in hists if h.name != mb_hist_name]
+        title = 'dN/d#eta|_{mult} / dN/d#eta|_{MB} '
+        c = plot_list_of_plottables(ratios, title)
+        c.name = "dNdeta_ratio_to_mb_canvas"
+        f.cd(res_dir_str)
+        c.Write()
 
-        # # looping over file again in order to have the estimator name handy,
-        # for i, est_dir in enumerate(sums):
-        #     res_dir_str = "results_post/" + est_dir.GetName() + postfix + "/ratios_to_other_est"
-        #     try:
-        #         f.mkdir(res_dir_str, recurse=True)
-        #     except:
-        #         pass
-        #     # calc cannonical avg withouth the current hist
-        #     other_dNdeta_stacks = dNdeta_stacks[:i] + dNdeta_stacks[i+1:]
-        #     avg_stack = create_canonnical_avg_from_stacks(other_dNdeta_stacks)
-        #     ratio = divide_stacks(dNdeta_stacks[i], avg_stack)
-        #     ratio.title = ('Ratio of '
-        #                    + dNdeta_stacks[i].title
-        #                    + ' to cannonical average')
-
-        #     c = plot_histogram_stack(ratio)
-        #     c.name = dNdeta_stacks[i].name + '_ratio_cannonical_avg'
-        #     c.Update()
-        #     f.cd(res_dir_str)
-        #     c.Write()
-
-        #     # create ratio between P(N_ch) and cannonical_avg
-        #     # avg = pNch_stack[0].Clone()
-        #     # avg.Clear()
-        #     # other_PNch = pNch_stack[:i] + pNch_stack[i+1:]
-        #     # [avg.Add(h) for h in other_PNch]
-        #     # avg.Scale(1.0/(len(other_PNch)))
-
-        #     # ratio = pNch_stack[i] / avg
-        #     # ratio.name = "{0}_div_by_can_avg".format(pNch_stack[i].name)
-        #     # ratio.title = "Ratio of {} over cannonical avg".format(pNch_stack[i].title)
-        #     # f.cd(res_dir_str)
-        #     # ratio.Write()
 
 def _make_correlation_plots(f, sums, results_post):
     # Make correlations between estimators
@@ -462,32 +446,32 @@ def _make_correlation_plots(f, sums, results_post):
         f.mkdir(corr_dir, recurse=True)
     except:
         pass
-    # only for weighted case
     # Take ntuple from the first estimator and then add friends to this one
     nt0 = sums[0].FindObject("fEventTuple")
     nt0.SetAlias(sums[0].GetName(), "fEventTuple")
-    #previous_estimator_names = [sums[0].GetName(), ]
+
     # build ntuple
     for est_dir in sums[1:]:
         nt0.AddFriend(est_dir.FindObject("fEventTuple"), est_dir.GetName())
-    for ref_est in ref_ests:
+    for ref_est in considered_ests:
         for est_dir in sums:
             corr_hist = Hist2D(400, 0, 400,
                                400, 0, 400,
                                name="corr_hist_{}_vs_{}".format(ref_est, est_dir.GetName()))
             # Lables are deliberatly swaped, see Projection below!
-            corr_hist.title = ("Correlation N_{{ch}} in {0} and {1};N_{{ch}} {1};N_{{ch}} {0}"\
+            corr_hist.title = ("Correlation N_{{ch}} in {0} and {1};N_{{ch}} {1};N_{{ch}} {0}"
                                .format(ref_est, est_dir.GetName()))
 
-            # this projects onto y:x, to make coding more adventurous 
+            # this projects onto y:x, to make coding more adventurous
             nt0.Project(corr_hist.name, "{0}.nch:{1}.nch".format(ref_est, est_dir.GetName()),
                         "ev_weight")
             corr_hist.drawstyle = 'colz'
             f.cd(corr_dir)
             corr_hist.write()
 
+
 def _make_pid_ratio_plots(f, sums, results_post):
-    log.info("Correlating identified particle ratios")
+    log.info("Creating plots vs refmult")
     ratio_vs_ref_dir = 'results_post/pid_ratios_vs_refmult'
     ratio_vs_est_dir = 'results_post/pid_ratios_vs_estmult'
     try:
@@ -497,7 +481,7 @@ def _make_pid_ratio_plots(f, sums, results_post):
     f.cd(ratio_vs_ref_dir)
 
     # Proton / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212','2212'], ['-211', '211'],
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['-211', '211'],
                                      ytitle="p/#pi^{+-}")
     # K / pi_ch
     _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['-211', '211'],
@@ -512,10 +496,10 @@ def _make_pid_ratio_plots(f, sums, results_post):
     _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['-211', '211'],
                                      ytitle="#Omega / #pi^{+-}")
     # pi_ch/pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-211', '211'], ['111',],
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-211', '211'], ['111'],
                                      ytitle="#pi^{+-}/#pi^{0}")
     # proton / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['111',],
+    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['111'],
                                      ytitle="p/#pi^{0}")
     # K / pi0
     _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['111'],
@@ -545,46 +529,57 @@ def _make_pid_ratio_plots(f, sums, results_post):
         pass
     f.cd(ratio_vs_est_dir)
     _plot_particle_ratios_vs_estmult(f, sums, results_post, ['321', '-321'], ['310'],
-                                     scale=.5, title="(K^{+} + K^{-}) / (2*K_{S}^{0})")
+                                     scale=.5, ytitle="(K^{+} + K^{-}) / (2*K_{S}^{0})")
 
 
-def _reset_results_dir():
-    with root_open(sys.argv[1], 'update') as f:
-        try:
+def _delete_results_dir(f, sums):
+    try:
         # delete old result directory
-            f.rmdir('results_post')
+        f.rmdir('results_post')
+    except:
+        pass
+    f.mkdir('results_post')
+
+
+def _mk_results_dir(f, sums):
+    for est_dir in sums:
+        try:
+            resdir = f.results_post.mkdir(est_dir.GetName())
+            resdir.Write()
         except:
             pass
-        f.mkdir('results_post')
 
 if __name__ == "__main__":
     # go into batch mode
-    ROOT.gROOT.SetBatch(True)
+    ROOT.gROOT.SetBatch(False)
 
     log = log["/post"]  # set name of this script in logger
-    log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch())) # Results in "DEBUG:myapp] Hello"
+    log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch()))  # Results in "DEBUG:myapp] Hello"
 
     # Rebin multiplicity with factor:
     rebin_mult = 10
-    ref_ests = ['EtaLt05',]
-    postfixes = ["",]  # "_unweighted"]
+    ref_ests = ['EtaLt05', ]
+    considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C']
+    postfixes = ["", ]  # "_unweighted"]
 
-    _reset_results_dir()
+    functions = [
+        _delete_results_dir,
+        _mk_results_dir,
+    ]
+
     with root_open(sys.argv[1], 'update') as f:
         sums = f.Sums
-        for est_dir in sums:
-            try:
-                resdir = f.results_post.mkdir(est_dir.GetName())
-                resdir.Write()
-            except:
-                pass
+        for func in functions:
+            func(f, sums)
         results_post = f.results_post
-        _make_dNdeta_and_event_counter(f, sums, results_post)
-        _make_mult_vs_pt_plots(f, sums, results_post)
-        _make_PNch_ratio_plots(f, sums, results_post)
-        _make_hists_vs_pt(f, sums, results_post)
-        _make_PNch_plots(f, sums, results_post)
+        _make_dNdeta_and_event_counter(f, sums)
         _make_correlation_plots(f, sums, results_post)
+        _make_PNch_plots(f, sums, results_post)
+
+        _make_mult_vs_pt_plots(f, sums, results_post)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.Sums
+        results_post = f.results_post
+        _make_hists_vs_pt(f, sums, results_post)  # needs updated results_post!
+        _make_dNdeta_mb_ratio_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
-
-
