@@ -101,73 +101,68 @@ def make_stack_of_mult_bins_for_pids(h3d, pids):
     return stack
 
 
-def plot_histogram_stack(stack):
+def plot_list_of_plottables(l, title='', logx=False, logy=False):
     """
-    Plot a stack of histograms. The legend is generated from the titles of the histograms.
+    Plot the plottable objects, given as a list in a nice graph with
+    legend. Legend is the plottables' titles.  `title` is an optional
+    title for the entire plot.
+
     """
-    stack = asrootpy(stack)
-    c = Canvas()
+    c = Canvas(width=340, height=300, size_includes_decorations=True)
     pad1 = Pad(0., 0., .8, 1., name="plot")
-    pad1.SetRightMargin(.015)
+    pad1.SetRightMargin(.02)
     pad2 = Pad(.8, 0, 1., 1., name="legend")
-    pad2.SetLeftMargin(.0)
-    pad1.Draw()
-    pad2.Draw()
+    pad2.SetLeftMargin(0.0)
+    pad2.SetFillStyle(0)  # make this pad transparent
 
-    nesti = len(stack.GetHists())
-
-    c.cd()
-    pad1.cd(0)
-    leg = Legend(entries=nesti, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04, textsize=.1)
-    leg.SetBorderSize(0)
-    maximum = 0
-    for mult_bin, h in enumerate(stack):
-        h.color = 800 + int(100.0/len(stack))*(mult_bin) + 1
-        h.markerstyle = 'circle'
-        leg.AddEntry(h)
-        if h.GetMaximum() > maximum:
-            maximum = h.GetMaximum()
-    stack.SetMaximum(maximum + maximum * 0.1)
-    stack.Draw('nostack')
-    stack.xaxis.SetTitle(stack.GetHists()[0].GetXaxis().GetTitle())
-    stack.yaxis.SetTitle(stack.GetHists()[0].GetYaxis().GetTitle())
-    c.cd()
-    pad2.cd()
-    leg.Draw()
-    return c
-
-def plot_list_of_plottables(l, title=''):
-    """
-    Plot the plottable objects, given as a list in a nice graph with legend. Legend is the plottables' titles.
-    `title` is an optional title for the entire plot.
-    """
-    c = Canvas()
-    pad1 = Pad(0., 0., .8, 1., name="plot")
-    pad2 = Pad(.8, 0, 1., 1., name="legend")
-    pad2.SetLeftMargin(.03)
     pad1.Draw()
     pad2.Draw()
     ntot = len(l)
 
-    c.cd()
-    pad1.cd(0)
-    leg = Legend(entries=ntot, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04, textsize=.15)
-    leg.SetBorderSize(0)
-    #maximum, minimum = 0, 0  # extreme values of all plottables
-    isfirst = True           # switch to turn on drawingoption 'same'
-    for i, p in enumerate(l):
-        p.color = 800 + int(100.0/len(l))*(i) + 1
-        p.markerstyle = 'circle'
-        leg.AddEntry(p)
-        # if p.GetMaximum() > maximum:
-        #    maximum = p.GetMaximum()
-        if isfirst:
-            p.title = title
-            p.Draw('ALP')
-            isfirst = False
-        else:
-            p.Draw('LPsame')
+    leg = Legend(entries=ntot, leftmargin=0, rightmargin=0, entrysep=0, entryheight=.04, textsize=14, textfont=63)
+    leg.SetBorderSize(0)  # no box
+    leg.SetFillStyle(0)   # transparent background of legend TPave(!)
 
+    # draw an empty hist set limits later
+    c.cd()
+    pad1.cd()
+    xtitle = l[0].GetXaxis().GetTitle()
+    ytitle = l[0].GetYaxis().GetTitle()
+    xmin, xmax, ymin, ymax = get_limits(l, logx=logx, logy=logy)
+
+    is_first = True
+    for i, obj in enumerate(l):
+        obj.color = 800 + int(100.0 / len(l)) * (i) + 1
+        obj.markerstyle = 'circle'
+
+        obj.SetMinimum(ymin)
+        obj.SetMaximum(ymax)
+        obj.GetYaxis().SetLimits(ymin, ymax)
+        obj.GetYaxis().SetRangeUser(ymin, ymax)
+
+        obj.GetXaxis().SetTitle(xtitle)
+        obj.GetYaxis().SetTitle(ytitle)
+
+        obj.SetStats(0)
+        leg.AddEntry(obj, label=obj.GetTitle())
+        # Set the title to the given title:
+        obj.title = title
+        if isinstance(obj, Graph):
+            if is_first:
+                drawoption = 'APL'  # root think axis are over rated for graphs...
+            else:
+                drawoption = 'PLsame'
+        else:
+            if is_first:
+                drawoption = ''
+            else:
+                drawoption = 'same'
+        is_first = False
+        obj.Draw(drawoption)
+
+    pad1.SetTicks()
+    pad1.SetLogx(logx)
+    pad1.SetLogy(logy)
     c.cd()
     pad2.cd()
     leg.Draw()
