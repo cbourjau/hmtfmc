@@ -193,86 +193,86 @@ def _make_hists_vs_pt(f, sums, results_post):
             max_nch = mean_nch * mean_mult_cutoff_factor
             esti_title = "({0})".format(h3d.title[31:])
 
-            mult_pt_dir = results_post.FindObject(est_dir.GetName()).FindObject("mult_pt")
+            mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
             
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], max_nch)
             hs.title = "p/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "proton_over_pich__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPIMINUS, kPIPLUS], max_nch)
             hs.title = "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "Xi_over_pich__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS], max_nch)
             hs.title = "#Omega_{ch}/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "OmegaCh_over_pich__vs__pt"
             c.write()
 
             # Ratios to pi0
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kPIMINUS, kPIPLUS], [kPI0], max_nch)
             hs.title = "#pi^{+-}/#pi^{0} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "pich_over_pi0__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPI0], max_nch)
             hs.title = "p/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "proton_over_pi0__vs__pt"
 
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kK0S], [kPI0], max_nch)
             hs.title = "K0S/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "K0S_over_pi0__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kPI0], max_nch)
             hs.title = "#Lambda/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "Lambda_over_pi0__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPI0], max_nch)
             hs.title = "#Xi/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "Xi_over_pi0__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPI0], max_nch)
             hs.title = "#Omega_{ch}/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "OmegaCh_over_pi0__vs__pt"
             c.write()
 
             # Ratios to K0S
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kK0S], max_nch)
             hs.title = "p/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "proton_over_K0S__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kK0S], max_nch)
             hs.title = "#Lambda/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "Lambda_over_K0S__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kK0S], max_nch)
             hs.title = "#Xi/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "Xi_over_K0S__vs__pt"
             c.write()
 
             hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kK0S], max_nch)
             hs.title = "#Omega_{ch}/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_histogram_stack(hs)
+            c = plot_list_of_plottables(hs)
             c.name = "OmegaCh_over_K0S__vs__pt"
             c.write()
 
