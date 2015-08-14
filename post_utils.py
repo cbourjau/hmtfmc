@@ -227,6 +227,7 @@ def create_stack_pid_ratio_over_pt(mult_pt_dir, pids1, pids2, nch_max):
 
 
 def create_hist_pid_ratio_over_mult(h3d, pid1, pid2):
+def remap_x_values(hist, corr_hist):
     """
     Create a histogram whith the ratio of particles of species 1 over 2 vs. multiplicity
     pidx must be a list, these particles are added together befor dividing (eg. pi charged)
@@ -288,14 +289,15 @@ def divide_stacks(stack1, stack2):
     return outstack
 
 
-def remap_x_values(hist, map_hist):
-    """Map the x values of hist to the y values of map_hist.
+    Map the x values of hist to the y values of map_hist.
     In order to do so, it is necessary that the x values of hist are also present as x-values in map_hist.
 
     Parameters
     ----------
     hist : Hist1D
-    map_hist : Hist1D
+    corr_hist : Hist2D
+                Correlations between the quantity on hist's x-axis (also corr_hist's xaxis) and the new
+                quantity to plot agains (on corr_hist's y-axis.
 
     Returns
     -------
