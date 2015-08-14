@@ -278,96 +278,77 @@ def _make_hists_vs_pt(f, sums, results_post):
 
 
 def _make_PNch_plots(f, sums, results_post):
-    # Create P(Nch) plots
-    log.info("Creating P(Nch) plots")
-    for postfix in postfixes:
-        pNch_summary = HistStack()  # One HistStack!
-        pNch_summary.title = "P(N_{ch}^{est}) summary "
+    log.info("Creating P(Nch) summary plot")
+    hists_PNch_vs_estmult = []
+    for est_name in considered_ests:
+        h_tmp = get_PNch_vs_estmult(results_post, est_name)
+        h_tmp.title = make_estimator_title(est_name)
+        if h_tmp.Integral() > 0:
+            hists_PNch_vs_estmult.append(h_tmp)
 
-        step_size = 10  # binning in Nch^est
-        # make ntuples:
-        nt0 = sums[0].FindObject("fEventTuple")
-        nt0.SetAlias(sums[0].GetName(), "fEventTuple")
-        #previous_estimator_names = [sums[0].GetName(), ]
-        for est_dir in sums[1:]:
-            nt0.AddFriend(est_dir.FindObject("fEventTuple"), est_dir.GetName())
-        for est_dir in sums:
-            ############################################################
-            # Summary plot P(Nch^{est}):
-            name = "PNch_"+est_dir.GetName()+ postfix
-            axis_title = ";N_{ch}^{est}"
-            h_summary = Hist1D(400, 0, 400, name=name,
-                               title=est_dir.GetName() + axis_title)
-            nt0.Project(h_summary.name,
-                        "{}.nch".format(est_dir.GetName()),
-                        "{}.ev_weight".format(est_dir.GetName()))
-            h_summary.Scale(1.0/h_summary.Integral())
-            pNch_summary.Add(h_summary)
+    [h.Scale(1.0 / h.Integral()) for h in hists_PNch_vs_estmult]
 
-            #############################################################
-            # Plot binned in mult_ref vs. mutl_est and vice versa
-            for ref_est in ref_ests:
-                axis_title_vs_ref = ";N_{{ch}}^{{{}}}".format(ref_est)
-                axis_title_vs_est = ";N_{{ch}}^{{{}}}".format(est_dir.GetName())
-                pNch_ref_binned_Nch_est = HistStack()
-                pNch_est_binned_Nch_ref = HistStack()
-                pNch_ref_binned_Nch_est.title = "P(N_{{ch}}^{{{}}}) binned in N_{{ch}}^{{{}}}"\
-                                                .format(ref_est, est_dir.GetName())
-                pNch_est_binned_Nch_ref.title = "P(N_{{ch}}^{{{}}}) binned in N_{{ch}}^{{{}}}"\
-                                       .format(est_dir.GetName(), ref_est)
+    c = plot_list_of_plottables(hists_PNch_vs_estmult, logy=True)
+    c.name = "PNch_summary"
+    f.cd("results_post")
+    c.write()
 
-                for nch_interv_min in range(0, 401, step_size):
-                    nch_interv_max = nch_interv_min + step_size
-                    name = "PNch_{}_lt_mult_ref_lt_{}".format(nch_interv_min, nch_interv_max)
-                    h_tmp_vs_ref = Hist1D(400, 0, 400, name=name)
-                    name = "PNch_{}_lt_mult_est_lt_{}".format(nch_interv_min, nch_interv_max)
-                    h_tmp_vs_est = Hist1D(400, 0, 400, name=name)
-                    h_tmp_vs_ref.title = "{} < N_{{ch}}^{{{}}} < {}".\
-                                         format(nch_interv_min, est_dir.GetName(), nch_interv_max) + axis_title_vs_ref
-                    h_tmp_vs_est.title = "{} < N_{{ch}}^{{{}}} < {}".\
-                                         format(nch_interv_min, ref_est, nch_interv_max) + axis_title_vs_est
-                    nt0.Project(h_tmp_vs_ref.name,
-                                "{}.nch".format(ref_est),
-                                "{2}.ev_weight*({0} < {2}.nch && {2}.nch < {1})"\
-                                .format(nch_interv_min, nch_interv_max, est_dir.GetName()))
-                    nt0.Project(h_tmp_vs_est.name,
-                                "{}.nch".format(est_dir.GetName()),
-                                "{2}.ev_weight*({0} < {2}.nch && {2}.nch < {1})"\
-                                .format(nch_interv_min, nch_interv_max, ref_est))
-                    try:
-                        h_tmp_vs_ref.Scale(1.0/h_tmp_vs_ref.Integral())
-                    except ZeroDivisionError:
-                        pass
-                    else:
-                        # only add to stack if there are values in this Nch interval
-                        pNch_ref_binned_Nch_est.Add(h_tmp_vs_ref)
-                    try:
-                        h_tmp_vs_est.Scale(1.0/h_tmp_vs_est.Integral())
-                    except ZeroDivisionError:
-                        pass
-                    else:
-                        # only add to stack if there are values in this Nch interval
-                        pNch_est_binned_Nch_ref.Add(h_tmp_vs_est)
-                f.cd("results_post/" + est_dir.GetName() + postfix)
-                # plot vs ref mult 
-                c = plot_histogram_stack(pNch_ref_binned_Nch_est)
-                c.name = "PNch{}_binned_in_Nch{}".format(ref_est, est_dir.GetName())
-                c.FindObject("plot").SetLogy(1)
-                c.write()
+    log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
+    mult_bin_size = 10
+    for ref_est in ref_ests:
+        for est in considered_ests:
+            corr_hist = get_NchEst1_vs_NchEst2(results_post, ref_est, est)
+            nch_max = corr_hist.xaxis.GetNbins()
+            mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
+            nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
+            hists_PNch_vs_estmult_binned_in_refmult = []
+            hists_PNch_vs_refmult_binned_in_estmult = []
+            is_last_bin = False
+            for nch_lower_edge in range(0, nch_max, mult_bin_size):
+                if nch_lower_edge + mult_bin_size > nch_cutoff:
+                    nch_upper_edge = nch_max
+                    is_last_bin = True
+                else:
+                    nch_upper_edge = nch_lower_edge + mult_bin_size
+                # vs est_mult:
+                corr_hist.xaxis.SetRange(0, 0)  # reset x axis
+                corr_hist.yaxis.SetRange(nch_lower_edge, nch_upper_edge)
+                h_vs_est = asrootpy(corr_hist.ProjectionX(gen_random_name()))
+                h_vs_est.title = "{} < N_{{ch}}^{{{}}} < {}".\
+                                 format(nch_lower_edge, ref_est, nch_upper_edge)
+                h_vs_est.xaxis.title = "N_{{ch}}^{{{}}}".format(est)
+                if h_vs_est.Integral() > 0:
+                    hists_PNch_vs_estmult_binned_in_refmult.append(h_vs_est)
 
-                # plot vs est mult 
-                c = plot_histogram_stack(pNch_est_binned_Nch_ref)
-                c.name = "PNch{}_binned_in_Nch{}".format(est_dir.GetName(), ref_est)
-                c.FindObject("plot").SetLogy(1)
-                c.write()
+                # vs ref_mult:
+                corr_hist.yaxis.SetRange(0, 0)  # reset y axis
+                corr_hist.xaxis.SetRange(nch_lower_edge, nch_upper_edge)
+                h_vs_ref = asrootpy(corr_hist.ProjectionY(gen_random_name()))
+                h_vs_ref.title = "{} < N_{{ch}}^{{{}}} < {}".\
+                                 format(nch_lower_edge, est, nch_upper_edge)
+                h_vs_ref.xaxis.title = "N_{{ch}}^{{{}}}".format(ref_est)
+                if h_vs_ref.Integral() > 0:
+                    hists_PNch_vs_refmult_binned_in_estmult.append(h_vs_ref)
 
+                if is_last_bin:
+                    break
 
-        # Write summary to disk
-        c = plot_histogram_stack(pNch_summary)
-        c.FindObject("plot").SetLogy(1)
-        c.name = "PNch_summary" + postfix
-        f.cd("results_post")
-        c.write()
+            # Normalize each slice:
+            [h.Scale(1.0 / h.Integral()) for h in hists_PNch_vs_estmult_binned_in_refmult]
+            [h.Scale(1.0 / h.Integral()) for h in hists_PNch_vs_refmult_binned_in_estmult]
+
+            # Plot:
+            f.cd("results_post/" + est)
+
+            # vs est_mult
+            c = plot_list_of_plottables(hists_PNch_vs_estmult_binned_in_refmult, logy=True)
+            c.name = "PNch{}_binned_in_Nch{}".format(est, ref_est)
+            c.write()
+
+            # vs est_mult
+            c = plot_list_of_plottables(hists_PNch_vs_refmult_binned_in_estmult, logy=True)
+            c.name = "PNch{}_binned_in_Nch{}".format(ref_est, est)
+            c.write()
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
