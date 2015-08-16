@@ -71,8 +71,19 @@ class Figure(object):
         nentries = len(self._legend_labels)
         leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.02, textsize=14, textfont=63, margin=0.1, )
         leg.SetBorderSize(0)  # no box
-        leg.SetFillStyle(10)   # transparent background of legend TPave(!)
+        leg.SetFillStyle(0)   # transparent background of legend TPave(!)
         return leg
+
+    def _theme_plottable(self, obj):
+        axes = obj.GetXaxis(), obj.GetYaxis()
+        for axis in axes:
+            axis.SetLabelSize(14)
+            axis.SetLabelFont(63)
+
+            axis.SetTitleFont(63)
+            axis.SetTitleSize(14)
+            axis.SetTitleFont(63)
+            axis.SetTitleSize(14)
 
     def add_plottable(self, obj, legend_title=''):
         """
@@ -107,7 +118,7 @@ class Figure(object):
         else:
             legend_width = 0
         pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
-        pad_plot.SetRightMargin(.02)
+        pad_plot.SetRightMargin(.04)
         pad_plot.Draw()
         pad_plot.cd()
 
@@ -132,6 +143,8 @@ class Figure(object):
             # Set the title to the given title:
             obj.title = self.title
 
+            self._theme_plottable(obj)
+
             if isinstance(obj, ROOT.TGraph):
                 if is_first:
                     drawoption = 'APL'  # root think axis are over rated for graphs...
@@ -150,8 +163,7 @@ class Figure(object):
         pad_plot.SetTicks()
         pad_plot.SetLogx(self.logx)
         pad_plot.SetLogy(self.logy)
-        # c.cd()
-        # pad_legend.cd()
+
         if len(self._legend_labels) > 0:
             leg = self._create_legend()
             longest_label = 0
@@ -187,3 +199,38 @@ class Figure(object):
         if self.plot.logy:
             pad_plot.SetLogy(True)
         return c
+
+    def delete_plottables(self):
+        """
+        Delete all plottables in this figure so that it can be filled with
+        new ones while keeping the lables.
+        """
+        self._plottables = []
+        self._legend_labels = []
+
+    def save_to_root_file(self, in_f, name, path=''):
+        """
+        Save the current figure to the given root file under the given path
+        Parameters
+        ----------
+        f : TFile
+            Root file object open in writable mode
+        name : str
+            Name for the canvas in the root file
+        path : str
+            The path where the figure should be saved within the root file
+        Returns
+        -------
+        TFile :
+            The file where the object was written to
+        """
+        f = asrootpy(in_f)
+        c = self.draw_to_canvas()
+        c.name = name
+        try:
+            f.mkdir(path, recurse=True)
+        except ValueError:
+            pass
+        f.cd(path)
+        c.Write()
+        return f

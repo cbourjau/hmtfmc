@@ -1,11 +1,11 @@
 import unittest
 
 from rootpy.plotting import Hist1D, Graph
-from ROOT import TCanvas, TLegend
+from rootpy.io import File
+from ROOT import TCanvas, TLegend, TFile, TDirectoryFile
 from roofi import Figure
 
 import ROOT
-ROOT.gROOT.SetBatch(False)
 
 
 class Test_Figure(unittest.TestCase):
@@ -28,6 +28,14 @@ class Test_Figure(unittest.TestCase):
         # no old plottables if I make a new one:
         f = Figure()
         self.assertEqual(len(f._plottables), 0)
+
+    def test_reset_figure(self):
+        f = Figure()
+        h = Hist1D(10, 0, 10)
+        f.add_plottable(h)
+        f.delete_plottables()
+        self.assertEqual(len(f._plottables), 0)
+
 
 
 class Test_draw_to_canvas(unittest.TestCase):
@@ -90,6 +98,15 @@ class Test_plot_options(unittest.TestCase):
         c = f.draw_to_canvas()
         self.assertEqual(c.FindObject("plot").GetLogy(), 1)
 
+    def test_axis_labels(self):
+        f = Figure()
+        f.xtitle = '#eta / #phi'
+        f.ytitle = '#pi/#Xi'
+        h1 = Hist1D(10, 0, 10,)
+        h1.Fill(5)
+        f.add_plottable(h1)
+        f.draw_to_canvas()
+
 
 class Test_legend_options(unittest.TestCase):
     def setUp(self):
@@ -129,5 +146,33 @@ class Test_legend_options(unittest.TestCase):
         c = self.f.draw_to_canvas()
         pad = c.FindObject("legend")
         self.assertIsInstance(pad, ROOT.TPad)
-        import ipdb; ipdb.set_trace()
 
+
+class Test_write_to_root_file(unittest.TestCase):
+    def setUp(self):
+        self.fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        self.fig.add_plottable(h1, legend_title="hist 1")
+
+    @unittest.skip(True)
+    def test_write_to_TFile(self):
+        f = TFile("test.root", "recreate")
+        f = self.fig.save_to_root_file(f, 'myname')
+        # Close might raise an error here!
+        f.Close()
+
+    def test_write_to_root_file(self):
+        f = File("test.root", "recreate")
+        f = self.fig.save_to_root_file(f, 'myname')
+        f.close()
+        f = TFile("test.root", "read")
+        self.assertIsInstance(f.Get("myname"), TCanvas)
+
+    def test_write_to_root_file_with_path(self):
+        f = File("test.root", "recreate")
+        f = self.fig.save_to_root_file(f, 'myname', path='folder/')
+        f.Close()
+        f = TFile("test.root", "read")
+        self.assertIsInstance(f.Get("folder"), TDirectoryFile)
+        self.assertIsInstance(f.Get("folder").Get("myname"), TCanvas)
