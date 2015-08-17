@@ -21,7 +21,7 @@ case x$1 in
 	runmode="lite"
 	case x$2 in
 	    xpythia)
-		incoll="${PWD}/pythia4/input_files.dat"
+		incoll="${PWD}/pythia/input_files.dat"
 		;;
 	    xphojet)
 		incoll="${PWD}/phojet/input_files.dat"

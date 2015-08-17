@@ -94,16 +94,20 @@ TString getDatasetString(const char* incollection) {
   return dataset;
 }
 
+void setUpIncludes(TString runmode) {
+  // Set the include directories
+  // gProof is without -I :P and gSystem has to be set for all runmodes
+  gSystem->AddIncludePath("-I$ALICE_ROOT/include");
+  if (runmode.BeginsWith("lite")){
+    gProof->AddIncludePath("$ALICE_ROOT/include", kTRUE);
+  }
+  
+}
 void loadAnalysisFiles(const TString files, TString runmode ) {
   // load files from colon (:) separated string
   // first file in string is loaded first (OBS: dependencies)
   // The function does the right thing regardless if local, lite or pod
   // Do not use ++ in the string to avoid unnecessary recompiles on nodes
-
-  // Set the include directories
-  // gProof is without -I :P and gSystem has to be set for all runmodes
-  gSystem->AddIncludePath("-I$ALICE_ROOT/include");
-  if (runmode.BeginsWith("lite")) gProof->AddIncludePath("$ALICE_ROOT/include", kTRUE);
 
   // loop over analysis files given by the user
   TIter it(files.Tokenize(":"));
@@ -124,13 +128,13 @@ void run(const TString runmode_str  = "lite",
 	 Int_t debug = 0,
 	 const char * incollection = "./pythia/input_files.dat",
 	 const char * analysisName = "hmtf_mc_mult",
-	 const char * aliceExtraLibs=("libAliMultiplicityEstimators:"
+	 const char * aliceExtraLibs=("libPWGHMTF:"
 				      "libpythia6_4_25:"
 				      "libAliPythia6"
 				      ),
 	 const char * analysisFiles="",//"AliMultiplicityEstimators.cxx+:"
 	                               //"AliAnalysisTaskHMTFMCMultEst.cxx+"),
-	 const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
+	 const TString adderFiles=("$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
        runmode_str.BeginsWith("lite") ||
@@ -142,6 +146,7 @@ void run(const TString runmode_str  = "lite",
   if (runmode_str.BeginsWith("lite")) TProof::Open("lite://");
   else if (runmode_str.BeginsWith("pod")) TProof::Open("pod://");
 
+  setUpIncludes(runmode_str);
   loadLibs(aliceExtraLibs, runmode_str);
 
   // Create  and setup the analysis manager
@@ -176,7 +181,10 @@ void run(const TString runmode_str  = "lite",
   if (!(runmode_str.BeginsWith("pod"))) {
       // Process with chain
       TChain *chain = makeChain(incollection);
-
+      if (!chain) {
+	std::cout << "Dataset is empty!" << std::endl;
+	return;
+      }
       if (runmode_str.BeginsWith("lite")) mgr->StartAnalysis("proof", chain, max_events);
 
       else if (runmode_str.BeginsWith("local")) {
