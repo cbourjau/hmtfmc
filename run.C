@@ -119,19 +119,18 @@ void loadAnalysisFiles(const TString files, TString runmode ) {
 }
 
 void run(const TString runmode_str  = "lite",
-	      Int_t max_events = -1,
-	      //Int_t first_event= 0,
-	      Int_t debug = 0,
-	      const char * incollection = "./pythia/input_files.dat",
-	      const char * analysisName = "hmtf_mc_mult",
-	      const char * aliceExtraLibs=(//"libANALYSIS:"
-					   //"libANALYSISalice:"
-					   "libpythia6_4_25:"
-					   "libAliPythia6"
-					   ),
-	      const char * analysisFiles=("AliMultiplicityEstimators.cxx+:"
-					  "AliAnalysisTaskHMTFMCMultEst.cxx+"),
-	      const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
+	 Int_t max_events = -1,
+	 //Int_t first_event= 0,
+	 Int_t debug = 0,
+	 const char * incollection = "./pythia/input_files.dat",
+	 const char * analysisName = "hmtf_mc_mult",
+	 const char * aliceExtraLibs=("libAliMultiplicityEstimators:"
+				      "libpythia6_4_25:"
+				      "libAliPythia6"
+				      ),
+	 const char * analysisFiles="",//"AliMultiplicityEstimators.cxx+:"
+	                               //"AliAnalysisTaskHMTFMCMultEst.cxx+"),
+	 const TString adderFiles=("AddTaskHMTFMCMultEst.C"))
 {
   if(!(runmode_str.BeginsWith("local") ||
        runmode_str.BeginsWith("lite") ||
