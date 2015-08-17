@@ -26,39 +26,11 @@ from post_utils import create_stack_pid_ratio_over_pt,\
     plot_list_of_plottables, remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
 
+from figure import Figure
 
 def gen_random_name():
     """Generate a random name for temp hists"""
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
-
-
-def get_color_generator(ncolors):
-    """Returns a generator for n colors"""
-    # return (int(800 + idx*100.0/ncolors) + 1 for idx in xrange(ncolors))
-
-    # generated with sns.palplot(sns.color_palette("colorblind", 10))
-    colorblind_colors = [(0.0, 0.4470588235294118, 0.6980392156862745),
-                         (0.0, 0.6196078431372549, 0.45098039215686275),
-                         (0.8352941176470589, 0.3686274509803922, 0.0),
-                         (0.8, 0.4745098039215686, 0.6549019607843137),
-                         (0.9411764705882353, 0.8941176470588236, 0.25882352941176473),
-                         (0.33725490196078434, 0.7058823529411765, 0.9137254901960784),
-                         (0.0, 0.4470588235294118, 0.6980392156862745),
-                         (0.0, 0.6196078431372549, 0.45098039215686275),
-                         (0.8352941176470589, 0.3686274509803922, 0.0),
-                         (0.8, 0.4745098039215686, 0.6549019607843137)]
-    # return iter(colorblind_colors)
-    set2 = [(0.40000000596046448, 0.7607843279838562, 0.64705884456634521),
-            (0.98131487965583808, 0.55538641635109398, 0.38740485135246722),
-            (0.55432528607985565, 0.62711267120697922, 0.79595541393055635),
-            (0.90311419262605563, 0.54185316071790801, 0.76495195557089413),
-            (0.65371782148585622, 0.84708959004458262, 0.32827375098770734),
-            (0.9986312957370983, 0.85096502233954041, 0.18488274134841617),
-            (0.89573241682613591, 0.76784315109252932, 0.58182240093455595),
-            (0.70196080207824707, 0.70196080207824707, 0.70196080207824707),
-            (0.40000000596046448, 0.7607843279838562, 0.64705884456634521),
-            (0.98131487965583808, 0.55538641635109398, 0.38740485135246722)]
-    return iter(set2)
 
 
 def make_estimator_title(name):
@@ -95,10 +67,12 @@ mean_mult_cutoff_factor = 4
 
 
 def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
-    stack = list()
-    colors = get_color_generator(10)
+    ratio_vs_estmult_dir = 'results_post/pid_ratios_vs_estmult'
+    fig = Figure()
     if not ytitle:
-        ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
+        fig.ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
+    else:
+        fig.ytitle = ytitle
 
     for est_dir in sums:
         if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
@@ -110,16 +84,14 @@ def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=
         pids1_px = sum(pids1hists)
         pids2_px = sum(pids2hists)
         ratio1d = pids1_px / pids2_px
-        ratio1d.SetTitle(make_estimator_title(est_dir.GetName()))
-        ratio1d.xaxis.title = "N_{ch}|_{" + make_estimator_title(est_dir.GetName()) + "}"
-        ratio1d.yaxis.title = ytitle
-        ratio1d.color = colors.next()
+
+        fig.xtitle = "N_{ch}|_{" + make_estimator_title(est_dir.GetName()) + "}"
+
         if scale:
             ratio1d.Scale(scale)
-        stack.append(ratio1d)
-    c = plot_list_of_plottables(stack)
-    c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
-    c.Write()
+        fig.add_plottable(ratio1d, legend_title=make_estimator_title(est_dir.GetName()))
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratio_vs_estmult_dir)
 
 
 def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
@@ -127,11 +99,14 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     plot and write to file the ratio of the two pid-lists (pids1/pids2). Plot is vs refmult.
     This function depends on the correlation histograms to be present in f
     """
-    ratios = []
-    colors = get_color_generator(10)
+    ratio_vs_refmult_dir = 'results_post/pid_ratios_vs_refmult'
+    fig = Figure()
+
     refest = "EtaLt05"
     if not ytitle:
-        ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
+        fig.ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
+    else:
+        fig.ytitle = ytitle
 
     for est_dir in sums:
         if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
@@ -160,20 +135,11 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
             continue
         if scale:
             ratio.Scale(scale)
-        ratio.xaxis.title = "N_{ch}|_{" + refest + "}"
-        ratio.yaxis.title = ytitle
-        ratio.title = make_estimator_title(est_dir.GetName())
+        fig.xtitle = "N_{ch}|_{" + refest + "}"
+        fig.add_plottable(ratio, make_estimator_title(est_dir.GetName()))
 
-        ratio.SetColor(colors.next())
-        ratios.append(ratio)
-    c = plot_list_of_plottables(ratios)
-    c.name = "_".join(pids1) + "_div_" + "_".join(pids2)
-    try:
-        os.makedirs("./figures/pid_ratios_vs_ref_mult/")
-    except OSError:
-        pass
-    # c.SaveAs("./figures/pid_ratios_vs_ref_mult/"+c.name+".pdf")
-    c.Write()
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratio_vs_refmult_dir)
 
 
 def _make_dNdeta_and_event_counter(f, sums):
@@ -322,30 +288,44 @@ def _make_hists_vs_pt(f, sums, results_post):
 
 def _make_PNch_plots(f, sums, results_post):
     log.info("Creating P(Nch) summary plot")
-    hists_PNch_vs_estmult = []
+    summary_fig = Figure()
+    summary_fig.xtitle = "N_{ch}^{est}"
+    summary_fig.ytitle = "P(N_{ch}^{est})"
+    summary_fig.legend.position = 'tr'
+
     for est_name in considered_ests:
         h_tmp = get_PNch_vs_estmult(results_post, est_name)
-        h_tmp.title = make_estimator_title(est_name)
         if h_tmp.Integral() > 0:
-            hists_PNch_vs_estmult.append(h_tmp)
+            h_tmp.Scale(1.0 / h_tmp.Integral())
+            summary_fig.add_plottable(h_tmp, make_estimator_title(est_name))
 
-    [h.Scale(1.0 / h.Integral()) for h in hists_PNch_vs_estmult]
-
-    c = plot_list_of_plottables(hists_PNch_vs_estmult, logy=True)
-    c.name = "PNch_summary"
-    f.cd("results_post")
-    c.write()
+    summary_fig.plot.logy = True
+    summary_fig.save_to_root_file(f, "PNch_summary", path="/results_post/")
 
     log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
     mult_bin_size = 10
     for ref_est in ref_ests:
         for est in considered_ests:
+            # Figure properties:
+            fig_vs_estmult = Figure()
+            fig_vs_refmult = Figure()
+            fig_vs_estmult.plot.logy = True
+            fig_vs_refmult.plot.logy = True
+
+            fig_vs_estmult.legend.position = 'tr'
+            fig_vs_refmult.legend.position = 'tr'
+
+            fig_vs_estmult.xtitle = "N_{{ch}}^{{{}}}".format(est)
+            fig_vs_refmult.xtitle = "N_{{ch}}^{{{}}}".format(ref_est)
+
+            fig_vs_estmult.ytitle = "P(N_{{ch}}^{{{}}})".format(est)
+            fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est)
+
             corr_hist = get_NchEst1_vs_NchEst2(results_post, ref_est, est)
             nch_max = corr_hist.xaxis.GetNbins()
             mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
             nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
-            hists_PNch_vs_estmult_binned_in_refmult = []
-            hists_PNch_vs_refmult_binned_in_estmult = []
+
             is_last_bin = False
             for nch_lower_edge in range(0, nch_max, mult_bin_size):
                 if nch_lower_edge + mult_bin_size > nch_cutoff:
@@ -353,45 +333,41 @@ def _make_PNch_plots(f, sums, results_post):
                     is_last_bin = True
                 else:
                     nch_upper_edge = nch_lower_edge + mult_bin_size
+
                 # vs est_mult:
                 corr_hist.xaxis.SetRange(0, 0)  # reset x axis
                 corr_hist.yaxis.SetRange(nch_lower_edge, nch_upper_edge)
                 h_vs_est = asrootpy(corr_hist.ProjectionX(gen_random_name()))
-                h_vs_est.title = "{} < N_{{ch}}^{{{}}} < {}".\
-                                 format(nch_lower_edge, ref_est, nch_upper_edge)
-                h_vs_est.xaxis.title = "N_{{ch}}^{{{}}}".format(est)
                 if h_vs_est.Integral() > 0:
-                    hists_PNch_vs_estmult_binned_in_refmult.append(h_vs_est)
+                    h_vs_est.Scale(1.0 / h_vs_est.Integral())
+                    fig_vs_estmult.add_plottable(h_vs_est,
+                                                 "{} < N_{{ch}}^{{{}}} < {}".
+                                                 format(nch_lower_edge,
+                                                        make_estimator_title(ref_est),
+                                                        nch_upper_edge))
 
                 # vs ref_mult:
                 corr_hist.yaxis.SetRange(0, 0)  # reset y axis
                 corr_hist.xaxis.SetRange(nch_lower_edge, nch_upper_edge)
                 h_vs_ref = asrootpy(corr_hist.ProjectionY(gen_random_name()))
-                h_vs_ref.title = "{} < N_{{ch}}^{{{}}} < {}".\
-                                 format(nch_lower_edge, est, nch_upper_edge)
-                h_vs_ref.xaxis.title = "N_{{ch}}^{{{}}}".format(ref_est)
                 if h_vs_ref.Integral() > 0:
-                    hists_PNch_vs_refmult_binned_in_estmult.append(h_vs_ref)
+                    h_vs_ref.Scale(1.0 / h_vs_ref.Integral())
+                    fig_vs_refmult.add_plottable(h_vs_ref,
+                                                 "{} < N_{{ch}}^{{{}}} < {}".
+                                                 format(nch_lower_edge,
+                                                        make_estimator_title(est),
+                                                        nch_upper_edge))
 
                 if is_last_bin:
                     break
 
-            # Normalize each slice:
-            [h.Scale(1.0 / h.Integral()) for h in hists_PNch_vs_estmult_binned_in_refmult]
-            [h.Scale(1.0 / h.Integral()) for h in hists_PNch_vs_refmult_binned_in_estmult]
-
-            # Plot:
-            f.cd("results_post/" + est)
+            path = "results_post/" + est
 
             # vs est_mult
-            c = plot_list_of_plottables(hists_PNch_vs_estmult_binned_in_refmult, logy=True)
-            c.name = "PNch{}_binned_in_Nch{}".format(est, ref_est)
-            c.write()
+            fig_vs_estmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(est, ref_est), path)
 
             # vs est_mult
-            c = plot_list_of_plottables(hists_PNch_vs_refmult_binned_in_estmult, logy=True)
-            c.name = "PNch{}_binned_in_Nch{}".format(ref_est, est)
-            c.write()
+            fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(ref_est, est), path)
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
@@ -472,13 +448,6 @@ def _make_correlation_plots(f, sums, results_post):
 
 def _make_pid_ratio_plots(f, sums, results_post):
     log.info("Creating plots vs refmult")
-    ratio_vs_ref_dir = 'results_post/pid_ratios_vs_refmult'
-    ratio_vs_est_dir = 'results_post/pid_ratios_vs_estmult'
-    try:
-        f.mkdir(ratio_vs_ref_dir, recurse=True)
-    except:
-        pass
-    f.cd(ratio_vs_ref_dir)
 
     # Proton / pi_ch
     _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['-211', '211'],
@@ -523,11 +492,8 @@ def _make_pid_ratio_plots(f, sums, results_post):
     _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['3312'],
                                      ytitle="K^{0}_{S} / #Xi")
 
-    try:
-        f.mkdir(ratio_vs_est_dir, recurse=True)
-    except:
-        pass
-    f.cd(ratio_vs_est_dir)
+    ######################################################################################
+    # vs Est mult
     _plot_particle_ratios_vs_estmult(f, sums, results_post, ['321', '-321'], ['310'],
                                      scale=.5, ytitle="(K^{+} + K^{-}) / (2*K_{S}^{0})")
 
@@ -551,7 +517,7 @@ def _mk_results_dir(f, sums):
 
 if __name__ == "__main__":
     # go into batch mode
-    ROOT.gROOT.SetBatch(False)
+    ROOT.gROOT.SetBatch(True)
 
     log = log["/post"]  # set name of this script in logger
     log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch()))  # Results in "DEBUG:myapp] Hello"
