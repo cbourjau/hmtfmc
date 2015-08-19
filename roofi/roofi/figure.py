@@ -7,13 +7,15 @@ from rootpy.plotting.utils import get_limits
 
 import ROOT
 
+from external import husl
+
 
 def gen_random_name():
     """Generate a random name for temp hists"""
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
 
 
-def get_color_generator(palett='set2'):
+def get_color_generator(palett='husl'):
     """Returns a generator for n colors"""
     # generated with sns.palplot(sns.color_palette("colorblind", 10))
     if 'colorblind':
@@ -22,12 +24,7 @@ def get_color_generator(palett='set2'):
                      (0.8352941176470589, 0.3686274509803922, 0.0),
                      (0.8, 0.4745098039215686, 0.6549019607843137),
                      (0.9411764705882353, 0.8941176470588236, 0.25882352941176473),
-                     (0.33725490196078434, 0.7058823529411765, 0.9137254901960784),
-                     (0.0, 0.4470588235294118, 0.6980392156862745),
-                     (0.0, 0.6196078431372549, 0.45098039215686275),
-                     (0.8352941176470589, 0.3686274509803922, 0.0),
-                     (0.8, 0.4745098039215686, 0.6549019607843137)])
-    # return iter(colorblind_colors)
+                     (0.33725490196078434, 0.7058823529411765, 0.9137254901960784)])
     if 'set2':
         return iter([(0.40000000596046448, 0.7607843279838562, 0.64705884456634521),
                      (0.98131487965583808, 0.55538641635109398, 0.38740485135246722),
@@ -36,9 +33,19 @@ def get_color_generator(palett='set2'):
                      (0.65371782148585622, 0.84708959004458262, 0.32827375098770734),
                      (0.9986312957370983, 0.85096502233954041, 0.18488274134841617),
                      (0.89573241682613591, 0.76784315109252932, 0.58182240093455595),
-                     (0.70196080207824707, 0.70196080207824707, 0.70196080207824707),
-                     (0.40000000596046448, 0.7607843279838562, 0.64705884456634521),
-                     (0.98131487965583808, 0.55538641635109398, 0.38740485135246722)])
+                     (0.70196080207824707, 0.70196080207824707, 0.70196080207824707)])
+    if 'husl':
+        return iter([(0.9677975592919913, 0.44127456009157356, 0.5358103155058701),
+                     (0.8616090647292522, 0.536495730113334, 0.19548899031476086),
+                     (0.6804189127793346, 0.6151497514677574, 0.19405452111445337),
+                     (0.46810256823426105, 0.6699492535792404, 0.1928958739904499),
+                     (0.20125317221201128, 0.6907920815379025, 0.47966761189275336),
+                     (0.21044753832183283, 0.6773105080456748, 0.6433941168468681),
+                     (0.2197995660828324, 0.6625157876850336, 0.7732093159317209),
+                     (0.433280341176423, 0.6065273407962815, 0.9585467098271748),
+                     (0.8004936186423958, 0.47703363533737203, 0.9579547196007522),
+                     (0.962272393509669, 0.3976451968965351, 0.8008274363432775)])
+
     else:
         raise ValueError("Unknonw palette")
 
@@ -61,6 +68,7 @@ class Figure(object):
     class Plot(object):
         logx = False
         logy = False
+        palett = 'husl'
         # xmin, xmax, ymin, ymax = None, None, None, None
 
     class Legend(object):
@@ -69,7 +77,7 @@ class Figure(object):
 
     def _create_legend(self):
         nentries = len(self._legend_labels)
-        leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.02, textsize=14, textfont=63, margin=0.1, )
+        leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1, )
         leg.SetBorderSize(0)  # no box
         leg.SetFillStyle(0)   # transparent background of legend TPave(!)
         return leg
@@ -118,7 +126,10 @@ class Figure(object):
         else:
             legend_width = 0
         pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
+        pad_plot.SetLeftMargin(.13)
         pad_plot.SetRightMargin(.04)
+        pad_plot.SetTopMargin(.04)
+        pad_plot.SetBottomMargin(.13)
         pad_plot.Draw()
         pad_plot.cd()
 

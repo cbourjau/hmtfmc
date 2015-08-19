@@ -1,6 +1,7 @@
 import unittest
 
 from rootpy.plotting import Hist1D, Graph
+from rootpy.interactive import wait
 from rootpy.io import File
 from ROOT import TCanvas, TLegend, TFile, TDirectoryFile
 from roofi import Figure
@@ -35,7 +36,6 @@ class Test_Figure(unittest.TestCase):
         f.add_plottable(h)
         f.delete_plottables()
         self.assertEqual(len(f._plottables), 0)
-
 
 
 class Test_draw_to_canvas(unittest.TestCase):
@@ -99,13 +99,15 @@ class Test_plot_options(unittest.TestCase):
         self.assertEqual(c.FindObject("plot").GetLogy(), 1)
 
     def test_axis_labels(self):
+        ROOT.gROOT.SetBatch(False)
         f = Figure()
-        f.xtitle = '#eta / #phi'
-        f.ytitle = '#pi/#Xi'
+        f.xtitle = 'N_{ch}#times#eta / #phi'
+        f.ytitle = '1/N_{ch}^{supscr}#pi^{#pm}/#Xi'
         h1 = Hist1D(10, 0, 10,)
         h1.Fill(5)
         f.add_plottable(h1)
-        f.draw_to_canvas()
+        c = f.draw_to_canvas()
+        wait()
 
 
 class Test_legend_options(unittest.TestCase):
