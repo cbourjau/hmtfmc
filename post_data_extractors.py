@@ -42,7 +42,7 @@ def get_dNdeta_binned_in_mult(h2d, event_counter, nch_max, with_mb=True):
         h = asrootpy(h2d.projection_x())
         h.name = str(mult_bin)
         h.title = (str(int(h2d.yaxis.get_bin_low_edge(mult_bin)))
-                   + ' #leq N_{ch}^{est} #leq ' +
+                   + '#leqN_{ch}^{est}#leq' +
                    str(int(h2d.yaxis.get_bin_up_edge(mult_bin_upper))))
         h.yaxis.title = '1/N dN_{ch}^{est}/d#eta'
         # scale by the number of events in this mult_bin
@@ -88,11 +88,13 @@ def get_identified_vs_mult(h3d, pdg):
     return h
 
 
-def get_NchEst1_vs_NchEst2(results_post, est1, est2):
+def get_NchEst1_vs_NchEst2(sums, est1, est2):
     """
     Returns the correlation histogram between estimator 1 and estimator two
     Parameters
     ----------
+    sums : TList
+           Sums directory
     est1 : str
            Name of estimator 1
     est2 : str
@@ -102,21 +104,22 @@ def get_NchEst1_vs_NchEst2(results_post, est1, est2):
     Hist2D :
             Hist2D with Nch est1 on the x- and Nch est2 on the y-axis_title
     """
-    corr_hist_dir = results_post.Get("correlations")
-    hist_name = "corr_hist_{}_vs_{}".format(est1, est2)
-    corr_hist = asrootpy(corr_hist_dir.Get(hist_name))
-    corr_hist.name = gen_random_name()
+    if not isinstance(sums, ROOT.TList):
+        raise TypeError("{} is not of type ROOT.TList".format(sums))
+    hist_name = "fcorr_thisNch_vs_refNch"
+    corr_hist = asrootpy(sums.FindObject(est2).FindObject(hist_name))
     if not isinstance(corr_hist, ROOT.TH2):
+        import ipdb; ipdb.set_trace()
         raise ValueError("Correlation histogram with name {} not found".format(hist_name))
     return corr_hist
 
 
-def get_PNch_vs_estmult(results_post, est):
+def get_PNch_vs_estmult(sums, est):
     """
     Parameters
     ----------
-    results_post : TDirectory
-                   Results_post directory
+    sums : TList
+           Sums directory
     est : str
           Estimator name
     Returns
@@ -124,7 +127,9 @@ def get_PNch_vs_estmult(results_post, est):
     Hist1D :
             Counter Histogram for Number of events with Nch in the estimator region
     """
+    if not isinstance(sums, ROOT.TList):
+        raise TypeError("{} is not of type ROOT.TList".format(sums))
     # nasty hardcoded:
     ref_est = "EtaLt05"
-    corr_hist = get_NchEst1_vs_NchEst2(results_post, ref_est, est)
+    corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est, est)
     return asrootpy(corr_hist.ProjectionX(gen_random_name()))

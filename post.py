@@ -64,7 +64,11 @@ kOMEGAPLUS = str(-3334)
 
 
 # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
-mean_mult_cutoff_factor = 4
+mean_mult_cutoff_factor = 3
+
+
+def get_est_dirs(sums):
+    return (somedir for somedir in sums if somedir.GetName() in considered_ests)
 
 
 def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
@@ -109,11 +113,9 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     else:
         fig.ytitle = ytitle
 
-    for est_dir in sums:
-        if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
-            continue
+    for est_dir in get_est_dirs(sums):
         h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
-        corr_hist = asrootpy(results_post.correlations.Get("corr_hist_{}_vs_{}".format(refest, est_dir.GetName())))
+        corr_hist = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
 
         pids1_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids1])
         pids2_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids2])
@@ -143,40 +145,41 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     fig.save_to_root_file(f, name, ratio_vs_refmult_dir)
 
 
-def _make_dNdeta_and_event_counter(f, sums):
+def _make_event_counters(f, sums, results_post):
+    log.info("Creating event counters")
+    for est_dir in get_est_dirs(sums):
+        results_est_dir = results_post.FindObject(est_dir.GetName())
+        corr = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
+        counter = asrootpy(corr.ProjectionX())
+        counter.name = "event_counter"
+        f.cd("MultEstimators/results_post/" + est_dir.GetName())
+        results_est_dir.WriteTObject(counter)
+        #counter.Write()
+
+
+def _make_dNdeta(f, sums, results_post):
     # Loop over all estimators in the Sums list:
-    log.info("Creating event counter and dN/deta plots")
-    for est_dir in sums:
-        if est_dir.GetName() == "Total":
-            continue
-        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+    log.info("Creating dN/deta bin in multiplicity")
+    for est_dir in get_est_dirs(sums):
+        results_est_dir = results_post.Get(est_dir.GetName())
+        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))  # use FindObject on List objects (they have no get)
         h2d = asrootpy(est_dir.FindObject('feta_Nch'))
-        nt = asrootpy(est_dir.FindObject("fEventTuple"))
-
-        f.cd("results_post/" + est_dir.GetName())
-
-        # Write out event counters vs. multiplicity
-        h_event_counter = Hist1D(400, 0, 400,
-                                 name=("event_counter"),
-                                 title="Event counter vs. multiplicity in est region")
-        nt.Project(h_event_counter.name, "nch", "ev_weight")
-        h_event_counter.write()
+        event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
         esti_title = "({0})".format(h3d.GetTitle()[31:])
 
         mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
         # bin in standard step size up to max_nch; from there ibs all in one bin:
         max_nch = mean_nch * mean_mult_cutoff_factor
-        l = get_dNdeta_binned_in_mult(h2d, h_event_counter, nch_max=max_nch, with_mb=True)
-        c = plot_list_of_plottables(l, title="dN/d#eta vs. #eta " + esti_title)
-        c.name = "dNdeta_summary"
-        path = "./figures/results_post/{}/".format(est_dir.GetName())
-        try:
-            os.makedirs(path)
-        except OSError:
-            pass
-        # c.SaveAs(path+c.name+".pdf")
-        c.write()
+
+        fig = Figure()
+        hists = get_dNdeta_binned_in_mult(h2d, event_counter, nch_max=max_nch, with_mb=True)
+        [fig.add_plottable(p, legend_title=p.title) for p in hists]
+        fig.xtitle = '#eta'
+        fig.ytitle = 'dN_{ch}/d#eta'
+        fig.legend.position = 'seperate'
+        path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
+        fig.save_to_root_file(f, "dNdeta_summary", path=path)
 
 
 def _make_hists_vs_pt(f, sums, results_post):
@@ -187,10 +190,10 @@ def _make_hists_vs_pt(f, sums, results_post):
     log.info("Computing histograms vs pt")
 
     # Loop over all estimators in the Sums list:
-    for est_dir in sums:
+    for est_dir in get_est_dirs(sums):
         # and do everything for weighted and unweighted:
         for postfix in postfixes:
-            dirname = 'results_post/{}/pid_ratios'.format(est_dir.GetName() + postfix)
+            dirname = 'MultEstimators/results_post/{}/pid_ratios'.format(est_dir.GetName() + postfix)
             try:
                 f.mkdir(dirname, recurse=True)
             except:
@@ -295,13 +298,14 @@ def _make_PNch_plots(f, sums, results_post):
     summary_fig.legend.position = 'tr'
 
     for est_name in considered_ests:
-        h_tmp = get_PNch_vs_estmult(results_post, est_name)
+        h_tmp = get_PNch_vs_estmult(sums, est_name)
         if h_tmp.Integral() > 0:
             h_tmp.Scale(1.0 / h_tmp.Integral())
             summary_fig.add_plottable(h_tmp, make_estimator_title(est_name))
 
     summary_fig.plot.logy = True
-    summary_fig.save_to_root_file(f, "PNch_summary", path="/results_post/")
+    path = results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
+    summary_fig.save_to_root_file(f, "PNch_summary", path=path)
 
     log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
     mult_bin_size = 10
@@ -322,7 +326,7 @@ def _make_PNch_plots(f, sums, results_post):
             fig_vs_estmult.ytitle = "P(N_{{ch}}^{{{}}})".format(est)
             fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est)
 
-            corr_hist = get_NchEst1_vs_NchEst2(results_post, ref_est, est)
+            corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est, est)
             nch_max = corr_hist.xaxis.GetNbins()
             mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
             nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
@@ -362,24 +366,24 @@ def _make_PNch_plots(f, sums, results_post):
                 if is_last_bin:
                     break
 
-            path = "results_post/" + est
-
+            path = results_post.GetPath().split(":")[1] + "/" + est  # file.root:/internal/root/path
             # vs est_mult
             fig_vs_estmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(est, ref_est), path)
-
             # vs est_mult
             fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(ref_est, est), path)
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
     log.info("Makeing 2D mult pt plots for each particle kind")
-    for est_dir in (somedir for somedir in sums if somedir.GetName() in considered_ests):
-        dir_name = "results_post/" + est_dir.GetName() + "/mult_pt"
+    for est_dir in get_est_dirs(sums):
+        path = (results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
+                + "/" + est_dir.GetName()
+                + "/mult_pt")
         try:
-            f.mkdir(dir_name, recurse=True)
+            f.mkdir(path, recurse=True)
         except ValueError:
             pass
-        f.cd(dir_name)
+        f.cd(path)
 
         h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
         # loop through all particle kinds:
@@ -502,7 +506,8 @@ def _make_pid_ratio_plots(f, sums, results_post):
 
 def _delete_results_dir(f, sums):
     # delete old result directory
-    f.rmdir('MultEstimators/results_post')
+    f.rm('MultEstimators/results_post')
+    f.Write()
 
 
 def _mk_results_dir(f, sums):
@@ -537,13 +542,17 @@ if __name__ == "__main__":
         for func in functions:
             func(f, sums)
         results_post = f.MultEstimators.results_post
-        _make_dNdeta_and_event_counter(f, sums)
-        _make_correlation_plots(f, sums, results_post)
+        _make_event_counters(f, sums, results_post)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        _make_dNdeta(f, sums, results_post)
+        #     _make_correlation_plots(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
         _make_mult_vs_pt_plots(f, sums, results_post)
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
         _make_hists_vs_pt(f, sums, results_post)  # needs updated results_post!
-        _make_dNdeta_mb_ratio_plots(f, sums, results_post)
+        # _make_dNdeta_mb_ratio_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
