@@ -1,13 +1,17 @@
 import string
 import random
+import logging
 
-from rootpy import asrootpy
+from rootpy import asrootpy, log
 from rootpy.plotting import Legend, Canvas, Pad
 from rootpy.plotting.utils import get_limits
 
 import ROOT
 
 from external import husl
+
+logging.basicConfig(level=logging.DEBUG)
+log = log["/roofi"]
 
 
 def gen_random_name():
@@ -140,7 +144,11 @@ class Figure(object):
         is_first = True
         for i, obj in enumerate(self._plottables):
             obj.markerstyle = 'circle'
-            color = next(colors)
+            try:
+                color = next(colors)
+            except StopIteration:
+                log.warning("Ran out of colors; defaulting to black")
+                color = 1
             obj.color = color
 
             obj.SetMinimum(ymin)
