@@ -26,7 +26,8 @@ from post_utils import create_stack_pid_ratio_over_pt,\
     plot_list_of_plottables, remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
 
-from figure import Figure
+from roofi import Figure
+
 
 def gen_random_name():
     """Generate a random name for temp hists"""
@@ -431,6 +432,7 @@ def _make_correlation_plots(f, sums, results_post):
         nt0.AddFriend(est_dir.FindObject("fEventTuple"), est_dir.GetName())
     for ref_est in considered_ests:
         for est_dir in sums:
+            log.info("Correlating {} with {}".format(ref_est, est_dir.GetName()))
             corr_hist = Hist2D(400, 0, 400,
                                400, 0, 400,
                                name="corr_hist_{}_vs_{}".format(ref_est, est_dir.GetName()))
@@ -499,18 +501,15 @@ def _make_pid_ratio_plots(f, sums, results_post):
 
 
 def _delete_results_dir(f, sums):
-    try:
-        # delete old result directory
-        f.rmdir('results_post')
-    except:
-        pass
-    f.mkdir('results_post')
+    # delete old result directory
+    f.rmdir('MultEstimators/results_post')
 
 
 def _mk_results_dir(f, sums):
+    f.mkdir('MultEstimators/results_post', recurse=True)
     for est_dir in sums:
         try:
-            resdir = f.results_post.mkdir(est_dir.GetName())
+            resdir = f.MultEstimators.results_post.mkdir(est_dir.GetName())
             resdir.Write()
         except:
             pass
@@ -534,18 +533,17 @@ if __name__ == "__main__":
     ]
 
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.Sums
+        sums = f.MultEstimators.Sums
         for func in functions:
             func(f, sums)
-        results_post = f.results_post
+        results_post = f.MultEstimators.results_post
         _make_dNdeta_and_event_counter(f, sums)
         _make_correlation_plots(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
-
         _make_mult_vs_pt_plots(f, sums, results_post)
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.Sums
-        results_post = f.results_post
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
         _make_hists_vs_pt(f, sums, results_post)  # needs updated results_post!
         _make_dNdeta_mb_ratio_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
