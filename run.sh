@@ -8,6 +8,9 @@ case x$1 in
 	    xpythia)
 		incoll="${PWD}/pythia/input_files.dat"
 		;;
+	    xpythia4)
+		incoll="${PWD}/pythia4/input_files.dat"
+		;;
 	    xphojet)
 		incoll="${PWD}/phojet/input_files.dat"
 		;;
@@ -23,6 +26,9 @@ case x$1 in
 	    xpythia)
 		incoll="${PWD}/pythia/input_files.dat"
 		;;
+	    xpythia4)
+		incoll="${PWD}/pythia4/input_files.dat"
+		;;
 	    xphojet)
 		incoll="${PWD}/phojet/input_files.dat"
 		;;
@@ -37,11 +43,14 @@ case x$1 in
 	    xpythia)
 		incoll="pythia"
 		;;
+	    xpythia4)
+		incoll="pythia4"
+		;;
 	    xphojet)
 		incoll="phojet"
 		;;
 	    xdipsy)
-		incoll="pythia"
+		incoll="dipsy"
 		;;
 	esac
 	;;
