@@ -23,7 +23,7 @@ from post_data_extractors import get_dNdeta_binned_in_mult, get_identified_vs_mu
     get_NchEst1_vs_NchEst2, get_PNch_vs_estmult
 from post_utils import create_stack_pid_ratio_over_pt,\
     remap_x_values,\
-    plot_list_of_plottables, remove_zero_value_points, remove_non_mutual_points,\
+    remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
 
 from roofi import Figure
@@ -191,7 +191,7 @@ def _make_hists_vs_pt(f, sums, results_post):
 
     # Loop over all estimators in the Sums list:
     for est_dir in get_est_dirs(sums):
-        dirname = 'MultEstimators/results_post/{}/pid_ratios'.format(est_dir.GetName())
+        dirname = 'MultEstimators/results_post/{}/pid_ratios/'.format(est_dir.GetName())
         try:
             f.mkdir(dirname, recurse=True)
         except:
@@ -205,87 +205,102 @@ def _make_hists_vs_pt(f, sums, results_post):
         esti_title = "({0})".format(h3d.title[31:])
 
         mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
+        fig = Figure()
+        fig.xtitle = 'p_{T} (GeV)'
+        fig.legend.position = 'br'
 
+        fig.delete_plottables()
+        name = "proton_over_pich__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], max_nch)
-        hs.title = "p/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "proton_over_pich__vs__pt"
-        c.write()
+        fig.ytitle = "(p+#bar{p})/#pi^{+-} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "Xi_over_pich__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPIMINUS, kPIPLUS], max_nch)
-        hs.title = "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "Xi_over_pich__vs__pt"
-        c.write()
+        fig.ytitle = "#Xi/#pi^{+-} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "OmegaCh_over_pich__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS], max_nch)
-        hs.title = "#Omega_{ch}/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "OmegaCh_over_pich__vs__pt"
-        c.write()
+        fig.ytitle = "#Omega_{ch}/#pi^{+-} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
         # Ratios to pi0
+        fig.delete_plottables()
+        name = "pich_over_pi0__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kPIMINUS, kPIPLUS], [kPI0], max_nch)
-        hs.title = "#pi^{+-}/#pi^{0} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "pich_over_pi0__vs__pt"
-        c.write()
+        fig.ytitle = "#pi^{+-}/#pi^{0} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "proton_over_pi0__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPI0], max_nch)
-        hs.title = "p/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-        c = plot_list_of_plottables(hs)
-        c.name = "proton_over_pi0__vs__pt"
+        fig.ytitle = "p/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-        c.write()
-
+        fig.delete_plottables()
+        name = "K0S_over_pi0__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kK0S], [kPI0], max_nch)
-        hs.title = "K0S/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-        c = plot_list_of_plottables(hs)
-        c.name = "K0S_over_pi0__vs__pt"
-        c.write()
+        fig.ytitle = "K0S/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "Lambda_over_pi0__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kPI0], max_nch)
-        hs.title = "#Lambda/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-        c = plot_list_of_plottables(hs)
-        c.name = "Lambda_over_pi0__vs__pt"
-        c.write()
+        fig.ytitle = "#Lambda/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "Xi_over_pi0__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPI0], max_nch)
-        hs.title = "#Xi/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-        c = plot_list_of_plottables(hs)
-        c.name = "Xi_over_pi0__vs__pt"
-        c.write()
+        fig.ytitle = "#Xi/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "OmegaCh_over_pi0__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPI0], max_nch)
-        hs.title = "#Omega_{ch}/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-        c = plot_list_of_plottables(hs)
-        c.name = "OmegaCh_over_pi0__vs__pt"
-        c.write()
+        fig.ytitle = "#Omega_{ch}/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
         # Ratios to K0S
+        fig.delete_plottables()
+        name = "proton_over_K0S__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kK0S], max_nch)
-        hs.title = "p/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "proton_over_K0S__vs__pt"
-        c.write()
+        fig.ytitle = "p/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "Lambda_over_K0S__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kK0S], max_nch)
-        hs.title = "#Lambda/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "Lambda_over_K0S__vs__pt"
-        c.write()
+        fig.ytitle = "#Lambda/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "Xi_over_K0S__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kK0S], max_nch)
-        hs.title = "#Xi/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "Xi_over_K0S__vs__pt"
-        c.write()
+        fig.ytitle = "#Xi/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
+        fig.delete_plottables()
+        name = "OmegaCh_over_K0S__vs__pt"
         hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kK0S], max_nch)
-        hs.title = "#Omega_{ch}/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-        c = plot_list_of_plottables(hs)
-        c.name = "OmegaCh_over_K0S__vs__pt"
-        c.write()
+        fig.ytitle = "#Omega_{ch}/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
 
 def _make_PNch_plots(f, sums, results_post):
@@ -410,11 +425,12 @@ def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
         except StopIteration:
             raise StopIteration("no histogram named {} was found in dNdeta summary plot".format(mb_hist_name))
         ratios = [h / mb_hist for h in hists if h.name != mb_hist_name]
-        title = 'dN/d#eta|_{mult} / dN/d#eta|_{MB} '
-        c = plot_list_of_plottables(ratios, title)
-        c.name = "dNdeta_ratio_to_mb_canvas"
-        f.cd(res_dir_str)
-        c.Write()
+        fig = Figure()
+        fig.xtitle = '#eta'
+        fig.ytitle = 'dN/d#eta|_{mult} / dN/d#eta|_{MB}'
+        [fig.add_plottable(p, p.title) for p in ratios]
+        name = "dNdeta_ratio_to_mb_canvas"
+        fig.save_to_root_file(f, name, res_dir_str)
 
 
 def _make_correlation_plots(f, sums, results_post):
