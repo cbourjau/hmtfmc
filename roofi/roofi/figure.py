@@ -100,6 +100,8 @@ class Figure(object):
     def _create_legend(self):
         nentries = len(self._legend_labels)
         leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1, )
+        leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1)
+        leg.SetHeader(self.legend.title)
         leg.SetBorderSize(0)  # no box
         leg.SetFillStyle(0)   # transparent background of legend TPave(!)
         return leg
