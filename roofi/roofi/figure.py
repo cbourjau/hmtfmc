@@ -77,7 +77,7 @@ class Figure(object):
         self.title = ''
         self.xtitle = ''
         self.ytitle = ''
-        self.logx, self.logy = False, False
+        # self.logx, self.logy = False, False
         # ncolors = 10
         # Private:
         self._plottables = []
@@ -211,8 +211,8 @@ class Figure(object):
             is_first = False
             obj.Draw(drawoption)
         pad_plot.SetTicks()
-        pad_plot.SetLogx(self.logx)
-        pad_plot.SetLogy(self.logy)
+        pad_plot.SetLogx(self.plot.logx)
+        pad_plot.SetLogy(self.plot.logy)
 
         if len(self._legend_labels) > 0:
             leg = self._create_legend()
