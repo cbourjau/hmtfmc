@@ -82,8 +82,9 @@ class Figure(object):
         self.title = ''
         self.xtitle = ''
         self.ytitle = ''
-        # self.logx, self.logy = False, False
-        # ncolors = 10
+        self.plot = self.Plot()
+        self.legend = self.Legend()
+
         # Private:
         self._plottables = []
         self._legend_labels = []
@@ -108,8 +109,6 @@ class Figure(object):
                              'canvasHeight': 300}}
         self._titlefont = 63
         self._labelfont = 43
-        self.plot = self.Plot()
-        self.legend = self.Legend()
 
     class Plot(object):
         logx = False
