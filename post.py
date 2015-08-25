@@ -23,10 +23,11 @@ from post_data_extractors import get_dNdeta_binned_in_mult, get_identified_vs_mu
     get_NchEst1_vs_NchEst2, get_PNch_vs_estmult
 from post_utils import create_stack_pid_ratio_over_pt,\
     remap_x_values,\
-    plot_list_of_plottables, remove_zero_value_points, remove_non_mutual_points,\
+    remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
 
-from figure import Figure
+from roofi import Figure
+
 
 def gen_random_name():
     """Generate a random name for temp hists"""
@@ -63,7 +64,11 @@ kOMEGAPLUS = str(-3334)
 
 
 # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
-mean_mult_cutoff_factor = 4
+mean_mult_cutoff_factor = 3
+
+
+def get_est_dirs(sums):
+    return (somedir for somedir in sums if somedir.GetName() in considered_ests)
 
 
 def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
@@ -108,11 +113,9 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     else:
         fig.ytitle = ytitle
 
-    for est_dir in sums:
-        if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
-            continue
+    for est_dir in get_est_dirs(sums):
         h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
-        corr_hist = asrootpy(results_post.correlations.Get("corr_hist_{}_vs_{}".format(refest, est_dir.GetName())))
+        corr_hist = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
 
         pids1_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids1])
         pids2_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids2])
@@ -142,40 +145,41 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     fig.save_to_root_file(f, name, ratio_vs_refmult_dir)
 
 
-def _make_dNdeta_and_event_counter(f, sums):
+def _make_event_counters(f, sums, results_post):
+    log.info("Creating event counters")
+    for est_dir in get_est_dirs(sums):
+        results_est_dir = results_post.FindObject(est_dir.GetName())
+        corr = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
+        counter = asrootpy(corr.ProjectionX())
+        counter.name = "event_counter"
+        f.cd("MultEstimators/results_post/" + est_dir.GetName())
+        results_est_dir.WriteTObject(counter)
+        #counter.Write()
+
+
+def _make_dNdeta(f, sums, results_post):
     # Loop over all estimators in the Sums list:
-    log.info("Creating event counter and dN/deta plots")
-    for est_dir in sums:
-        if est_dir.GetName() == "Total":
-            continue
-        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+    log.info("Creating dN/deta bin in multiplicity")
+    for est_dir in get_est_dirs(sums):
+        results_est_dir = results_post.Get(est_dir.GetName())
+        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))  # use FindObject on List objects (they have no get)
         h2d = asrootpy(est_dir.FindObject('feta_Nch'))
-        nt = asrootpy(est_dir.FindObject("fEventTuple"))
-
-        f.cd("results_post/" + est_dir.GetName())
-
-        # Write out event counters vs. multiplicity
-        h_event_counter = Hist1D(400, 0, 400,
-                                 name=("event_counter"),
-                                 title="Event counter vs. multiplicity in est region")
-        nt.Project(h_event_counter.name, "nch", "ev_weight")
-        h_event_counter.write()
+        event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
         esti_title = "({0})".format(h3d.GetTitle()[31:])
 
         mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
         # bin in standard step size up to max_nch; from there ibs all in one bin:
         max_nch = mean_nch * mean_mult_cutoff_factor
-        l = get_dNdeta_binned_in_mult(h2d, h_event_counter, nch_max=max_nch, with_mb=True)
-        c = plot_list_of_plottables(l, title="dN/d#eta vs. #eta " + esti_title)
-        c.name = "dNdeta_summary"
-        path = "./figures/results_post/{}/".format(est_dir.GetName())
-        try:
-            os.makedirs(path)
-        except OSError:
-            pass
-        # c.SaveAs(path+c.name+".pdf")
-        c.write()
+
+        fig = Figure()
+        hists = get_dNdeta_binned_in_mult(h2d, event_counter, nch_max=max_nch, with_mb=True)
+        [fig.add_plottable(p, legend_title=p.title) for p in hists]
+        fig.xtitle = '#eta'
+        fig.ytitle = 'dN_{ch}/d#eta'
+        fig.legend.position = 'seperate'
+        path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
+        fig.save_to_root_file(f, "dNdeta_summary", path=path)
 
 
 def _make_hists_vs_pt(f, sums, results_post):
@@ -186,104 +190,117 @@ def _make_hists_vs_pt(f, sums, results_post):
     log.info("Computing histograms vs pt")
 
     # Loop over all estimators in the Sums list:
-    for est_dir in sums:
-        # and do everything for weighted and unweighted:
-        for postfix in postfixes:
-            dirname = 'results_post/{}/pid_ratios'.format(est_dir.GetName() + postfix)
-            try:
-                f.mkdir(dirname, recurse=True)
-            except:
-                pass
-            f.cd(dirname)
-            h3d_orig = asrootpy(est_dir.FindObject('fNch_pT_pid' + postfix))
-            h3d = asrootpy(h3d_orig.RebinX(rebin_mult, h3d_orig.name + "rebinned"))
-            mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
-            # bin in standard step size up to max_nch; from there ibs all in one bin:
-            max_nch = mean_nch * mean_mult_cutoff_factor
-            esti_title = "({0})".format(h3d.title[31:])
+    for est_dir in get_est_dirs(sums):
+        dirname = 'MultEstimators/results_post/{}/pid_ratios/'.format(est_dir.GetName())
+        try:
+            f.mkdir(dirname, recurse=True)
+        except:
+            pass
+        f.cd(dirname)
+        h3d_orig = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+        h3d = asrootpy(h3d_orig.RebinX(rebin_mult, h3d_orig.name + "rebinned"))
+        mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
+        # bin in standard step size up to max_nch; from there ibs all in one bin:
+        max_nch = mean_nch * mean_mult_cutoff_factor
+        esti_title = "({0})".format(h3d.title[31:])
 
-            mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
+        mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
+        fig = Figure()
+        fig.xtitle = 'p_{T} (GeV)'
+        fig.legend.position = 'br'
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], max_nch)
-            hs.title = "p/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "proton_over_pich__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "proton_over_pich__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], max_nch)
+        fig.ytitle = "(p+#bar{p})/#pi^{+-} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPIMINUS, kPIPLUS], max_nch)
-            hs.title = "#Xi/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "Xi_over_pich__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "Xi_over_pich__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPIMINUS, kPIPLUS], max_nch)
+        fig.ytitle = "#Xi/#pi^{+-} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS], max_nch)
-            hs.title = "#Omega_{ch}/#pi^{+-} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "OmegaCh_over_pich__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "OmegaCh_over_pich__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS], max_nch)
+        fig.ytitle = "#Omega_{ch}/#pi^{+-} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            # Ratios to pi0
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kPIMINUS, kPIPLUS], [kPI0], max_nch)
-            hs.title = "#pi^{+-}/#pi^{0} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "pich_over_pi0__vs__pt"
-            c.write()
+        # Ratios to pi0
+        fig.delete_plottables()
+        name = "pich_over_pi0__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kPIMINUS, kPIPLUS], [kPI0], max_nch)
+        fig.ytitle = "#pi^{+-}/#pi^{0} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPI0], max_nch)
-            hs.title = "p/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_list_of_plottables(hs)
-            c.name = "proton_over_pi0__vs__pt"
+        fig.delete_plottables()
+        name = "proton_over_pi0__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPI0], max_nch)
+        fig.ytitle = "p/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            c.write()
+        fig.delete_plottables()
+        name = "K0S_over_pi0__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kK0S], [kPI0], max_nch)
+        fig.ytitle = "K0S/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kK0S], [kPI0], max_nch)
-            hs.title = "K0S/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_list_of_plottables(hs)
-            c.name = "K0S_over_pi0__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "Lambda_over_pi0__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kPI0], max_nch)
+        fig.ytitle = "#Lambda/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kPI0], max_nch)
-            hs.title = "#Lambda/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_list_of_plottables(hs)
-            c.name = "Lambda_over_pi0__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "Xi_over_pi0__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPI0], max_nch)
+        fig.ytitle = "#Xi/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPI0], max_nch)
-            hs.title = "#Xi/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_list_of_plottables(hs)
-            c.name = "Xi_over_pi0__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "OmegaCh_over_pi0__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPI0], max_nch)
+        fig.ytitle = "#Omega_{ch}/#pi^{0} " + "({})".format(est_dir.GetName())
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPI0], max_nch)
-            hs.title = "#Omega_{ch}/#pi^{0} vs. p_{T} " + "{}".format(est_dir.GetName())
-            c = plot_list_of_plottables(hs)
-            c.name = "OmegaCh_over_pi0__vs__pt"
-            c.write()
+        # Ratios to K0S
+        fig.delete_plottables()
+        name = "proton_over_K0S__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kK0S], max_nch)
+        fig.ytitle = "p/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            # Ratios to K0S
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kK0S], max_nch)
-            hs.title = "p/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "proton_over_K0S__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "Lambda_over_K0S__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kK0S], max_nch)
+        fig.ytitle = "#Lambda/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kK0S], max_nch)
-            hs.title = "#Lambda/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "Lambda_over_K0S__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "Xi_over_K0S__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kK0S], max_nch)
+        fig.ytitle = "#Xi/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kK0S], max_nch)
-            hs.title = "#Xi/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "Xi_over_K0S__vs__pt"
-            c.write()
-
-            hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kK0S], max_nch)
-            hs.title = "#Omega_{ch}/K^{0}_{S} vs. p_{T} " + "{}".format(esti_title)
-            c = plot_list_of_plottables(hs)
-            c.name = "OmegaCh_over_K0S__vs__pt"
-            c.write()
+        fig.delete_plottables()
+        name = "OmegaCh_over_K0S__vs__pt"
+        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kK0S], max_nch)
+        fig.ytitle = "#Omega_{ch}/K^{0}_{S} " + "({})".format(esti_title)
+        [fig.add_plottable(p, p.title) for p in hs]
+        fig.save_to_root_file(f, name, dirname)
 
 
 def _make_PNch_plots(f, sums, results_post):
@@ -294,13 +311,14 @@ def _make_PNch_plots(f, sums, results_post):
     summary_fig.legend.position = 'tr'
 
     for est_name in considered_ests:
-        h_tmp = get_PNch_vs_estmult(results_post, est_name)
+        h_tmp = get_PNch_vs_estmult(sums, est_name)
         if h_tmp.Integral() > 0:
             h_tmp.Scale(1.0 / h_tmp.Integral())
             summary_fig.add_plottable(h_tmp, make_estimator_title(est_name))
 
     summary_fig.plot.logy = True
-    summary_fig.save_to_root_file(f, "PNch_summary", path="/results_post/")
+    path = results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
+    summary_fig.save_to_root_file(f, "PNch_summary", path=path)
 
     log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
     mult_bin_size = 10
@@ -321,7 +339,7 @@ def _make_PNch_plots(f, sums, results_post):
             fig_vs_estmult.ytitle = "P(N_{{ch}}^{{{}}})".format(est)
             fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est)
 
-            corr_hist = get_NchEst1_vs_NchEst2(results_post, ref_est, est)
+            corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est, est)
             nch_max = corr_hist.xaxis.GetNbins()
             mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
             nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
@@ -361,24 +379,24 @@ def _make_PNch_plots(f, sums, results_post):
                 if is_last_bin:
                     break
 
-            path = "results_post/" + est
-
+            path = results_post.GetPath().split(":")[1] + "/" + est  # file.root:/internal/root/path
             # vs est_mult
             fig_vs_estmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(est, ref_est), path)
-
             # vs est_mult
             fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(ref_est, est), path)
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
     log.info("Makeing 2D mult pt plots for each particle kind")
-    for est_dir in (somedir for somedir in sums if somedir.GetName() in considered_ests):
-        dir_name = "results_post/" + est_dir.GetName() + "/mult_pt"
+    for est_dir in get_est_dirs(sums):
+        path = (results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
+                + "/" + est_dir.GetName()
+                + "/mult_pt")
         try:
-            f.mkdir(dir_name, recurse=True)
+            f.mkdir(path, recurse=True)
         except ValueError:
             pass
-        f.cd(dir_name)
+        f.cd(path)
 
         h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
         # loop through all particle kinds:
@@ -407,11 +425,12 @@ def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
         except StopIteration:
             raise StopIteration("no histogram named {} was found in dNdeta summary plot".format(mb_hist_name))
         ratios = [h / mb_hist for h in hists if h.name != mb_hist_name]
-        title = 'dN/d#eta|_{mult} / dN/d#eta|_{MB} '
-        c = plot_list_of_plottables(ratios, title)
-        c.name = "dNdeta_ratio_to_mb_canvas"
-        f.cd(res_dir_str)
-        c.Write()
+        fig = Figure()
+        fig.xtitle = '#eta'
+        fig.ytitle = 'dN/d#eta|_{mult} / dN/d#eta|_{MB}'
+        [fig.add_plottable(p, p.title) for p in ratios]
+        name = "dNdeta_ratio_to_mb_canvas"
+        fig.save_to_root_file(f, name, res_dir_str)
 
 
 def _make_correlation_plots(f, sums, results_post):
@@ -431,6 +450,7 @@ def _make_correlation_plots(f, sums, results_post):
         nt0.AddFriend(est_dir.FindObject("fEventTuple"), est_dir.GetName())
     for ref_est in considered_ests:
         for est_dir in sums:
+            log.info("Correlating {} with {}".format(ref_est, est_dir.GetName()))
             corr_hist = Hist2D(400, 0, 400,
                                400, 0, 400,
                                name="corr_hist_{}_vs_{}".format(ref_est, est_dir.GetName()))
@@ -499,18 +519,16 @@ def _make_pid_ratio_plots(f, sums, results_post):
 
 
 def _delete_results_dir(f, sums):
-    try:
-        # delete old result directory
-        f.rmdir('results_post')
-    except:
-        pass
-    f.mkdir('results_post')
+    # delete old result directory
+    f.rm('MultEstimators/results_post')
+    f.Write()
 
 
 def _mk_results_dir(f, sums):
+    f.mkdir('MultEstimators/results_post', recurse=True)
     for est_dir in sums:
         try:
-            resdir = f.results_post.mkdir(est_dir.GetName())
+            resdir = f.MultEstimators.results_post.mkdir(est_dir.GetName())
             resdir.Write()
         except:
             pass
@@ -526,7 +544,6 @@ if __name__ == "__main__":
     rebin_mult = 10
     ref_ests = ['EtaLt05', ]
     considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C']
-    postfixes = ["", ]  # "_unweighted"]
 
     functions = [
         _delete_results_dir,
@@ -534,18 +551,21 @@ if __name__ == "__main__":
     ]
 
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.Sums
+        sums = f.MultEstimators.Sums
         for func in functions:
             func(f, sums)
-        results_post = f.results_post
-        _make_dNdeta_and_event_counter(f, sums)
-        _make_correlation_plots(f, sums, results_post)
+        results_post = f.MultEstimators.results_post
+        _make_event_counters(f, sums, results_post)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        _make_dNdeta(f, sums, results_post)
+        #     _make_correlation_plots(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
-
         _make_mult_vs_pt_plots(f, sums, results_post)
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.Sums
-        results_post = f.results_post
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
         _make_hists_vs_pt(f, sums, results_post)  # needs updated results_post!
-        _make_dNdeta_mb_ratio_plots(f, sums, results_post)
+        # _make_dNdeta_mb_ratio_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
