@@ -7,7 +7,12 @@ from rootpy.plotting.utils import get_limits
 
 import ROOT
 
-from external import husl
+# from external import husl
+
+# Define names of plot layouts:
+PRES_FULL = 'presentation_full'
+PRES_HALF = 'presentation_half'
+PUBLIC_FULL = 'publication_full'
 
 
 def gen_random_name():
@@ -61,7 +66,27 @@ class Figure(object):
         # Private:
         self._plottables = []
         self._legend_labels = []
-        self.style = 'presentation'
+        self.style = PRES_FULL
+        self._style_dict = {PRES_FULL:
+                            {'axisTitleSize': 14,
+                             'axisLabelSize': 14,
+                             'legendSize': 14,
+                             'canvasWidth': 340,
+                             'canvasHeight': 300},
+                            PRES_HALF:
+                            {'axisTitleSize': 14,
+                             'axisLabelSize': 12,
+                             'legendSize': 14,
+                             'canvasWidth': 170,
+                             'canvasHeight': 300},
+                            PUBLIC_FULL:
+                            {'axisTitleSize': 10,
+                             'axisLabelSize': 8,
+                             'legendSize': 8,
+                             'canvasWidth': 340,
+                             'canvasHeight': 300}}
+        self._titlefont = 63
+        self._labelfont = 43
         self.plot = self.Plot()
         self.legend = self.Legend()
 
@@ -85,13 +110,14 @@ class Figure(object):
     def _theme_plottable(self, obj):
         axes = obj.GetXaxis(), obj.GetYaxis()
         for axis in axes:
-            axis.SetLabelSize(14)
-            axis.SetLabelFont(63)
+            axis.SetLabelSize(self._style_dict[self.style]['axisLabelSize'])
+            axis.SetLabelFont(self._labelfont)
 
-            axis.SetTitleFont(63)
-            axis.SetTitleSize(14)
-            axis.SetTitleFont(63)
-            axis.SetTitleSize(14)
+            axis.SetTitleFont(self._titlefont)
+            axis.SetTitleSize(self._style_dict[self.style]['axisTitleSize'])
+        # yaxis only settings:
+        if self.style == PRES_HALF:
+            axes[1].SetTitleOffset(2)
 
     def add_plottable(self, obj, legend_title=''):
         """
@@ -116,7 +142,9 @@ class Figure(object):
         """
         if len(self._plottables) == 0:
             raise IndexError("No plottables defined")
-        c = Canvas(width=340, height=300, size_includes_decorations=True)
+        c = Canvas(width=self._style_dict[self.style]['canvasWidth'],
+                   height=self._style_dict[self.style]['canvasHeight'],
+                   size_includes_decorations=True)
         if self.legend.position == 'seperate':
             legend_width = .2
             pad_legend = Pad(1 - legend_width, 0, 1., 1., name="legend")
@@ -126,7 +154,10 @@ class Figure(object):
         else:
             legend_width = 0
         pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
-        pad_plot.SetLeftMargin(.13)
+        if self.style == PRES_HALF:
+            pad_plot.SetLeftMargin(.25)
+        else:
+            pad_plot.SetLeftMargin(.13)
         pad_plot.SetRightMargin(.04)
         pad_plot.SetTopMargin(.04)
         pad_plot.SetBottomMargin(.13)

@@ -98,7 +98,7 @@ class Test_plot_options(unittest.TestCase):
         c = f.draw_to_canvas()
         self.assertEqual(c.FindObject("plot").GetLogy(), 1)
 
-    def test_axis_labels(self):
+    def test_axis_labels_dont_overlap(self):
         ROOT.gROOT.SetBatch(False)
         f = Figure()
         f.xtitle = 'N_{ch}#times#eta / #phi'
@@ -108,6 +108,19 @@ class Test_plot_options(unittest.TestCase):
         f.add_plottable(h1)
         c = f.draw_to_canvas()
         wait()
+
+    def test_draw_half_width(self):
+        ROOT.gROOT.SetBatch(False)
+        f = Figure()
+        f.style = 'presentation_half'
+        f.xtitle = 'N_{ch}#times#eta / #phi'
+        f.ytitle = '1/N_{ch}^{supscr}#pi^{#pm}/#Xi'
+        h1 = Hist1D(10, 0, 10,)
+        h1.Fill(5)
+        f.add_plottable(h1)
+        c = f.draw_to_canvas()
+
+
 
 
 class Test_legend_options(unittest.TestCase):
