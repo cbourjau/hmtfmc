@@ -109,6 +109,22 @@ class Test_plot_options(unittest.TestCase):
         c = f.draw_to_canvas()
         wait()
 
+    def test_SetRangeUser(self):
+        f = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        f.add_plottable(h1)
+        f.plot.xmin = -5
+        f.plot.xmax = 5
+        f.plot.ymin = -5
+        f.plot.ymax = 5
+        c = f.draw_to_canvas()
+        plot_pad = c.FindObject("plot")
+        self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetXaxis().GetXmin(), -5)
+        self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetXaxis().GetXmax(), 5)
+        self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetMinimum(), -5)
+        self.assertEqual(plot_pad.GetListOfPrimitives()[-1].GetMaximum(), 5)
+
 
 class Test_legend_options(unittest.TestCase):
     def setUp(self):

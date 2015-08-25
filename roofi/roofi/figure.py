@@ -158,6 +158,15 @@ class Figure(object):
         pad_plot.cd()
 
         xmin, xmax, ymin, ymax = get_limits(self._plottables, logx=self.plot.logx, logy=self.plot.logy)
+        # overwrite these ranges if defaults are given
+        if self.plot.xmin is not None:
+            xmin = self.plot.xmin
+        if self.plot.xmax is not None:
+            xmax = self.plot.xmax
+        if self.plot.ymax is not None:
+            ymax = self.plot.ymax
+        if self.plot.ymin is not None:
+            ymin = self.plot.ymin
 
         colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
 
@@ -175,6 +184,8 @@ class Figure(object):
             obj.SetMaximum(ymax)
             obj.GetYaxis().SetLimits(ymin, ymax)
             obj.GetYaxis().SetRangeUser(ymin, ymax)
+
+            obj.GetXaxis().SetLimits(xmin, xmax)
 
             obj.GetXaxis().SetTitle(self.xtitle)
             obj.GetYaxis().SetTitle(self.ytitle)
