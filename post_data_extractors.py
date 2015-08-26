@@ -13,7 +13,44 @@ from post_utils import gen_random_name
 import ROOT
 
 
-def get_dNdeta_binned_in_mult(h2d, event_counter, nch_max, with_mb=True):
+def get_Nch_edges_for_percentile_edges(percentile_edges, event_counter):
+    """
+    Returns the bin edges so that each bin reprecents the given percentile edges
+    Parameters
+    ----------
+    percentile_edges : list
+                       Edges in percentiles; has to start at 1 and end at 0
+    event_counter : Hist1D
+                    Event counter histogram with Nch (in estimator region) on the x-axis
+    Returns
+    -------
+    list :
+           Edges in Nch of the estimator, first edge is 0 last edge the highest available bin
+    """
+    nch_bins = event_counter.GetXaxis().GetNbins()
+    n_total = event_counter.Integral(1, nch_bins)
+    accu_counts = [0] + [event_counter.Integral(1, binidx) for binidx in range(1, nch_bins)]
+    accu_percents = [1 - (accu_count / float(n_total)) for accu_count in accu_counts]
+
+    nch_edges = []  # int(round(n_total - n_total * perc)) for perc in percentile_edges]
+    iter_wanted_perc_edges = iter(percentile_edges)
+    perc_edge = next(iter_wanted_perc_edges)
+    for idx, (accu_count, accu_percent) in enumerate(zip(accu_counts, accu_percents)):
+        # the idx is the nch bin we are looking for
+        try:
+            if accu_percent <= perc_edge:  # this should pick up the first bin with 1.0 = 1.0
+                nch_edges.append(idx)
+                perc_edge = next(iter_wanted_perc_edges)
+                # check if we are skipping a bin because the percentile intervals are too small:
+                if accu_percent <= perc_edge:
+                    raise ValueError("The given percentile edges narrower than one Nch bin!")
+        except StopIteration:
+            # We found the last bin
+            break
+    return nch_edges
+
+
+def get_dNdeta_binned_in_mult(h2d, event_counter, percent_bins=None, nch_max=None, with_mb=True):
     """
     Create dN/deta stack for various multiplicity bins from given 2D histogram. If `with_mb` is `True`,
     also add dNdeta for minimum bias to the stack.
@@ -22,7 +59,15 @@ def get_dNdeta_binned_in_mult(h2d, event_counter, nch_max, with_mb=True):
     h2d : Hist2D
           feta_Nch from the Sums list
     event_counter : Hist1D
-         Event counter histogram used for scaling
+                    Event counter histogram used for scaling
+    percent_bins : list
+                   Percentile bin edges; either this or nch_max has to be given
+    nch_max : int
+              The cutoff value above which, everything is packed in one bin, if percent_bins is given,
+              this value is ignored
+    with_mb : bool
+              If true, the last plottable in the return list is the minimum bias distribution
+
     Returns
     -------
     list
@@ -32,24 +77,33 @@ def get_dNdeta_binned_in_mult(h2d, event_counter, nch_max, with_mb=True):
     nbins = h2d.yaxis.GetNbins()
     nch_step = 10
     last_mult_bin = False
-    for mult_bin in range(1, nbins, nch_step):
-        if mult_bin + nch_step > nch_max:
-            last_mult_bin = True
-            mult_bin_upper = nbins
-        else:
-            mult_bin_upper = mult_bin + nch_step - 1
-        h2d.yaxis.set_range(mult_bin, mult_bin_upper)
+    if percent_bins:
+        nch_edges = get_Nch_edges_for_percentile_edges(percent_bins, event_counter)
+    else:
+        nch_edges = range(0, nbins, nch_step)
+
+    for i, (nch_low, nch_up) in enumerate(zip(nch_edges[:-1], nch_edges[1:])):
+        nch_bin_low = nch_low + 1  # root's crack pot binning...
+        nch_bin_up = nch_up + 1    # root's crack pot binning...
+        if percent_bins is None:
+            if (nch_bin_up > nch_max):
+                last_mult_bin = True
+                nch_bin_up = nbins
+        h2d.yaxis.set_range(nch_bin_low, nch_bin_up)
         h = asrootpy(h2d.projection_x())
-        h.name = str(mult_bin)
-        h.title = (str(int(h2d.yaxis.get_bin_low_edge(mult_bin)))
-                   + '#leqN_{ch}^{est}#leq' +
-                   str(int(h2d.yaxis.get_bin_up_edge(mult_bin_upper))))
+        h.name = str(nch_bin_low)
+        if percent_bins is None:
+            h.title = (str(int(nch_low))
+                       + '#leqN_{ch}^{est}#leq' +
+                       str(int(nch_up)))
+        else:
+            h.title = "{} - {} %".format(100 * percent_bins[i], 100 * percent_bins[i + 1])
         h.yaxis.title = '1/N dN_{ch}^{est}/d#eta'
         # scale by the number of events in this mult_bin
         try:
-            h.Scale(1.0 / float(event_counter.Integral(mult_bin, mult_bin_upper)))
+            h.Scale(1.0 / float(event_counter.Integral(nch_bin_low, nch_bin_up)))
         except ZeroDivisionError:
-            raise ZeroDivisionError("Consider lowering the cutoff factor to avoid this")
+            raise ZeroDivisionError("Consider lowering the cutoff factor / percentil binning to avoid this")
         stack.append(h)
         if last_mult_bin:
             break
