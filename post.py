@@ -72,7 +72,7 @@ def get_est_dirs(sums):
 
 
 def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
-    ratio_vs_estmult_dir = 'results_post/pid_ratios_vs_estmult'
+    ratio_vs_estmult_dir = 'MultEstimators/results_post/pid_ratios_vs_estmult'
     fig = Figure()
     if not ytitle:
         fig.ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
@@ -104,7 +104,7 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
     plot and write to file the ratio of the two pid-lists (pids1/pids2). Plot is vs refmult.
     This function depends on the correlation histograms to be present in f
     """
-    ratio_vs_refmult_dir = 'results_post/pid_ratios_vs_refmult'
+    ratio_vs_refmult_dir = 'MultEstimators/results_post/pid_ratios_vs_refmult'
     fig = Figure()
 
     refest = "EtaLt05"
@@ -412,7 +412,7 @@ def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
     # Create ratio plots; depends on the previously created histograms
     log.info("Creating ratios of dN/deta plots for each multiplicity bin")
     for est_dir in (somedir for somedir in results_post if somedir.GetName() in considered_ests):
-        res_dir_str = "results_post/" + est_dir.GetName()
+        res_dir_str = "MultEstimators/results_post/" + est_dir.GetName()
         # get the histograms out of the summary plot, even if it is hackish...
         plot_pad = est_dir.Get("dNdeta_summary").FindObject("plot")
         # some of the hists are just the frames, neglect those
@@ -436,7 +436,7 @@ def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
 def _make_correlation_plots(f, sums, results_post):
     # Make correlations between estimators
     log.info("Correlating N_ch of each estimator")
-    corr_dir = 'results_post/correlations'
+    corr_dir = 'MultEstimators/results_post/correlations'
     try:
         f.mkdir(corr_dir, recurse=True)
     except:
