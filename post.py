@@ -36,13 +36,13 @@ def gen_random_name():
 
 def make_estimator_title(name):
     if name == 'EtaLt05':
-        return '|#eta| #leq 0.5'
+        return '|#eta|#leq0.5'
     elif name == 'EtaLt08':
-        return '|#eta| #leq 0.8'
+        return '|#eta|#leq0.8'
     elif name == 'EtaLt15':
-        return '|#eta| #leq 1.5'
+        return '|#eta|#leq1.5'
     elif name == 'Eta08_15':
-        return '0.8 #leq |#eta| #leq 1.5'
+        return '0.8#leq|#eta|#leq1.5'
     else:
         return name
 
