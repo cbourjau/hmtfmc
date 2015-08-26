@@ -1,6 +1,7 @@
 import string
 import random
 import logging
+import os
 
 from rootpy import asrootpy, log
 from rootpy.plotting import Legend, Canvas, Pad
@@ -314,3 +315,30 @@ class Figure(object):
         f.cd(path)
         c.Write()
         return f
+
+    def save_to_file(self, path, name):
+        """
+        Save the current figure to the given root file under the given path
+        Parameters
+        ----------
+        path : string
+            Path excluding the file name, relative files are interpreted relative to the working dir
+        name : string
+            Name of the file including its extension
+        Returns
+        -------
+        string :
+            Path to the saved file
+        """
+        disk_dir = path.strip('.').strip('/')
+        folders = disk_dir.split('/')
+        print folders
+        c = self.draw_to_canvas()
+        c.name = name.strip('.').split('.')[0]  # strip of extension
+        for i, folder in enumerate(folders):
+            try:
+                print "/".join(folders[:i + 1])
+                os.mkdir("/".join(folders[:i + 1]))
+            except OSError:
+                pass
+        c.SaveAs("{}/{}".format(disk_dir, name))

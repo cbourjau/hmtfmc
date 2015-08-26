@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from rootpy.plotting import Hist1D, Graph
@@ -7,6 +8,8 @@ from ROOT import TCanvas, TLegend, TFile, TDirectoryFile
 from roofi import Figure
 
 import ROOT
+
+test_dir = os.path.dirname(os.path.abspath(__file__))
 
 
 class Test_Figure(unittest.TestCase):
@@ -99,7 +102,7 @@ class Test_plot_options(unittest.TestCase):
         self.assertEqual(c.FindObject("plot").GetLogy(), 1)
 
     def test_axis_labels_dont_overlap(self):
-        ROOT.gROOT.SetBatch(False)
+        # ROOT.gROOT.SetBatch(False)
         f = Figure()
         f.xtitle = 'N_{ch}#times#eta / #phi'
         f.ytitle = '1/N_{ch}^{supscr}#pi^{#pm}/#Xi'
@@ -107,7 +110,7 @@ class Test_plot_options(unittest.TestCase):
         h1.Fill(5)
         f.add_plottable(h1)
         c = f.draw_to_canvas()
-        wait()
+        # wait()
 
     def test_draw_half_width(self):
         ROOT.gROOT.SetBatch(False)
@@ -186,22 +189,35 @@ class Test_write_to_root_file(unittest.TestCase):
 
     @unittest.skip(True)
     def test_write_to_TFile(self):
-        f = TFile("test.root", "recreate")
+        f = TFile(test_dir + "/test.root", "recreate")
         f = self.fig.save_to_root_file(f, 'myname')
         # Close might raise an error here!
         f.Close()
 
     def test_write_to_root_file(self):
-        f = File("test.root", "recreate")
+        f = File(test_dir + "/test.root", "recreate")
         f = self.fig.save_to_root_file(f, 'myname')
         f.close()
-        f = TFile("test.root", "read")
+        f = TFile(test_dir + "/test.root", "read")
         self.assertIsInstance(f.Get("myname"), TCanvas)
 
     def test_write_to_root_file_with_path(self):
-        f = File("test.root", "recreate")
+        f = File(test_dir + "/test.root", "recreate")
         f = self.fig.save_to_root_file(f, 'myname', path='folder/')
         f.Close()
-        f = TFile("test.root", "read")
+        f = TFile(test_dir + "/test.root", "read")
         self.assertIsInstance(f.Get("folder"), TDirectoryFile)
         self.assertIsInstance(f.Get("folder").Get("myname"), TCanvas)
+
+
+class Test_write_to_root_file_with_copy_to_disc(unittest.TestCase):
+    def setUp(self):
+        self.fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        self.fig.add_plottable(h1, legend_title="hist 1")
+
+    def test_write_to_disc(self):
+        path = './roofi/tests/figures/'
+        self.fig.save_to_file(path, "myfig.pdf")
+        self.assertTrue(os.path.exists(os.curdir + '/roofi/tests/figures/'))
