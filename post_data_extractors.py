@@ -50,6 +50,19 @@ def get_Nch_edges_for_percentile_edges(percentile_edges, event_counter):
     return nch_edges
 
 
+def get_meanpt_vs_estmult(resutlts_est_dir, pids):
+    """
+    Create a 1Dprofile for the given pids and the given estimator name
+    """
+    # find the mult vs pt histograms for the given pids
+    mult_vs_pts = []
+    for pid in pids:
+        mult_vs_pts.append(asrootpy(getattr(resutlts_est_dir.mult_pt, pid)))
+    profx = sum(mult_vs_pts).ProfileX()
+    profx.name = gen_random_name()
+    return profx
+
+
 def get_dNdeta_binned_in_mult(h2d, event_counter, percent_bins=None, nch_max=None, with_mb=True):
     """
     Create dN/deta stack for various multiplicity bins from given 2D histogram. If `with_mb` is `True`,
@@ -187,3 +200,68 @@ def get_PNch_vs_estmult(sums, est):
     ref_est = "EtaLt05"
     corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est, est)
     return asrootpy(corr_hist.ProjectionX(gen_random_name()))
+
+
+def get_nMPI_vs_Nch(sums_est_dir):
+    """
+    Parameters
+    ----------
+    sums_est_dir : TList
+        Estimator directory from Sums
+
+    Returns
+    -------
+    Profile :
+        Profile with N_ch on the xaxis and <nMPI> on the yaxis
+    """
+    nch_nmpi = sums_est_dir.FindObject("fNch_vs_nMPI")
+    profx = nch_nmpi.ProfileX()
+    return profx
+
+
+def get_pT_distribution(results_est_dir, pids, nch_low, nch_up, normalized):
+    """
+    Parameters
+    ----------
+    results_est_dir : TDirectory
+               Directory of a given estimator
+    pids : list
+           List of strings denoting requested pids
+    nch_low, nch_up : int
+           Lower and upper limit of Nch for which the p_T distribution should be made
+    normalized : Boolean
+           Should the distribution be normalized to yield P(p_T)?
+    Returns
+    -------
+    Hist1D :
+            Histogram P(p_T)
+    """
+    mult_pt_hists = []
+    for pid in pids:
+        mult_pt_hists.append(getattr(results_est_dir.mult_pt, pid))
+    summed_mult_pt = sum(mult_pt_hists)
+    summed_mult_pt.xaxis.SetRangeUser(nch_low, nch_up)
+    projy = asrootpy(summed_mult_pt.ProjectionY())
+    projy.name = gen_random_name()
+    if normalized:
+        projy.Scale(1.0 / projy.Integral())
+    return projy
+
+
+def get_mean_nMPI(sums_est_dir, nch_low, nch_up):
+    """
+    Get the mean nMPI of events in a given N_ch interval
+    Parameters
+    ----------
+    sums_est_dir : TList
+                   List for a given estimator
+    nch_low, nch_up : int
+           Lower and upper limit of Nch for which <nMPI> should be calculated
+    Returns
+    -------
+    Float :
+           <nMPI>
+    """
+    nch_vs_nmpi = asrootpy(sums_est_dir.FindObject("fNch_vs_nMPI"))
+    nch_vs_nmpi.xaxis.SetRangeUser(nch_low, nch_up)
+    return nch_vs_nmpi.GetMean(2)

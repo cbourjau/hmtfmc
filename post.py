@@ -591,6 +591,196 @@ def _make_pid_ratio_plots(f, sums, results_post):
                                      scale=.5, ytitle="(K^{+} + K^{-}) / (2*K_{S}^{0})")
 
 
+def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
+    log.info("Creating mean pT plots")
+    for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
+        if sums_est_dir.GetName() != res_est_dir.GetName():
+            raise IndexError("Order of estimator dirs is different in sums and results_post")
+        res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
+        corr_hist = asrootpy(sums_est_dir.FindObject("fcorr_thisNch_vs_refNch"))
+        fig = Figure()
+        fig.plot.palette = 'root'
+        fig.plot.ncolors = 7
+        fig.plot.xmin = 0
+        fig.plot.xmax = 25
+        fig.plot.ymin = 0.3
+        fig.plot.ymax = 1.9
+        fig.ytitle = "<p_{T}>"
+        fig.xtitle = "N_{ch}|_{|#eta|<0.5}"
+        graphs = []
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kPI0, kPIMINUS, kPIPLUS]), corr_hist))
+        graphs[-1].title = "#pi"
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kKMINUS, kKPLUS]), corr_hist))
+        graphs[-1].title = "K^{#pm}"
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kPROTON, kANTIPROTON]), corr_hist))
+        graphs[-1].title = "p"
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kK0S]), corr_hist))
+        graphs[-1].title = "K^{0}_{S}"
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kLAMBDA, kANTILAMBDA]), corr_hist))
+        graphs[-1].title = "#Lambda"
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kXI, kANTIXI]), corr_hist))
+        graphs[-1].title = "#Xi"
+        graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS]), corr_hist))
+        graphs[-1].title = "#Omega"
+        # sanitize graphs:
+        for g in graphs:
+            remove_zero_value_points(g)
+            remove_points_with_x_err_gt_1NchRef(g)
+            remove_points_with_equal_x(g)
+        [fig.add_plottable(g, g.title) for g in graphs]
+        fig.save_to_root_file(f, "mean_pt", res_dir_str)
+
+
+def _plot_event_counter_with_shaded_perc_areas(f, results_post):
+    log.info("Broken: Root sucks! Creating shaded event counter with percentile regions")
+    return
+    for est_dir in get_est_dirs(results_post):
+        event_counter = asrootpy(getattr(est_dir, "event_counter"))
+        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
+        nch_edges = get_Nch_edges_for_percentile_edges(perc_edges, event_counter)
+        c = Canvas(name="event_counter_with_perc")
+        leg = Legend(len(nch_edges) - 1)
+        copies = []
+        colors = get_color_generator(ncolors=10)
+        # Draw the hist once
+        event_counter.Draw()
+        for nch_low, nch_up in zip(nch_edges[:-1], nch_edges[1:]):
+            copies.append(event_counter.Clone(gen_random_name()))
+            copies[-1].xaxis.SetRangeUser(nch_low, nch_up)
+            copies[-1].SetFillStyle(1001)
+            copies[-1].color = next(colors)
+            copies[-1].xaxis.title = "N_{ch}"
+            copies[-1].yaxis.title = "counts"
+            leg.AddEntry(copies[-1], "{}-{}%".format(str(nch_low), str(nch_up)))
+            copies[-1].Draw('sameHist')
+            break
+        leg.Draw()
+        est_dir.cd()
+        c.Write()
+
+
+def _plot_PpT(f, sums, results_post):
+    log.info("Plot PpT plots")
+    for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
+        if sums_est_dir.GetName() != res_est_dir.GetName():
+            raise IndexError("Order of estimator dirs is different in sums and results_post")
+        res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
+        fig = Figure()
+        fig.plot.palette = 'root'
+        fig.plot.ncolors = 7
+        # fig.plot.xmin = 0
+        # fig.plot.xmax = 25
+        fig.plot.ymin = 0.01
+        fig.plot.ymax = 0.05
+        fig.ytitle = "P(p_{T})"
+        fig.xtitle = "p_{T} (GeV)"
+        hists = []
+        nch_low, nch_up = 0, 250
+        hists.append(get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low, nch_up, normalized=True))
+        hists[-1].title = "#pi"
+        hists.append(get_pT_distribution(res_est_dir, [kKMINUS, kKPLUS], nch_low, nch_up, normalized=True))
+        hists[-1].title = "K^{#pm}"
+        hists.append(get_pT_distribution(res_est_dir, [kPROTON, kANTIPROTON], nch_low, nch_up, normalized=True))
+        hists[-1].title = "p"
+        hists.append(get_pT_distribution(res_est_dir, [kK0S], nch_low, nch_up, normalized=True))
+        hists[-1].title = "K^{0}_{S}"
+        hists.append(get_pT_distribution(res_est_dir, [kLAMBDA, kANTILAMBDA], nch_low, nch_up, normalized=True))
+        hists[-1].title = "#Lambda"
+        hists.append(get_pT_distribution(res_est_dir, [kXI, kANTIXI], nch_low, nch_up, normalized=True))
+        hists[-1].title = "#Xi"
+        hists.append(get_pT_distribution(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low, nch_up, normalized=True))
+        hists[-1].title = "#Omega"
+        [fig.add_plottable(p, p.title) for p in hists]
+        fig.save_to_root_file(f, "PpT", res_dir_str)
+
+
+def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
+    log.info("Plot PpT plots")
+    for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
+        if sums_est_dir.GetName() != res_est_dir.GetName():
+            raise IndexError("Order of estimator dirs is different in sums and results_post")
+        res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
+        fig = Figure()
+        fig.plot.palette = 'root'
+        fig.plot.ncolors = 7
+        # fig.plot.xmin = 0
+        # fig.plot.xmax = 25
+        # fig.plot.ymin = 0.01
+        # fig.plot.ymax = 0.05
+        fig.ytitle = "P(p_{T})"
+        fig.xtitle = "p_{T} (GeV)"
+        hists = []
+        event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
+        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
+        nch_edges = get_Nch_edges_for_percentile_edges(perc_edges, event_counter)
+        nch_low_mb, nch_up_mb = 0, 250
+        nch_low_hm, nch_up_hm = nch_edges[-2], nch_edges[-1]
+        mean_nmpi_mb = get_mean_nMPI(sums_est_dir, nch_low_mb, nch_up_mb)
+        mean_nmpi_hm = get_mean_nMPI(sums_est_dir, nch_low_hm, nch_up_hm)
+        ratio_mean_nmpi = mean_nmpi_mb / mean_nmpi_hm
+
+        pt_hm = get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+
+        hists[-1].title = "#pi"
+        pt_hm = get_pT_distribution(res_est_dir, [kKMINUS, kKPLUS], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kKMINUS, kKPLUS], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+        hists[-1].title = "K^{#pm}"
+        pt_hm = get_pT_distribution(res_est_dir, [kPROTON, kANTIPROTON], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kPROTON, kANTIPROTON], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+        hists[-1].title = "p"
+        pt_hm = get_pT_distribution(res_est_dir, [kK0S], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kK0S], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+        hists[-1].title = "K^{0}_{S}"
+        pt_hm = get_pT_distribution(res_est_dir, [kLAMBDA, kANTILAMBDA], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kLAMBDA, kANTILAMBDA], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+        hists[-1].title = "#Lambda"
+        pt_hm = get_pT_distribution(res_est_dir, [kXI, kANTIXI], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kXI, kANTIXI], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+        hists[-1].title = "#Xi"
+        pt_hm = get_pT_distribution(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low_hm, nch_up_hm, normalized=True)
+        pt_mb = get_pT_distribution(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low_mb, nch_up_mb, normalized=True)
+        pt_hm.Divide(pt_mb)
+        hists.append(pt_hm)
+        hists[-1].title = "#Omega"
+
+        name = "pt_hm_div_pt_mb"
+        if scale_nMPI:
+            [prof.Scale(ratio_mean_nmpi) for prof in hists]
+            name += "_scaled_to_mean_nMPI"
+        [fig.add_plottable(p, p.title) for p in hists]
+        fig.save_to_root_file(f, name, res_dir_str)
+
+
+def _plot_nMPI_vs_Nch(f, sums, results_post):
+    log.info("Creating nMPI(Nch) summary plot")
+    summary_fig = Figure()
+    summary_fig.xtitle = "N_{ch}^{est}"
+    summary_fig.ytitle = "<N_{MPI}>"
+    summary_fig.plot.palette = 'root'
+    summary_fig.legend.position = 'br'
+    summary_fig.plot.logy = True
+
+    for est_dir in get_est_dirs(sums):
+        h_tmp = get_nMPI_vs_Nch(est_dir)
+        summary_fig.add_plottable(h_tmp, make_estimator_title(est_dir.GetName()))
+
+    path = results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
+    summary_fig.save_to_root_file(f, "nMPI_summary", path=path)
+
+
 def _delete_results_dir(f, sums):
     # delete old result directory
     f.rm('MultEstimators/results_post')
@@ -632,13 +822,28 @@ if __name__ == "__main__":
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
+        # _plot_event_counter_with_shaded_perc_areas(f, results_post)
         _make_dNdeta(f, sums, results_post)
         #     _make_correlation_plots(f, sums, results_post)
         _make_PNch_plots(f, sums, results_post)
+        _plot_nMPI_vs_Nch(f, sums, results_post)
         _make_mult_vs_pt_plots(f, sums, results_post)
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
+        _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post)
         _make_hists_vs_pt(f, sums, results_post)  # needs updated results_post!
         # _make_dNdeta_mb_ratio_plots(f, sums, results_post)
         _make_pid_ratio_plots(f, sums, results_post)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        _plot_PpT(f, sums, results_post)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=False)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=True)
