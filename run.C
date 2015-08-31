@@ -134,7 +134,7 @@ void run(const TString runmode_str  = "lite",
 				      ),
 	 const char * analysisFiles="",//"AliMultiplicityEstimators.cxx+:"
 	                               //"AliAnalysisTaskHMTFMCMultEst.cxx+"),
-	 const TString adderFiles=("$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C"))
+	 const TString adderFiles=("$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(kTRUE, kFALSE)"))
 {
   if(!(runmode_str.BeginsWith("local") ||
        runmode_str.BeginsWith("lite") ||
