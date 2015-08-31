@@ -266,18 +266,20 @@ class Figure(object):
             # vertical:
             if self.legend.position.startswith('t'):
                 leg_hight = leg.y2 - leg.y1
-                leg.y2 = 1 - pad_plot.GetTopMargin()
+                leg.y2 = 1 - pad_plot.GetTopMargin() - ytick_length
                 leg.y1 = leg.y2 - leg_hight
             elif self.legend.position.startswith('b'):
                 leg_hight = leg.y2 - leg.y1
-                leg.y1 = pad_plot.GetBottomMargin()
+                leg.y1 = pad_plot.GetBottomMargin() + ytick_length
                 leg.y2 = leg.y1 + leg_hight
             # horizontal:
             if self.legend.position[1:].startswith('l'):
-                pass
+                leg_width = 0.3
+                leg.x1 = pad_plot.GetLeftMargin() + xtick_length
+                leg.x2 = leg.x1 + leg_width
             elif self.legend.position[1:].startswith('r'):
                 leg_width = 0.3
-                leg.x2 = 1 - pad_plot.GetRightMargin()
+                leg.x2 = 1 - pad_plot.GetRightMargin() - xtick_length
                 leg.x1 = leg.x2 - leg_width
             if self.legend.position == 'seperate':
                 with pad_legend:
