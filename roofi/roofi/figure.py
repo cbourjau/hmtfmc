@@ -25,7 +25,7 @@ def gen_random_name():
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
 
 
-def get_color_generator(palette='husl', ncolors=10):
+def get_color_generator(palette='root', ncolors=10):
     """
     Returns a generator for n colors.
     Parameters
