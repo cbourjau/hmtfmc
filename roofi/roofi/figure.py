@@ -119,14 +119,15 @@ class Figure(object):
         xmin, xmax, ymin, ymax = None, None, None, None
 
     class Legend(object):
-        title = ''
+        title = None
         position = 'tl'
 
     def _create_legend(self):
         nentries = len(self._legend_labels)
         leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1, )
         leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1)
-        leg.SetHeader(self.legend.title)
+        if self.legend.title:
+            leg.SetHeader(self.legend.title)
         leg.SetBorderSize(0)  # no box
         leg.SetFillStyle(0)   # transparent background of legend TPave(!)
         return leg
@@ -142,6 +143,8 @@ class Figure(object):
         # yaxis only settings:
         if self.style == PRES_HALF:
             axes[1].SetTitleOffset(2)
+        if self.style == PRES_FULL:
+            axes[1].SetTitleOffset(1.15)
 
     def add_plottable(self, obj, legend_title=''):
         """
