@@ -214,15 +214,21 @@ class Figure(object):
                 color = 1
             obj.color = color
 
+            xaxis = obj.GetXaxis()
+            yaxis = obj.GetYaxis()
+
             obj.SetMinimum(ymin)
             obj.SetMaximum(ymax)
-            obj.GetYaxis().SetLimits(ymin, ymax)
-            obj.GetYaxis().SetRangeUser(ymin, ymax)
+            yaxis.SetLimits(ymin, ymax)  # for unbinned data
+            yaxis.SetRangeUser(ymin, ymax)
 
-            obj.GetXaxis().SetLimits(xmin, xmax)
+            xaxis.SetLimits(xmin, xmax)
 
-            obj.GetXaxis().SetTitle(self.xtitle)
-            obj.GetYaxis().SetTitle(self.ytitle)
+            xaxis.SetTitle(self.xtitle)
+            yaxis.SetTitle(self.ytitle)
+
+            xtick_length = xaxis.GetTickLength()
+            ytick_length = yaxis.GetTickLength()
 
             # Set the title to the given title:
             obj.title = self.title
@@ -316,7 +322,9 @@ class Figure(object):
         except ValueError:
             pass
         f.cd(path)
-        c.Write()
+        success = c.Write()
+        if success == 0:
+            raise ValueError("Could not write to file!")
         return f
 
     def save_to_file(self, path, name):
@@ -335,12 +343,10 @@ class Figure(object):
         """
         disk_dir = path.strip('.').strip('/')
         folders = disk_dir.split('/')
-        print folders
         c = self.draw_to_canvas()
         c.name = name.strip('.').split('.')[0]  # strip of extension
         for i, folder in enumerate(folders):
             try:
-                print "/".join(folders[:i + 1])
                 os.mkdir("/".join(folders[:i + 1]))
             except OSError:
                 pass
