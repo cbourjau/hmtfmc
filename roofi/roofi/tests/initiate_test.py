@@ -219,5 +219,5 @@ class Test_write_to_root_file_with_copy_to_disc(unittest.TestCase):
 
     def test_write_to_disc(self):
         path = './roofi/tests/figures/'
-        self.fig.save_to_file(path, "myfig.pdf")
+        self.fig.save_to_file(name="myfig", path="folder/myfig.pdf")
         self.assertTrue(os.path.exists(os.curdir + '/roofi/tests/figures/'))
