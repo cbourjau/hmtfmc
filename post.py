@@ -6,10 +6,8 @@ These plottables are then plotted with the plotting functions in plotting_util.p
 """
 
 import sys
-import os
 import string
 import random
-import ipdb
 
 if len(sys.argv) != 2:
     print "Usage: python ./post.py path_to_root_file.root"
@@ -17,17 +15,19 @@ if len(sys.argv) != 2:
 
 from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log
-from rootpy.plotting import Hist1D, Hist2D, Canvas
+from rootpy.plotting import Hist1D, Hist2D, Canvas, Legend
 
 from post_data_extractors import get_dNdeta_binned_in_mult, get_identified_vs_mult,\
-    get_Nch_edges_for_percentile_edges,\
-    get_NchEst1_vs_NchEst2, get_PNch_vs_estmult
+    get_Nch_edges_for_percentile_edges, get_nMPI_vs_Nch,\
+    get_NchEst1_vs_NchEst2, get_PNch_vs_estmult,\
+    get_meanpt_vs_estmult, get_pT_distribution, get_mean_nMPI
 from post_utils import create_stack_pid_ratio_over_pt,\
     remap_x_values,\
     remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
 
 from roofi import Figure
+from roofi.figure import get_color_generator
 
 
 def gen_random_name():
@@ -65,7 +65,7 @@ kOMEGAPLUS = str(-3334)
 
 
 # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
-mean_mult_cutoff_factor = 3
+mean_mult_cutoff_factor = 4
 
 
 def get_est_dirs(sums):
@@ -155,7 +155,6 @@ def _make_event_counters(f, sums, results_post):
         counter.name = "event_counter"
         f.cd("MultEstimators/results_post/" + est_dir.GetName())
         results_est_dir.WriteTObject(counter)
-        #counter.Write()
 
 
 def _make_dNdeta(f, sums, results_post):
@@ -163,7 +162,6 @@ def _make_dNdeta(f, sums, results_post):
     log.info("Creating dN/deta bin in multiplicity")
     for est_dir in get_est_dirs(sums):
         results_est_dir = results_post.Get(est_dir.GetName())
-        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))  # use FindObject on List objects (they have no get)
         h2d = asrootpy(est_dir.FindObject('feta_Nch'))
         event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
@@ -172,13 +170,16 @@ def _make_dNdeta(f, sums, results_post):
         max_nch = mean_nch * mean_mult_cutoff_factor
 
         fig = Figure()
-        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0]
+        fig.plot.palette = 'root'
+        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
         hists = get_dNdeta_binned_in_mult(h2d, event_counter, percent_bins=perc_edges,  # nch_max=max_nch,
                                           with_mb=True)
         [fig.add_plottable(p, legend_title=p.title) for p in hists]
         fig.xtitle = '#eta'
         fig.ytitle = 'dN_{ch}/d#eta'
-        fig.legend.position = 'seperate'
+        fig.legend.position = 'tl'
+        fig.plot.ymin = 0
+        fig.plot.ymax = 5
         path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
         fig.save_to_root_file(f, "dNdeta_summary", path=path)
 
@@ -208,7 +209,6 @@ def _make_hists_vs_pt(f, sums, results_post):
         # nch_cutoff = int(mean_nch * mean_mult_cutoff_factor)
         # step_size = 10
         # nch_edges = list(range(0, nch_cutoff, step_size)) + [h3d_orig.GetXaxis().GetNbins()]
-        esti_title = "({0})".format(h3d_orig.title[31:])
 
         mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
         fig = Figure()
@@ -599,7 +599,7 @@ def _delete_results_dir(f, sums):
 
 def _mk_results_dir(f, sums):
     f.mkdir('MultEstimators/results_post', recurse=True)
-    for est_dir in sums:
+    for est_dir in get_est_dirs(sums):
         try:
             resdir = f.MultEstimators.results_post.mkdir(est_dir.GetName())
             resdir.Write()
@@ -616,7 +616,7 @@ if __name__ == "__main__":
     # Rebin multiplicity with factor:
     rebin_mult = 10
     ref_ests = ['EtaLt05', ]
-    considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C']
+    considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C', 'ZDC']
 
     functions = [
         _delete_results_dir,
