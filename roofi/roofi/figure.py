@@ -135,6 +135,7 @@ class Figure(object):
     def _theme_plottable(self, obj):
         axes = obj.GetXaxis(), obj.GetYaxis()
         for axis in axes:
+            axis.SetNoExponent(False)
             axis.SetLabelSize(self._style_dict[self.style]['axisLabelSize'])
             axis.SetLabelFont(self._labelfont)
 
