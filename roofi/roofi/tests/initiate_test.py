@@ -1,11 +1,12 @@
 import os
 import unittest
+import shutil
 
 from rootpy.plotting import Hist1D, Graph
 from rootpy.interactive import wait
 from rootpy.io import File
 from ROOT import TCanvas, TLegend, TFile, TDirectoryFile
-from roofi import Figure
+from roofi.figure import Figure, Styles
 
 import ROOT
 
@@ -216,8 +217,45 @@ class Test_write_to_root_file_with_copy_to_disc(unittest.TestCase):
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         self.fig.add_plottable(h1, legend_title="hist 1")
+        self.path = 'test_folder/'  # './roofi/tests/figures/'
+        shutil.rmtree(self.path, ignore_errors=True)
 
     def test_write_to_disc(self):
-        path = './roofi/tests/figures/'
-        self.fig.save_to_file(name="myfig", path="folder/myfig.pdf")
+        # test that it checks the input format
+        self.assertRaises(ValueError, self.fig.save_to_file, name="myfig", path=self.path)
+        # path needs to be relative (starting with . or absolute)
+        # self.assertRaises(ValueError, self.fig.save_to_file, name="myfig.pdf", path="bad_path")
+        # check successful save
+        self.fig.save_to_file(name="myfig.pdf", path=self.path)
         self.assertTrue(os.path.exists(os.curdir + '/roofi/tests/figures/'))
+
+
+class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
+    def setUp(self):
+        self.fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        self.fig.add_plottable(h1, legend_title="hist 1")
+        self.path = './roofi/tests/figures/'
+        shutil.rmtree(self.path, ignore_errors=True)
+
+    @unittest.skip("Somehow, I cannot get the current page size...")
+    def test_gStyle_is_unaltered(self):
+        paper_width_init, paper_height_init = ROOT.Double(), ROOT.Double
+        ROOT.gStyle.GetPaperSize(paper_width_init, paper_height_init)
+        self.fig.save_to_file(name="fig_pres_full.pdf", path=self.path)
+        paper_width_final, paper_height_final = ROOT.Double(), ROOT.Double
+        ROOT.gStyle.GetPaperSize(paper_width_final, paper_height_final)
+        self.assertEqual(paper_width_init, paper_width_final)
+        self.assertEqual(paper_height_init, paper_height_final)
+
+    def test_create_figures_of_different_size(self):
+        self.fig.style = Styles.PRES_FULL
+        self.fig.save_to_file(name="fig_pres_full.pdf", path=self.path)
+        self.fig.save_to_file(name="fig_pres_full.pdf", path=self.path)
+
+        self.fig.style = Styles.PRES_HALF
+        self.fig.save_to_file(name="fig_pres_half.pdf", path=self.path)
+
+        self.fig.style = Styles.PUBLIC_FULL
+        self.fig.save_to_file(name="fig_pub_full.pdf", path=self.path)

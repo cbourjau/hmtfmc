@@ -342,22 +342,42 @@ class Figure(object):
         Save the current figure to the given root file under the given path
         Parameters
         ----------
-        path : string
-            Path excluding the file name, relative files are interpreted relative to the working dir
         name : string
             Name of the file including its extension
+        path : string
+            Path excluding the file name, relative files are interpreted relative to the working dir
         Returns
         -------
         string :
             Path to the saved file
         """
+        # check if the name has the right extension
+        if len(name.split('.')) != 2:
+            raise ValueError("Filename must be given with extension")
+        if name.split('.')[1] != 'pdf':
+            raise NotImplementedError("Only PDF export is implemented at the moment")
+        # if not path.startswith(('/', './')):
+        #     raise ValueError("Path needs to be absolute or relative (starting with './')")
         disk_dir = path.strip('.').strip('/')
         folders = disk_dir.split('/')
-        c = self.draw_to_canvas()
-        c.name = name.strip('.').split('.')[0]  # strip of extension
         for i, folder in enumerate(folders):
             try:
                 os.mkdir("/".join(folders[:i + 1]))
             except OSError:
                 pass
-        c.SaveAs("{}/{}".format(disk_dir, name))
+
+        # The order of the following is important! First, set paper size, then draw the canvas and then create the pdf
+        # Doin pdf.Range(10, 10) is not sufficient. it just does random shit
+        # Be careful to reset the global gStyle when we are finished. Yeah! Globals!
+        # Ok, Root does not like that either...
+        # paper_width, paper_height = ROOT.Double(), ROOT.Double()
+        # ROOT.gStyle.GetPaperSize(paper_width, paper_height)
+        ROOT.gStyle.SetPaperSize(self.style.canvasWidth * self.style.pt_per_mm,
+                                 self.style.canvasHeight * self.style.pt_per_mm,)
+        c = self.draw_to_canvas()
+        pdf = ROOT.TPDF("{}/{}".format(disk_dir, name))
+        c.Draw()
+        pdf.Close()
+
+        # reset the page size
+        # ROOT.gStyle.SetPaperSize(paper_width, paper_height)
