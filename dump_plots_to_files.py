@@ -35,7 +35,8 @@ def objects(in_folder):
 if __name__ == '__main__':
     f_name = sys.argv[1]
     base_path = './' + f_name.split('.')[0] + '/'
-    shutil.rmtree(base_path)
+
+    shutil.rmtree(base_path, ignore_errors=True)
     in_folder = root_open(f_name, 'read').MultEstimators.results_post
     for c, rfile_path in objects(in_folder):
         path = base_path + rfile_path
