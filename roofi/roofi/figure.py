@@ -11,10 +11,38 @@ import ROOT
 
 # from external import husl
 
-# Define names of plot layouts:
-PRES_FULL = 'presentation_full'
-PRES_HALF = 'presentation_half'
-PUBLIC_FULL = 'publication_full'
+
+class Styles(object):
+    # Define names of plot layouts:
+    class _Default_Style(object):
+        pt_per_mm = 2.84527625
+        titlefont = 63
+        labelfont = 43
+
+    class Presentation_full(_Default_Style):
+        axisTitleSize = 14
+        axisLabelSize = 14
+        legendSize = 14
+        canvasWidth = 340
+        canvasHeight = 300
+
+    class Presentation_half(_Default_Style):
+        axisTitleSize = 14
+        axisLabelSize = 12
+        legendSize = 14
+        canvasWidth = 170
+        canvasHeight = 300
+
+    class Public_full(_Default_Style):
+        axisTitleSize = 10
+        axisLabelSize = 8
+        legendSize = 8
+        canvasWidth = 340
+        canvasHeight = 300
+
+    # PRES_FULL = 'presentation_full'
+    # PRES_HALF = 'presentation_half'
+    # PUBLIC_FULL = 'publication_full'
 
 logging.basicConfig(level=logging.DEBUG)
 log = log["/roofi"]
@@ -89,27 +117,7 @@ class Figure(object):
         # Private:
         self._plottables = []
         self._legend_labels = []
-        self.style = PRES_FULL
-        self._style_dict = {PRES_FULL:
-                            {'axisTitleSize': 14,
-                             'axisLabelSize': 14,
-                             'legendSize': 14,
-                             'canvasWidth': 340,
-                             'canvasHeight': 300},
-                            PRES_HALF:
-                            {'axisTitleSize': 14,
-                             'axisLabelSize': 12,
-                             'legendSize': 14,
-                             'canvasWidth': 170,
-                             'canvasHeight': 300},
-                            PUBLIC_FULL:
-                            {'axisTitleSize': 10,
-                             'axisLabelSize': 8,
-                             'legendSize': 8,
-                             'canvasWidth': 340,
-                             'canvasHeight': 300}}
-        self._titlefont = 63
-        self._labelfont = 43
+        self.style = Styles.Presentation_full
 
     class Plot(object):
         logx = False
@@ -135,15 +143,15 @@ class Figure(object):
     def _theme_plottable(self, obj):
         axes = obj.GetXaxis(), obj.GetYaxis()
         for axis in axes:
-            axis.SetLabelSize(self._style_dict[self.style]['axisLabelSize'])
-            axis.SetLabelFont(self._labelfont)
+            axis.SetLabelSize(self.style.axisLabelSize)
+            axis.SetLabelFont(self.style.labelfont)
 
-            axis.SetTitleFont(self._titlefont)
-            axis.SetTitleSize(self._style_dict[self.style]['axisTitleSize'])
+            axis.SetTitleFont(self.style.titlefont)
+            axis.SetTitleSize(self.style.axisTitleSize)
         # yaxis only settings:
-        if self.style == PRES_HALF:
+        if self.style == Styles.Presentation_half:
             axes[1].SetTitleOffset(2)
-        if self.style == PRES_FULL:
+        if self.style == Styles.Presentation_full:
             axes[1].SetTitleOffset(1.15)
 
     def add_plottable(self, obj, legend_title=''):
@@ -169,8 +177,8 @@ class Figure(object):
         """
         if len(self._plottables) == 0:
             raise IndexError("No plottables defined")
-        c = Canvas(width=self._style_dict[self.style]['canvasWidth'],
-                   height=self._style_dict[self.style]['canvasHeight'],
+        c = Canvas(width=self.style.canvasWidth,
+                   height=self.style.canvasHeight,
                    size_includes_decorations=True)
         if self.legend.position == 'seperate':
             legend_width = .2
@@ -181,7 +189,7 @@ class Figure(object):
         else:
             legend_width = 0
         pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
-        if self.style == PRES_HALF:
+        if self.style == Styles.PRES_HALF:
             pad_plot.SetLeftMargin(.25)
         else:
             pad_plot.SetLeftMargin(.13)
