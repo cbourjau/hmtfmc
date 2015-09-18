@@ -344,13 +344,13 @@ class Figure(object):
         string :
             Path to the saved file
         """
-        disk_dir = path.strip('.').strip('/')
-        folders = disk_dir.split('/')
+        # strip of tailing / if any
+        # this is not compatible with windows, I guess!
+        if path.endswith('/'):
+            path = path[:-1]
         c = self.draw_to_canvas()
-        c.name = name.strip('.').split('.')[0]  # strip of extension
-        for i, folder in enumerate(folders):
-            try:
-                os.mkdir("/".join(folders[:i + 1]))
-            except OSError:
-                pass
-        c.SaveAs("{}/{}".format(disk_dir, name))
+        try:
+            os.makedirs(path)
+        except OSError:
+            pass
+        c.SaveAs("{}/{}".format(path, name))

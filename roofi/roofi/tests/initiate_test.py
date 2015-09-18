@@ -1,5 +1,6 @@
 import os
 import unittest
+import shutil
 
 from rootpy.plotting import Hist1D, Graph
 from rootpy.interactive import wait
@@ -210,14 +211,32 @@ class Test_write_to_root_file(unittest.TestCase):
         self.assertIsInstance(f.Get("folder").Get("myname"), TCanvas)
 
 
-class Test_write_to_root_file_with_copy_to_disc(unittest.TestCase):
+class Test_write_to_pdf_file(unittest.TestCase):
     def setUp(self):
         self.fig = Figure()
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         self.fig.add_plottable(h1, legend_title="hist 1")
 
-    def test_write_to_disc(self):
-        path = './roofi/tests/figures/'
-        self.fig.save_to_file(name="myfig", path="folder/myfig.pdf")
-        self.assertTrue(os.path.exists(os.curdir + '/roofi/tests/figures/'))
+    def test_write_to_disc_with_folders(self):
+        # first, delete old verion of that folder
+        path = os.path.dirname(os.path.realpath(__file__)) + '/fig_folder'
+        try:
+            shutil.rmtree(path)
+        except OSError:  # no previous file found
+            pass
+        name = "myfig.pdf"
+        self.fig.save_to_file(name=name, path=path)
+        self.assertTrue(os.path.exists(path))
+        self.assertTrue(os.path.exists(path + '/' + name))
+
+    def test_write_to_disc_without_folder(self):
+        name = "myfig.pdf"
+        # path = os.path.dirname(os.path.realpath(__file__))
+        # first, delete old verion of that folder
+        try:
+            os.remove(name)
+        except OSError:  # no previous file found
+            pass
+        self.fig.save_to_file(name=name, path='./')
+        self.assertTrue(os.path.exists('./' + name))
