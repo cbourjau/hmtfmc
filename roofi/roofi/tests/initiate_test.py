@@ -2,10 +2,13 @@ import os
 import unittest
 import shutil
 
+from rootpy import asrootpy
 from rootpy.plotting import Hist1D, Graph
 from rootpy.interactive import wait
 from rootpy.io import File
-from ROOT import TCanvas, TLegend, TFile, TDirectoryFile
+
+from ROOT import TCanvas, TLegend, TFile, TDirectoryFile, TPad
+
 from roofi.figure import Figure, Styles
 
 import ROOT
@@ -54,7 +57,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         f.add_plottable(h)
         c = f.draw_to_canvas()
         self.assertIsInstance(c, TCanvas)
-        c.SaveAs("test_no_legend.pdf")
+        self.assertIsInstance(c.FindObject("plot"), TPad)
 
     def test_draw_to_canvas_legend(self):
         f = Figure()
@@ -62,7 +65,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         h.Fill(5)
         f.add_plottable(h, legend_title="some title")
         c = f.draw_to_canvas()
-        c.SaveAs("test_legend.pdf")
+        self.assertIsInstance(c.FindObject("plot"), TPad)
 
     def test_draw_to_canvas_several_hists(self):
         f = Figure()
@@ -73,7 +76,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         f.add_plottable(h1, legend_title="hist 1")
         f.add_plottable(h2, legend_title="hist 1")
         c = f.draw_to_canvas()
-        c.SaveAs("test_several.pdf")
+        self.assertIsInstance(c.FindObject("plot"), TPad)
 
     def test_draw_to_canvas_hists_and_graphs(self):
         f = Figure()
@@ -88,7 +91,7 @@ class Test_draw_to_canvas(unittest.TestCase):
         f.add_plottable(h1, "hist")
         f.add_plottable(gr, "graph")
         c = f.draw_to_canvas()
-        c.SaveAs("test_h_and_graph.pdf")
+        self.assertIsInstance(c.FindObject("plot"), TPad)
 
 
 class Test_plot_options(unittest.TestCase):
@@ -116,7 +119,7 @@ class Test_plot_options(unittest.TestCase):
     def test_draw_half_width(self):
         ROOT.gROOT.SetBatch(False)
         f = Figure()
-        f.style = 'presentation_half'
+        f.style = Styles.Presentation_half
         f.xtitle = 'N_{ch}#times#eta / #phi'
         f.ytitle = '1/N_{ch}^{supscr}#pi^{#pm}/#Xi'
         h1 = Hist1D(10, 0, 10,)
@@ -173,7 +176,7 @@ class Test_legend_options(unittest.TestCase):
         leg = next(obj for obj in c.FindObject("plot").GetListOfPrimitives() if isinstance(obj, TLegend))
         self.assertGreater(leg.x1, .5)
         self.assertLess(leg.y1, .5)
-        c.SaveAs("leg_br.pdf")
+        self.assertIsInstance(c.FindObject("plot"), TPad)
 
         self.f.legend.position = 'seperate'
         c = self.f.draw_to_canvas()
@@ -248,7 +251,7 @@ class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         self.fig.add_plottable(h1, legend_title="hist 1")
-        self.path = './roofi/tests/figures/'
+        self.path = os.path.dirname(os.path.realpath(__file__)) + '/test_styles'
         shutil.rmtree(self.path, ignore_errors=True)
 
     @unittest.skip("Somehow, I cannot get the current page size...")
@@ -262,14 +265,41 @@ class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
         self.assertEqual(paper_height_init, paper_height_final)
 
     def test_create_figures_of_different_size(self):
-        self.fig.style = Styles.PRES_FULL
-        self.fig.save_to_file(name="fig_pres_full.pdf", path=self.path)
+        self.fig.style = Styles.Presentation_full
         self.fig.save_to_file(name="fig_pres_full.pdf", path=self.path)
 
-        self.fig.style = Styles.PRES_HALF
+        self.fig.style = Styles.Presentation_half
         self.fig.save_to_file(name="fig_pres_half.pdf", path=self.path)
 
-        self.fig.style = Styles.PUBLIC_FULL
+        self.fig.style = Styles.Public_full
         self.fig.save_to_file(name="fig_pub_full.pdf", path=self.path)
-=======
->>>>>>> a9857c95be3c1d6d20a01ac4588633b85b124fa6
+
+        # make a pdf
+        import subprocess
+        tex_file = os.path.dirname(os.path.realpath(__file__)) + '/beamer.tex'
+        try:
+            latex_out = subprocess.check_output(
+                ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(tex_file)])
+        except subprocess.CalledProcessError, e:
+            print e
+
+
+class Test_write_to_tex_file(unittest.TestCase):
+    def setUp(self):
+        self.fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        self.fig.add_plottable(h1, legend_title="hist 1")
+
+    def test_write_to_disc_with_folders(self):
+        # first, delete old verion of that folder
+        path = os.path.dirname(os.path.realpath(__file__)) + '/fig_folder'
+        try:
+            shutil.rmtree(path)
+        except OSError:  # no previous file found
+            pass
+        name = "myfig.pdf"
+        cv = self.fig.draw_to_canvas()
+        self.fig.save_to_file(name=name, path=path)
+        self.assertTrue(os.path.exists(path))
+        self.assertTrue(os.path.exists(path + '/' + name))

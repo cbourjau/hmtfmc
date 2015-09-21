@@ -15,9 +15,10 @@ import ROOT
 class Styles(object):
     # Define names of plot layouts:
     class _Default_Style(object):
-        pt_per_mm = 2.84527625
+        pt_per_cm = 28.4527625
         titlefont = 63
         labelfont = 43
+        markerSizepx = 4  # number of pixels of the marker
 
     class Presentation_full(_Default_Style):
         axisTitleSize = 14
@@ -27,11 +28,11 @@ class Styles(object):
         canvasHeight = 300
 
     class Presentation_half(_Default_Style):
-        axisTitleSize = 14
+        axisTitleSize = 12
         axisLabelSize = 12
-        legendSize = 14
+        legendSize = 12
         canvasWidth = 170
-        canvasHeight = 300
+        canvasHeight = 150
 
     class Public_full(_Default_Style):
         axisTitleSize = 10
@@ -132,8 +133,8 @@ class Figure(object):
 
     def _create_legend(self):
         nentries = len(self._legend_labels)
-        leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1, )
-        leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01, textsize=14, textfont=63, margin=0.1)
+        leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01,
+                     textsize=self.style.legendSize, textfont=63, margin=0.1, )
         if self.legend.title:
             leg.SetHeader(self.legend.title)
         leg.SetBorderSize(0)  # no box
@@ -152,6 +153,11 @@ class Figure(object):
             axes[1].SetTitleOffset(2)
         if self.style == Styles.Presentation_full:
             axes[1].SetTitleOffset(1.15)
+        # apply styles, this might need to get more fine grained
+        # markers are avilable in children of TAttMarker
+        if isinstance(obj, ROOT.TAttMarker):
+            # marker size 1 == 8 px, and never scales with canvas...
+            obj.SetMarkerSize(self.style.markerSizepx / 8.0)
 
     def add_plottable(self, obj, legend_title=''):
         """
@@ -188,7 +194,7 @@ class Figure(object):
         else:
             legend_width = 0
         pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
-        if self.style == Styles.PRES_HALF:
+        if self.style == Styles.Presentation_half:
             pad_plot.SetLeftMargin(.25)
         else:
             pad_plot.SetLeftMargin(.13)
@@ -367,8 +373,11 @@ class Figure(object):
         # Ok, Root does not like that either...
         # paper_width, paper_height = ROOT.Double(), ROOT.Double()
         # ROOT.gStyle.GetPaperSize(paper_width, paper_height)
-        ROOT.gStyle.SetPaperSize(self.style.canvasWidth * self.style.pt_per_mm,
-                                 self.style.canvasHeight * self.style.pt_per_mm,)
+        dims = (self.style.canvasWidth / self.style.pt_per_cm,
+                self.style.canvasHeight / self.style.pt_per_cm)
+        # import ipdb; ipdb.set_trace()
+        ROOT.gStyle.SetPaperSize(self.style.canvasWidth / self.style.pt_per_cm,
+                                 self.style.canvasHeight / self.style.pt_per_cm,)
         c = self.draw_to_canvas()
         pdf = ROOT.TPDF("{}/{}".format(path, name))
         c.Draw()
