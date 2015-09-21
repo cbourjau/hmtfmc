@@ -80,9 +80,7 @@ def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=
     else:
         fig.ytitle = ytitle
 
-    for est_dir in sums:
-        if est_dir.GetName() not in ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M']:
-            continue
+    for est_dir in get_est_dirs(sums):
         h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
         pids1hists = [get_identified_vs_mult(h3d, pdg) for pdg in pids1]
         pids2hists = [get_identified_vs_mult(h3d, pdg) for pdg in pids2]
@@ -383,7 +381,8 @@ def _make_PNch_plots(f, sums, results_post):
     summary_fig.ytitle = "P(N_{ch}^{est})"
     summary_fig.legend.position = 'tr'
 
-    for est_name in considered_ests:
+    for est_dir in get_est_dirs(sums):
+        est_name = est_dir.GetName()
         h_tmp = get_PNch_vs_estmult(sums, est_name)
         if h_tmp.Integral() > 0:
             h_tmp.Scale(1.0 / h_tmp.Integral())
@@ -395,8 +394,9 @@ def _make_PNch_plots(f, sums, results_post):
 
     log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
     mult_bin_size = 10
-    for ref_est in ref_ests:
-        for est in considered_ests:
+    for ref_est_name in ref_ests:
+        for est_dir in get_est_dirs(sums):
+            est_name = est_dir.GetName()
             # Figure properties:
             fig_vs_estmult = Figure()
             fig_vs_refmult = Figure()
@@ -406,13 +406,13 @@ def _make_PNch_plots(f, sums, results_post):
             fig_vs_estmult.legend.position = 'tr'
             fig_vs_refmult.legend.position = 'tr'
 
-            fig_vs_estmult.xtitle = "N_{{ch}}^{{{}}}".format(est)
-            fig_vs_refmult.xtitle = "N_{{ch}}^{{{}}}".format(ref_est)
+            fig_vs_estmult.xtitle = "N_{{ch}}^{{{}}}".format(est_name)
+            fig_vs_refmult.xtitle = "N_{{ch}}^{{{}}}".format(ref_est_name)
 
-            fig_vs_estmult.ytitle = "P(N_{{ch}}^{{{}}})".format(est)
-            fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est)
+            fig_vs_estmult.ytitle = "P(N_{{ch}}^{{{}}})".format(est_name)
+            fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est_name)
 
-            corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est, est)
+            corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est_name, est_name)
             nch_max = corr_hist.xaxis.GetNbins()
             mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
             nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
@@ -434,7 +434,7 @@ def _make_PNch_plots(f, sums, results_post):
                     fig_vs_estmult.add_plottable(h_vs_est,
                                                  "{} < N_{{ch}}^{{{}}} < {}".
                                                  format(nch_lower_edge,
-                                                        make_estimator_title(ref_est),
+                                                        make_estimator_title(ref_est_name),
                                                         nch_upper_edge))
 
                 # vs ref_mult:
@@ -446,17 +446,17 @@ def _make_PNch_plots(f, sums, results_post):
                     fig_vs_refmult.add_plottable(h_vs_ref,
                                                  "{} < N_{{ch}}^{{{}}} < {}".
                                                  format(nch_lower_edge,
-                                                        make_estimator_title(est),
+                                                        make_estimator_title(est_name),
                                                         nch_upper_edge))
 
                 if is_last_bin:
                     break
 
-            path = results_post.GetPath().split(":")[1] + "/" + est  # file.root:/internal/root/path
+            path = results_post.GetPath().split(":")[1] + "/" + est_name  # file.root:/internal/root/path
             # vs est_mult
-            fig_vs_estmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(est, ref_est), path)
+            fig_vs_estmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(est_name, ref_est_name), path)
             # vs est_mult
-            fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(ref_est, est), path)
+            fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(ref_est_name, est_name), path)
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
@@ -484,7 +484,7 @@ def _make_mult_vs_pt_plots(f, sums, results_post):
 def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
     # Create ratio plots; depends on the previously created histograms
     log.info("Creating ratios of dN/deta plots for each multiplicity bin")
-    for est_dir in (somedir for somedir in results_post if somedir.GetName() in considered_ests):
+    for est_dir in get_est_dirs(results_post):
         res_dir_str = "MultEstimators/results_post/" + est_dir.GetName()
         # get the histograms out of the summary plot, even if it is hackish...
         plot_pad = est_dir.Get("dNdeta_summary").FindObject("plot")

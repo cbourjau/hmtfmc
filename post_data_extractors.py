@@ -176,7 +176,6 @@ def get_NchEst1_vs_NchEst2(sums, est1, est2):
     hist_name = "fcorr_thisNch_vs_refNch"
     corr_hist = asrootpy(sums.FindObject(est2).FindObject(hist_name))
     if not isinstance(corr_hist, ROOT.TH2):
-        import ipdb; ipdb.set_trace()
         raise ValueError("Correlation histogram with name {} not found".format(hist_name))
     return corr_hist
 
