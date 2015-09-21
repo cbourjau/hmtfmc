@@ -248,6 +248,8 @@ class Test_write_to_pdf_file(unittest.TestCase):
 class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
     def setUp(self):
         self.fig = Figure()
+        self.fig.ytitle = "dN_{test}/d#eta"
+        self.fig.xtitle = "#psi (arb. unit)"
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         self.fig.add_plottable(h1, legend_title="hist 1")
@@ -281,7 +283,8 @@ class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
             latex_out = subprocess.check_output(
                 ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(tex_file)])
         except subprocess.CalledProcessError, e:
-            print e
+            print e.output
+            raise e
 
 
 class Test_write_to_tex_file(unittest.TestCase):

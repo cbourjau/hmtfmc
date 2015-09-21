@@ -16,7 +16,7 @@ class Styles(object):
     # Define names of plot layouts:
     class _Default_Style(object):
         pt_per_cm = 28.4527625
-        titlefont = 63
+        titlefont = 43
         labelfont = 43
         markerSizepx = 4  # number of pixels of the marker
 
@@ -26,13 +26,17 @@ class Styles(object):
         legendSize = 14
         canvasWidth = 340
         canvasHeight = 300
+        plot_margins = (.13, .05, .13, .04)   # left, right, bottom, top
+        plot_ytitle_offset = 1.15  # factor of the normal offset :P, may lay outside of the canvas
 
     class Presentation_half(_Default_Style):
-        axisTitleSize = 12
-        axisLabelSize = 12
-        legendSize = 12
+        axisTitleSize = 10
+        axisLabelSize = 10
+        legendSize = 10
         canvasWidth = 170
         canvasHeight = 150
+        plot_margins = (.3, .08, .2, .04)
+        plot_ytitle_offset = 1
 
     class Public_full(_Default_Style):
         axisTitleSize = 10
@@ -40,10 +44,9 @@ class Styles(object):
         legendSize = 8
         canvasWidth = 340
         canvasHeight = 300
+        plot_margins = (.13, .05, .13, .04)
+        plot_ytitle_offset = 1.15
 
-    # PRES_FULL = 'presentation_full'
-    # PRES_HALF = 'presentation_half'
-    # PUBLIC_FULL = 'publication_full'
 
 logging.basicConfig(level=logging.DEBUG)
 log = log["/roofi"]
@@ -134,7 +137,7 @@ class Figure(object):
     def _create_legend(self):
         nentries = len(self._legend_labels)
         leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01,
-                     textsize=self.style.legendSize, textfont=63, margin=0.1, )
+                     textsize=self.style.legendSize, textfont=43, margin=0.1, )
         if self.legend.title:
             leg.SetHeader(self.legend.title)
         leg.SetBorderSize(0)  # no box
@@ -149,10 +152,7 @@ class Figure(object):
             axis.SetTitleFont(self.style.titlefont)
             axis.SetTitleSize(self.style.axisTitleSize)
         # yaxis only settings:
-        if self.style == Styles.Presentation_half:
-            axes[1].SetTitleOffset(2)
-        if self.style == Styles.Presentation_full:
-            axes[1].SetTitleOffset(1.15)
+        axes[1].SetTitleOffset(self.style.plot_ytitle_offset)
         # apply styles, this might need to get more fine grained
         # markers are avilable in children of TAttMarker
         if isinstance(obj, ROOT.TAttMarker):
@@ -194,13 +194,7 @@ class Figure(object):
         else:
             legend_width = 0
         pad_plot = Pad(0., 0., 1 - legend_width, 1., name="plot", )
-        if self.style == Styles.Presentation_half:
-            pad_plot.SetLeftMargin(.25)
-        else:
-            pad_plot.SetLeftMargin(.13)
-        pad_plot.SetRightMargin(.04)
-        pad_plot.SetTopMargin(.04)
-        pad_plot.SetBottomMargin(.13)
+        pad_plot.SetMargin(*self.style.plot_margins)
         pad_plot.Draw()
         pad_plot.cd()
 
@@ -373,9 +367,6 @@ class Figure(object):
         # Ok, Root does not like that either...
         # paper_width, paper_height = ROOT.Double(), ROOT.Double()
         # ROOT.gStyle.GetPaperSize(paper_width, paper_height)
-        dims = (self.style.canvasWidth / self.style.pt_per_cm,
-                self.style.canvasHeight / self.style.pt_per_cm)
-        # import ipdb; ipdb.set_trace()
         ROOT.gStyle.SetPaperSize(self.style.canvasWidth / self.style.pt_per_cm,
                                  self.style.canvasHeight / self.style.pt_per_cm,)
         c = self.draw_to_canvas()
