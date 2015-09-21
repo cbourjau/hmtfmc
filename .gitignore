@@ -13,3 +13,10 @@ build.log
 *.zip
 /pythia/*
 *.pdf
+*.aux
+*.dvi
+*.log
+*.nav
+*.out
+*.snm
+*.toc
