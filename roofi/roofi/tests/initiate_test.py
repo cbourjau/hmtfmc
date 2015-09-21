@@ -211,23 +211,35 @@ class Test_write_to_root_file(unittest.TestCase):
         self.assertIsInstance(f.Get("folder").Get("myname"), TCanvas)
 
 
-class Test_write_to_root_file_with_copy_to_disc(unittest.TestCase):
+class Test_write_to_pdf_file(unittest.TestCase):
     def setUp(self):
         self.fig = Figure()
         h1 = Hist1D(10, 0, 10)
         h1.Fill(5)
         self.fig.add_plottable(h1, legend_title="hist 1")
-        self.path = 'test_folder/'  # './roofi/tests/figures/'
-        shutil.rmtree(self.path, ignore_errors=True)
 
-    def test_write_to_disc(self):
-        # test that it checks the input format
-        self.assertRaises(ValueError, self.fig.save_to_file, name="myfig", path=self.path)
-        # path needs to be relative (starting with . or absolute)
-        # self.assertRaises(ValueError, self.fig.save_to_file, name="myfig.pdf", path="bad_path")
-        # check successful save
-        self.fig.save_to_file(name="myfig.pdf", path=self.path)
-        self.assertTrue(os.path.exists(os.curdir + '/roofi/tests/figures/'))
+    def test_write_to_disc_with_folders(self):
+        # first, delete old verion of that folder
+        path = os.path.dirname(os.path.realpath(__file__)) + '/fig_folder'
+        try:
+            shutil.rmtree(path)
+        except OSError:  # no previous file found
+            pass
+        name = "myfig.pdf"
+        self.fig.save_to_file(name=name, path=path)
+        self.assertTrue(os.path.exists(path))
+        self.assertTrue(os.path.exists(path + '/' + name))
+
+    def test_write_to_disc_without_folder(self):
+        name = "myfig.pdf"
+        # path = os.path.dirname(os.path.realpath(__file__))
+        # first, delete old verion of that folder
+        try:
+            os.remove(name)
+        except OSError:  # no previous file found
+            pass
+        self.fig.save_to_file(name=name, path='./')
+        self.assertTrue(os.path.exists('./' + name))
 
 
 class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
@@ -259,3 +271,5 @@ class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
 
         self.fig.style = Styles.PUBLIC_FULL
         self.fig.save_to_file(name="fig_pub_full.pdf", path=self.path)
+=======
+>>>>>>> a9857c95be3c1d6d20a01ac4588633b85b124fa6

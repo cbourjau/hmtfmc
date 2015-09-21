@@ -145,7 +145,6 @@ class Figure(object):
         for axis in axes:
             axis.SetLabelSize(self.style.axisLabelSize)
             axis.SetLabelFont(self.style.labelfont)
-
             axis.SetTitleFont(self.style.titlefont)
             axis.SetTitleSize(self.style.axisTitleSize)
         # yaxis only settings:
@@ -346,25 +345,21 @@ class Figure(object):
             Name of the file including its extension
         path : string
             Path excluding the file name, relative files are interpreted relative to the working dir
-        Returns
-        -------
-        string :
-            Path to the saved file
         """
         # check if the name has the right extension
         if len(name.split('.')) != 2:
             raise ValueError("Filename must be given with extension")
         if name.split('.')[1] != 'pdf':
             raise NotImplementedError("Only PDF export is implemented at the moment")
-        # if not path.startswith(('/', './')):
-        #     raise ValueError("Path needs to be absolute or relative (starting with './')")
-        disk_dir = path.strip('.').strip('/')
-        folders = disk_dir.split('/')
-        for i, folder in enumerate(folders):
-            try:
-                os.mkdir("/".join(folders[:i + 1]))
-            except OSError:
-                pass
+        # strip of tailing / if any
+        # this is not compatible with windows, I guess!
+        if path.endswith('/'):
+            path = path[:-1]
+        c = self.draw_to_canvas()
+        try:
+            os.makedirs(path)
+        except OSError:
+            pass
 
         # The order of the following is important! First, set paper size, then draw the canvas and then create the pdf
         # Doin pdf.Range(10, 10) is not sufficient. it just does random shit
@@ -375,7 +370,7 @@ class Figure(object):
         ROOT.gStyle.SetPaperSize(self.style.canvasWidth * self.style.pt_per_mm,
                                  self.style.canvasHeight * self.style.pt_per_mm,)
         c = self.draw_to_canvas()
-        pdf = ROOT.TPDF("{}/{}".format(disk_dir, name))
+        pdf = ROOT.TPDF("{}/{}".format(path, name))
         c.Draw()
         pdf.Close()
 
