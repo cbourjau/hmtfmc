@@ -163,9 +163,9 @@ def _make_dNdeta(f, sums, results_post):
         h2d = asrootpy(est_dir.FindObject('feta_Nch'))
         event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
-        mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
+        # mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
         # bin in standard step size up to max_nch; from there ibs all in one bin:
-        max_nch = mean_nch * mean_mult_cutoff_factor
+        # max_nch = mean_nch * mean_mult_cutoff_factor
 
         fig = Figure()
         fig.plot.palette = 'root'
@@ -192,12 +192,7 @@ def _make_hists_vs_pt(f, sums, results_post):
     # Loop over all estimators in the Sums list:
     for est_dir in get_est_dirs(sums):
         dirname = 'MultEstimators/results_post/{}/pid_ratios/'.format(est_dir.GetName())
-        try:
-            f.mkdir(dirname, recurse=True)
-        except:
-            pass
-        f.cd(dirname)
-        h3d_orig = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+
         event_counter = asrootpy(getattr(results_post, est_dir.GetName()).event_counter)
         perc_edges = [1, .6, .4, .2, .1, .05, .025, 0]
 
