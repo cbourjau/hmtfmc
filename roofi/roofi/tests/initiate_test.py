@@ -278,10 +278,11 @@ class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
 
         # make a pdf
         import subprocess
-        tex_file = os.path.dirname(os.path.realpath(__file__)) + '/beamer.tex'
+        test_dir = os.path.dirname(os.path.realpath(__file__))
+        tex_file = './beamer.tex'
         try:
             latex_out = subprocess.check_output(
-                ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(tex_file)])
+                ['pdflatex', '-file-line-error', '-interaction=nonstopmode', format(tex_file)], cwd=test_dir)
         except subprocess.CalledProcessError, e:
             print e.output
             raise e
