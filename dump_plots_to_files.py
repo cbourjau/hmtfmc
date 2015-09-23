@@ -35,7 +35,10 @@ def objects(in_folder):
 
 def dump_plots_to_files(f_name):
     base_path = './' + f_name.split('.')[0] + '/'
-    shutil.rmtree(base_path, ignore_errors=True)
+    if "AnalysisResults" in base_path:
+        shutil.rmtree(base_path, ignore_errors=True)
+    else:
+        raise ValueError("Something is strange with the given path!")
     in_folder = root_open(f_name, 'read').MultEstimators.results_post
     for c, rfile_path in objects(in_folder):
         path = base_path + rfile_path
