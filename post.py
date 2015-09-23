@@ -14,7 +14,7 @@ if len(sys.argv) != 2:
     quit()
 
 from rootpy.io import root_open
-from rootpy import asrootpy, ROOT, log
+from rootpy import asrootpy, ROOT, log, collection
 from rootpy.plotting import Hist1D, Hist2D, Canvas, Legend
 
 from post_data_extractors import get_dNdeta_binned_in_mult, get_identified_vs_mult,\
@@ -26,7 +26,7 @@ from post_utils import create_stack_pid_ratio_over_pt,\
     remove_zero_value_points, remove_non_mutual_points,\
     remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
 
-from roofi import Figure
+from roofi import Figure, Styles
 from roofi.figure import get_color_generator
 
 
@@ -98,20 +98,12 @@ def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=
     fig.save_to_root_file(f, name, ratio_vs_estmult_dir)
 
 
-def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
+def _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
     """
-    plot and write to file the ratio of the two pid-lists (pids1/pids2). Plot is vs refmult.
+    Returns list of ratios of the two pid-lists (pids1/pids2) vs refmult.
     This function depends on the correlation histograms to be present in f
     """
-    ratio_vs_refmult_dir = 'MultEstimators/results_post/pid_ratios_vs_refmult'
-    fig = Figure()
-
-    refest = "EtaLt05"
-    if not ytitle:
-        fig.ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
-    else:
-        fig.ytitle = ytitle
-
+    ratios = []
     for est_dir in get_est_dirs(sums):
         h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
         corr_hist = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
@@ -137,17 +129,15 @@ def _plot_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=
             continue
         if scale:
             ratio.Scale(scale)
-        fig.xtitle = "N_{ch}|_{" + refest + "}"
-        fig.add_plottable(ratio, make_estimator_title(est_dir.GetName()))
-
-    name = "_".join(pids1) + "_div_" + "_".join(pids2)
-    fig.save_to_root_file(f, name, ratio_vs_refmult_dir)
+        ratio.title = make_estimator_title(est_dir.GetName())
+        ratios.append(ratio)
+    return ratios
 
 
 def _make_event_counters(f, sums, results_post):
     log.info("Creating event counters")
     for est_dir in get_est_dirs(sums):
-        results_est_dir = results_post.FindObject(est_dir.GetName())
+        results_est_dir = results_post.__getattr__(est_dir.GetName())
         corr = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
         counter = asrootpy(corr.ProjectionX())
         counter.name = "event_counter"
@@ -176,6 +166,7 @@ def _make_dNdeta(f, sums, results_post):
         fig.xtitle = '#eta'
         fig.ytitle = 'dN_{ch}/d#eta'
         fig.legend.position = 'tl'
+        fig.legend.title = make_estimator_title(est_dir.GetName())
         fig.plot.ymin = 0
         fig.plot.ymax = 5
         path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
@@ -449,9 +440,9 @@ def _make_PNch_plots(f, sums, results_post):
 
             path = results_post.GetPath().split(":")[1] + "/" + est_name  # file.root:/internal/root/path
             # vs est_mult
-            fig_vs_estmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(est_name, ref_est_name), path)
+            fig_vs_estmult.save_to_root_file(f, "PNchEst_binned_in_Nch{}".format(ref_est_name), path)
             # vs est_mult
-            fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_Nch{}".format(ref_est_name, est_name), path)
+            fig_vs_refmult.save_to_root_file(f, "PNch{}_binned_in_NchEst".format(ref_est_name), path)
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
@@ -536,54 +527,169 @@ def _make_correlation_plots(f, sums, results_post):
 
 def _make_pid_ratio_plots(f, sums, results_post):
     log.info("Creating plots vs refmult")
+    ratios_dir = 'MultEstimators/results_post/pid_ratios_vs_refmult'
+    fig = Figure()
+    fig.plot.ncolors = len(considered_ests)
+    fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
+    fig.plot.xmin = 0
+    fig.plot.xmax = 40
 
     # Proton / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['-211', '211'],
-                                     ytitle="p/#pi^{+-}")
-    # K / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['-211', '211'],
-                                     ytitle="K^{*}/#pi^{+-}")
-    # Lambda / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3122'], ['-211', '211'],
-                                     ytitle="#Lambda / #pi^{+-}")
-    # Xi / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3312'], ['-211', '211'],
-                                     ytitle="#Xi / #pi^{+-}")
-    # Omega / pi_ch
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['-211', '211'],
-                                     ytitle="#Omega / #pi^{+-}")
-    # pi_ch/pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-211', '211'], ['111'],
-                                     ytitle="#pi^{+-}/#pi^{0}")
-    # proton / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['-2212', '2212'], ['111'],
-                                     ytitle="p/#pi^{0}")
-    # K / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310', '321', '-321'], ['111'],
-                                     ytitle="K^{*}/#pi^{0}")
-    # Lambda / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3122'], ['111'],
-                                     ytitle="#Lambda/#pi^{0}")
-    # Xi / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3312'], ['111'],
-                                     ytitle="#Xi/#pi^{0}")
-    # Omega / pi0
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['3334', '-3334'], ['111'],
-                                     ytitle="#Omega/#pi^{0}")
-    # K_ch / K0_S
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['321', '-321'], ['310'], scale=.5,
-                                     ytitle="(K^{+}+K^{-}) / (2#timesK^{0}_{S})")
-    # K0_S / Lambda
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['-3122', '3122'],
-                                     ytitle="K^{0}_{S} / #Lambda")
-    # K0_S / Xi
-    _plot_particle_ratios_vs_refmult(f, sums, results_post, ['310'], ['3312'],
-                                     ytitle="K^{0}_{S} / #Xi")
 
-    ######################################################################################
-    # vs Est mult
-    _plot_particle_ratios_vs_estmult(f, sums, results_post, ['321', '-321'], ['310'],
-                                     scale=.5, ytitle="(K^{+} + K^{-}) / (2*K_{S}^{0})")
+    pids1, pids2 = ['-2212', '2212'], ['-211', '211']
+    fig.ytitle = "p/#pi^{+-}"
+    fig.plot.ymin, fig.plot.ymax = 0.04, 0.13
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # K / pi_ch
+    pids1, pids2 = ['310', '321', '-321'], ['-211', '211']
+    fig.ytitle = "K^{*}/#pi^{+-}"
+    fig.plot.ymin, fig.plot.ymax = 0.09, 0.30
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # Lambda / pi_ch
+    pids1, pids2 = ['3122'], ['-211', '211']
+    fig.ytitle = "#Lambda / #pi^{+-}"
+    fig.plot.ymin, fig.plot.ymax = 0.005, 0.035
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # Xi / pi_ch
+    pids1, pids2 = ['3312'], ['-211', '211']
+    fig.ytitle = "#Xi / #pi^{+-}"
+    fig.plot.ymin, fig.plot.ymax = 0.0004, 0.002
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # Omega / pi_ch
+    pids1, pids2 = ['3334', '-3334'], ['-211', '211']
+    fig.ytitle = "#Omega / #pi^{+-}"
+    fig.plot.ymin, fig.plot.ymax = 0.00001, 0.00011
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # pi_ch/pi0
+    pids1, pids2 = ['-211', '211'], ['111']
+    fig.ytitle = "#pi^{+-}/#pi^{0}"
+    fig.plot.ymin, fig.plot.ymax = 1.5, 2.2
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # proton / pi0
+    pids1, pids2 = ['-2212', '2212'], ['111']
+    fig.ytitle = "p/#pi^{0}"
+    fig.plot.ymin, fig.plot.ymax = 0.09, 0.13
+    fig.legend.position = 'bl'
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+    fig.legend.position = 'tl'
+
+    # K / pi0
+    pids1, pids2 = ['310', '321', '-321'], ['111']
+    fig.ytitle = "K^{*}/#pi^{0}"
+    fig.plot.ymin, fig.plot.ymax = 0.15, 0.34
+    fig.legend.position = 'bl'
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+    fig.legend.position = 'tl'
+
+    # Lambda / pi0
+    pids1, pids2 = ['3122'], ['111']
+    fig.ytitle = "#Lambda/#pi^{0}"
+    fig.plot.ymin, fig.plot.ymax = 0.014, 0.036
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # Xi / pi0
+    pids1, pids2 = ['3312'], ['111']
+    fig.ytitle = "#Xi/#pi^{0}"
+    fig.plot.ymin, fig.plot.ymax = 0.0010, 0.0018
+    fig.legend.position = 'bl'
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+    fig.legend.position = 'tl'
+
+    # Omega / pi0
+    pids1, pids2 = ['3334', '-3334'], ['111']
+    fig.ytitle = "#Omega/#pi^{0}"
+    fig.legend.position = 'bl'
+    fig.plot.ymin, fig.plot.ymax = 0.00002, 0.00010
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+    fig.legend.position = 'tl'
+
+    # K_ch / K0_S
+    pids1, pids2 = ['321', '-321'], ['310']
+    fig.ytitle = "(K^{+}+K^{-}) / (2#timesK^{0}_{S})"
+    fig.plot.ymin, fig.plot.ymax = 0.4, 1.3
+    fig.legend.position = 'bl'
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, scale=.5)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+    fig.legend.position = 'tl'
+
+    # K0_S / Lambda
+    pids1, pids2 = ['310'], ['-3122', '3122']
+    fig.ytitle = "K^{0}_{S} / #Lambda"
+    fig.plot.ymin, fig.plot.ymax = 1.9, 3.7
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+    # K0_S / Xi
+    pids1, pids2 = ['310'], ['3312']
+    fig.ytitle = "K^{0}_{S} / #Xi"
+    fig.plot.ymin, fig.plot.ymax = 57, 78
+    fig.delete_plottables()
+    graphs = _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2)
+    [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
+    name = "_".join(pids1) + "_div_" + "_".join(pids2)
+    fig.save_to_root_file(f, name, ratios_dir)
+
+
+    # ######################################################################################
+    # # vs Est mult
+    # _plot_particle_ratios_vs_estmult(f, sums, results_post, ['321', '-321'], ['310'],
+    #                                  scale=.5, fig.ytitle = "(K^{+} + K^{-}) / (2*K_{S}^{0})")
 
 
 def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
@@ -602,6 +708,7 @@ def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
         fig.plot.ymax = 1.9
         fig.ytitle = "<p_{T}>"
         fig.xtitle = "N_{ch}|_{|#eta|<0.5}"
+        fig.legend.title = make_estimator_title(sums_est_dir.GetName())
         graphs = []
         graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kPI0, kPIMINUS, kPIPLUS]), corr_hist))
         graphs[-1].title = "#pi"
@@ -663,12 +770,15 @@ def _plot_PpT(f, sums, results_post):
         fig = Figure()
         fig.plot.palette = 'root'
         fig.plot.ncolors = 7
+        fig.legend.title = make_estimator_title(sums_est_dir.GetName())
+        fig.legend.position = 'tr'
         # fig.plot.xmin = 0
         # fig.plot.xmax = 25
-        fig.plot.ymin = 0.01
-        fig.plot.ymax = 0.05
+        fig.plot.ymin = 0.0001
+        fig.plot.ymax = 0.5
         fig.ytitle = "P(p_{T})"
         fig.xtitle = "p_{T} (GeV)"
+        fig.plot.logy = True
         hists = []
         nch_low, nch_up = 0, 250
         hists.append(get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low, nch_up, normalized=True))
@@ -704,6 +814,7 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
         # fig.plot.ymax = 0.05
         fig.ytitle = "P(p_{T})"
         fig.xtitle = "p_{T} (GeV)"
+        fig.legend.title = make_estimator_title(sums_est_dir.GetName())
         hists = []
         event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
         perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
