@@ -26,7 +26,7 @@ class Styles(object):
         legendSize = 14
         canvasWidth = 340
         canvasHeight = 300
-        plot_margins = (.13, .05, .13, .04)   # left, right, bottom, top
+        plot_margins = (.13, .05, .13, .1)   # left, right, bottom, top
         plot_ytitle_offset = 1.15  # factor of the normal offset :P, may lay outside of the canvas
 
     class Presentation_half(_Default_Style):
@@ -35,7 +35,7 @@ class Styles(object):
         legendSize = 10
         canvasWidth = 170
         canvasHeight = 150
-        plot_margins = (.3, .08, .2, .04)
+        plot_margins = (.3, .08, .2, .1)
         plot_ytitle_offset = 1
 
     class Public_full(_Default_Style):

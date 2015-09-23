@@ -276,6 +276,16 @@ class Test_Size_of_figures_corresponds_to_latex(unittest.TestCase):
         self.fig.style = Styles.Public_full
         self.fig.save_to_file(name="fig_pub_full.pdf", path=self.path)
 
+        # make a figure with exponential on y axis to see if it fits in the margin
+        fig_exp = Figure()
+        fig_exp.style = Styles.Presentation_half
+        fig_exp.ytitle = "dN_{test}/d#eta"
+        fig_exp.xtitle = "#psi (arb. unit)"
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5, 0.0000000001)
+        fig_exp.add_plottable(h1, legend_title="hist exp")
+        fig_exp.save_to_file(name='fig_pres_half_exp.pdf', path=self.path)
+
         # make a pdf
         import subprocess
         test_dir = os.path.dirname(os.path.realpath(__file__))
