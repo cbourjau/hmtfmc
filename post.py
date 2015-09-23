@@ -794,6 +794,8 @@ def _mk_results_dir(f, sums):
 if __name__ == "__main__":
     # go into batch mode
     ROOT.gROOT.SetBatch(True)
+    # set default style for all plots
+    Figure.style = Styles.Presentation_half
 
     log = log["/post"]  # set name of this script in logger
     log.info("IsBatch: {0}".format(ROOT.gROOT.IsBatch()))  # Results in "DEBUG:myapp] Hello"
@@ -803,37 +805,42 @@ if __name__ == "__main__":
     ref_ests = ['EtaLt05', ]
     considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C', 'ZDC']
 
-    functions = [
+    reset_functions = [
         _delete_results_dir,
         _mk_results_dir,
     ]
+    plotting_functions = [
+        _make_event_counters,
+        _make_dNdeta,
+        _make_PNch_plots,
+        _plot_nMPI_vs_Nch,
+        _make_mult_vs_pt_plots,
+        _plot_meanpt_vs_ref_mult_for_pids,
+        _make_hists_vs_pt,  # needs updated results_post!
+        # _make_dNdeta_mb_ratio_plots,
+        _make_pid_ratio_plots,
+        _plot_PpT,
+    ]
 
-    with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        for func in functions:
+    def delete_lists(l):
+        """Recursivley delete the lists to free memory"""
+        for obj in l:
+            if isinstance(obj, collection.List):
+                obj.Delete()
+        l.Delete()
+
+    for func in reset_functions:
+        with root_open(sys.argv[1], 'update') as f:
+            sums = f.MultEstimators.Sums
             func(f, sums)
-        results_post = f.MultEstimators.results_post
-        _make_event_counters(f, sums, results_post)
-    with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
-        # _plot_event_counter_with_shaded_perc_areas(f, results_post)
-        _make_dNdeta(f, sums, results_post)
-        #     _make_correlation_plots(f, sums, results_post)
-        _make_PNch_plots(f, sums, results_post)
-        _plot_nMPI_vs_Nch(f, sums, results_post)
-        _make_mult_vs_pt_plots(f, sums, results_post)
-    with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
-        _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post)
-        _make_hists_vs_pt(f, sums, results_post)  # needs updated results_post!
-        # _make_dNdeta_mb_ratio_plots(f, sums, results_post)
-        _make_pid_ratio_plots(f, sums, results_post)
-    with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
-        _plot_PpT(f, sums, results_post)
+            delete_lists(sums)
+    for func in plotting_functions:
+        with root_open(sys.argv[1], 'update') as f:
+            sums = f.MultEstimators.Sums
+            results_post = f.MultEstimators.results_post
+            func(f, sums, results_post)
+            delete_lists(sums)
+    # the following two need extra parameters
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
