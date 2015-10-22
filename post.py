@@ -17,7 +17,7 @@ from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log, collection
 from rootpy.plotting import Hist1D, Hist2D, Canvas, Legend
 
-from post_data_extractors import get_dNdeta_binned_in_mult, get_identified_vs_mult,\
+from post_data_extractors import get_dNdeta_in_mult_interval, get_identified_vs_mult,\
     get_Nch_edges_for_percentile_edges, get_nMPI_vs_Nch,\
     get_NchEst1_vs_NchEst2, get_PNch_vs_estmult,\
     get_meanpt_vs_estmult, get_pT_distribution, get_mean_nMPI
@@ -154,22 +154,20 @@ def _make_dNdeta(f, sums, results_post):
         h2d = asrootpy(est_dir.FindObject('feta_Nch'))
         event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
-        # mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
-        # bin in standard step size up to max_nch; from there ibs all in one bin:
-        # max_nch = mean_nch * mean_mult_cutoff_factor
-
         fig = Figure()
-        fig.plot.palette = 'root'
-        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
-        hists = get_dNdeta_binned_in_mult(h2d, event_counter, percent_bins=perc_edges,  # nch_max=max_nch,
-                                          with_mb=True)
-        [fig.add_plottable(p, legend_title=p.title) for p in hists]
+        fig.plot.palette = 'colorblind'
         fig.xtitle = '#eta'
-        fig.ytitle = 'dN_{ch}/d#eta'
+        fig.ytitle = '1/N dN_{ch}/d#eta'
         fig.legend.position = 'tl'
         fig.legend.title = make_estimator_title(est_dir.GetName())
         fig.plot.ymin = 0
-        fig.plot.ymax = 5
+        # fig.plot.ymax = 5
+        for nch_int, perc_int in zip(NCH_EDGES[est_dir.GetName()], perc_bins):
+            title = "{}%-{}%".format(perc_int[0] * 100, perc_int[1] * 100)
+            fig.add_plottable(get_dNdeta_in_mult_interval(h2d, event_counter, nch_int), legend_title=title)
+        # add MB as well:
+        title = "MB"
+        fig.add_plottable(get_dNdeta_in_mult_interval(h2d, event_counter, [0, 250]), legend_title=title)
         path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
         fig.save_to_root_file(f, "dNdeta_summary", path=path)
 
@@ -422,7 +420,7 @@ def _make_PNch_plots(f, sums, results_post):
             for nch_bin, perc_bin in zip(nch_bins_ref, perc_bins):
                 # vs est_mult:
                 corr_hist.xaxis.SetRange(0, 0)  # reset x axis
-                corr_hist.yaxis.SetRange(*nch_bin)
+                corr_hist.yaxis.SetRange(nch_bin[0] + 1, nch_bin[1] + 1)  # mind the crackpot binning!
                 h_vs_est = asrootpy(corr_hist.ProjectionX(gen_random_name()))
                 if h_vs_est.Integral() > 0:
                     h_vs_est.Scale(1.0 / h_vs_est.Integral())

@@ -63,7 +63,7 @@ def get_meanpt_vs_estmult(resutlts_est_dir, pids):
     return profx
 
 
-def get_dNdeta_binned_in_mult(h2d, event_counter, percent_bins=None, nch_max=None, with_mb=True):
+def get_dNdeta_in_mult_interval(h2d, event_counter, mult_interval):
     """
     Create dN/deta stack for various multiplicity bins from given 2D histogram. If `with_mb` is `True`,
     also add dNdeta for minimum bias to the stack.
@@ -73,62 +73,21 @@ def get_dNdeta_binned_in_mult(h2d, event_counter, percent_bins=None, nch_max=Non
           feta_Nch from the Sums list
     event_counter : Hist1D
                     Event counter histogram used for scaling
-    percent_bins : list
-                   Percentile bin edges; either this or nch_max has to be given
-    nch_max : int
-              The cutoff value above which, everything is packed in one bin, if percent_bins is given,
-              this value is ignored
-    with_mb : bool
-              If true, the last plottable in the return list is the minimum bias distribution
-
+    mult_interval : list
+               Nch bin edges
     Returns
     -------
-    list
-          List of plottables
+    Hist1D
     """
-    stack = list()
-    nbins = h2d.yaxis.GetNbins()
-    nch_step = 10
-    last_mult_bin = False
-    if percent_bins:
-        nch_edges = get_Nch_edges_for_percentile_edges(percent_bins, event_counter)
-    else:
-        nch_edges = range(0, nbins, nch_step)
-
-    for i, (nch_low, nch_up) in enumerate(zip(nch_edges[:-1], nch_edges[1:])):
-        nch_bin_low = nch_low + 1  # root's crack pot binning...
-        nch_bin_up = nch_up + 1    # root's crack pot binning...
-        if percent_bins is None:
-            if (nch_bin_up > nch_max):
-                last_mult_bin = True
-                nch_bin_up = nbins
-        h2d.yaxis.set_range(nch_bin_low, nch_bin_up)
-        h = asrootpy(h2d.projection_x())
-        h.name = str(nch_bin_low)
-        if percent_bins is None:
-            h.title = (str(int(nch_low))
-                       + '#leqN_{ch}^{est}#leq' +
-                       str(int(nch_up)))
-        else:
-            h.title = "{} - {} %".format(100 * percent_bins[i], 100 * percent_bins[i + 1])
-        h.yaxis.title = '1/N dN_{ch}^{est}/d#eta'
-        # scale by the number of events in this mult_bin
-        try:
-            h.Scale(1.0 / float(event_counter.Integral(nch_bin_low, nch_bin_up)))
-        except ZeroDivisionError:
-            raise ZeroDivisionError("Consider lowering the cutoff factor / percentil binning to avoid this")
-        stack.append(h)
-        if last_mult_bin:
-            break
-    if with_mb:
-        h2d.yaxis.set_range(0, -1)  # full Nch range
-        h = asrootpy(h2d.projection_x())
-        h.title = 'MB'
-        h.name = 'mb_dNdeta'
-        h.yaxis.title = '1/N dN_{ch}^{est}/d#eta'
-        h.Scale(1.0 / float(event_counter.Integral(0, -1)))
-        stack.append(h)
-    return stack
+    h2d.yaxis.set_range(mult_interval[0] + 1, mult_interval[1] + 1)
+    h = asrootpy(h2d.projection_x(gen_random_name()))
+    h.title = "{} - {} %".format(100 * mult_interval[0], 100 * mult_interval[1])
+    # scale by the number of events in this mult_interval and bin width
+    try:
+        h.Scale(1.0 / float(event_counter.Integral(mult_interval[0] + 1, mult_interval[1] + 1)), "width")
+    except ZeroDivisionError:
+        raise ZeroDivisionError("Consider increasing the nch interval to avoid this")
+    return h
 
 
 def get_identified_vs_mult(h3d, pdg):
