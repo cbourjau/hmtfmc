@@ -62,6 +62,8 @@ def get_color_generator(palette='root', ncolors=10):
     Returns a generator for n colors.
     Parameters
     ----------
+    palette : string
+              name of the color palette which should be used
     ncolors : int
               number of colors this palette should have, it might be ignored by some palettes!
     Returns
