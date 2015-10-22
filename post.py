@@ -66,6 +66,7 @@ kOMEGAPLUS = str(-3334)
 
 # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
 mean_mult_cutoff_factor = 4
+perc_bins = [(1, 0.7), (.5, .4), (.1, .05), (0.001, 0.0)]
 
 
 def get_est_dirs(sums):
@@ -761,46 +762,42 @@ def _plot_event_counter_with_shaded_perc_areas(f, results_post):
         c.Write()
 
 
-def _plot_PpT(f, sums, results_post):
-    log.info("Plot PpT plots")
+def _plot_dNdpT(f, sums, results_post):
+    log.info("1/N_evts  dN_ch/dpT plots")
     for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
         if sums_est_dir.GetName() != res_est_dir.GetName():
             raise IndexError("Order of estimator dirs is different in sums and results_post")
         res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
         fig = Figure()
-        fig.plot.palette = 'root'
-        fig.plot.ncolors = 7
+        fig.plot.palette = 'colorblind'
+        # fig.plot.ncolors = 5
         fig.legend.title = make_estimator_title(sums_est_dir.GetName())
         fig.legend.position = 'tr'
-        # fig.plot.xmin = 0
-        # fig.plot.xmax = 25
-        fig.plot.ymin = 0.0001
-        fig.plot.ymax = 0.5
-        fig.ytitle = "P(p_{T})"
+        fig.ytitle = "#frac{1}{N_{evts}}dN/dp_{T} MB"
         fig.xtitle = "p_{T} (GeV)"
         fig.plot.logy = True
         hists = []
         nch_low, nch_up = 0, 250
-        hists.append(get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low, nch_up, normalized=True))
-        hists[-1].title = "#pi"
-        hists.append(get_pT_distribution(res_est_dir, [kKMINUS, kKPLUS], nch_low, nch_up, normalized=True))
-        hists[-1].title = "K^{#pm}"
-        hists.append(get_pT_distribution(res_est_dir, [kPROTON, kANTIPROTON], nch_low, nch_up, normalized=True))
-        hists[-1].title = "p"
-        hists.append(get_pT_distribution(res_est_dir, [kK0S], nch_low, nch_up, normalized=True))
-        hists[-1].title = "K^{0}_{S}"
-        hists.append(get_pT_distribution(res_est_dir, [kLAMBDA, kANTILAMBDA], nch_low, nch_up, normalized=True))
-        hists[-1].title = "#Lambda"
-        hists.append(get_pT_distribution(res_est_dir, [kXI, kANTIXI], nch_low, nch_up, normalized=True))
-        hists[-1].title = "#Xi"
-        hists.append(get_pT_distribution(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low, nch_up, normalized=True))
-        hists[-1].title = "#Omega"
+        charged_particles = [kPIMINUS, kPIPLUS, kKMINUS, kKPLUS, kPROTON, kANTIPROTON,
+                             kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
+        hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
+        hists[-1].title = "MB"
+
+        event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
+        for perc_bin_up, perc_bin_low in perc_bins:
+            nch_low, nch_up = get_Nch_edges_for_percentile_edges([perc_bin_up, perc_bin_low], event_counter)
+            hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
+            hists[-1].title = "{}%-{}%".format(perc_bin_up * 100, perc_bin_low * 100)
+        # scale by bin width
+        [h.Scale(1, "width") for h in hists]
+
         [fig.add_plottable(p, p.title) for p in hists]
-        fig.save_to_root_file(f, "PpT", res_dir_str)
+        fig.legend.title = "#pi^{#pm}, K^{#pm}, p, #Lambda, #Xi, #Omega"
+        fig.save_to_root_file(f, "dNdpT_MB", res_dir_str)
 
 
 def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
-    log.info("Plot PpT plots")
+    log.info("Plot dN/dpT ratios scaled with nMPI")
     for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
         if sums_est_dir.GetName() != res_est_dir.GetName():
             raise IndexError("Order of estimator dirs is different in sums and results_post")
@@ -808,65 +805,33 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
         fig = Figure()
         fig.plot.palette = 'root'
         fig.plot.ncolors = 7
-        # fig.plot.xmin = 0
-        # fig.plot.xmax = 25
-        # fig.plot.ymin = 0.01
-        # fig.plot.ymax = 0.05
-        fig.ytitle = "P(p_{T})"
+        fig.ytitle = ("#left[ #frac{dN^{HM}}{dp_{T}} / #frac{dN^{MB}}{dp_{T}} #right] "
+                      "#times #left[ #frac{<N_{MPI}^{MB}>}{<N_{MPI}^{HM}>} #right]")
         fig.xtitle = "p_{T} (GeV)"
         fig.legend.title = make_estimator_title(sums_est_dir.GetName())
-        hists = []
         event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
-        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
-        nch_edges = get_Nch_edges_for_percentile_edges(perc_edges, event_counter)
+        charged_particles = [kPIMINUS, kPIPLUS, kKMINUS, kKPLUS, kPROTON, kANTIPROTON,
+                             kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
+
+        # get the MB distribution which will be used to devide the nch-binned distributions
         nch_low_mb, nch_up_mb = 0, 250
-        nch_low_hm, nch_up_hm = nch_edges[-2], nch_edges[-1]
+        pt_dist_mb = get_pT_distribution(res_est_dir, charged_particles, nch_low_mb, nch_up_mb, normalized=False)
         mean_nmpi_mb = get_mean_nMPI(sums_est_dir, nch_low_mb, nch_up_mb)
-        mean_nmpi_hm = get_mean_nMPI(sums_est_dir, nch_low_hm, nch_up_hm)
-        ratio_mean_nmpi = mean_nmpi_mb / mean_nmpi_hm
 
-        pt_hm = get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kPI0, kPIMINUS, kPIPLUS], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-
-        hists[-1].title = "#pi"
-        pt_hm = get_pT_distribution(res_est_dir, [kKMINUS, kKPLUS], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kKMINUS, kKPLUS], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-        hists[-1].title = "K^{#pm}"
-        pt_hm = get_pT_distribution(res_est_dir, [kPROTON, kANTIPROTON], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kPROTON, kANTIPROTON], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-        hists[-1].title = "p"
-        pt_hm = get_pT_distribution(res_est_dir, [kK0S], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kK0S], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-        hists[-1].title = "K^{0}_{S}"
-        pt_hm = get_pT_distribution(res_est_dir, [kLAMBDA, kANTILAMBDA], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kLAMBDA, kANTILAMBDA], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-        hists[-1].title = "#Lambda"
-        pt_hm = get_pT_distribution(res_est_dir, [kXI, kANTIXI], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kXI, kANTIXI], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-        hists[-1].title = "#Xi"
-        pt_hm = get_pT_distribution(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low_hm, nch_up_hm, normalized=True)
-        pt_mb = get_pT_distribution(res_est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low_mb, nch_up_mb, normalized=True)
-        pt_hm.Divide(pt_mb)
-        hists.append(pt_hm)
-        hists[-1].title = "#Omega"
-
-        name = "pt_hm_div_pt_mb"
-        if scale_nMPI:
-            [prof.Scale(ratio_mean_nmpi) for prof in hists]
-            name += "_scaled_to_mean_nMPI"
-        [fig.add_plottable(p, p.title) for p in hists]
+        event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
+        for perc_bin_up, perc_bin_low in perc_bins:
+            nch_low, nch_up = get_Nch_edges_for_percentile_edges([perc_bin_up, perc_bin_low], event_counter)
+            # get the pt distribution in this Nch interval
+            pt_dist_in_interval = get_pT_distribution(res_est_dir, charged_particles,
+                                                      nch_low, nch_up, normalized=False)
+            title = "{}%-{}%".format(perc_bin_up * 100, perc_bin_low * 100)
+            if scale_nMPI:
+                mean_nmpi_hm = get_mean_nMPI(sums_est_dir, nch_low, nch_up)
+                fig.add_plottable((pt_dist_in_interval / pt_dist_mb) * (mean_nmpi_mb / mean_nmpi_hm), title)
+                name = "pt_hm_div_pt_mb_scaled_nMPI"
+            else:
+                fig.add_plottable((pt_dist_in_interval / pt_dist_mb), title)
+                name = "pt_hm_div_pt_mb"
         fig.save_to_root_file(f, name, res_dir_str)
 
 
@@ -930,7 +895,7 @@ if __name__ == "__main__":
         _make_hists_vs_pt,  # needs updated results_post!
         # _make_dNdeta_mb_ratio_plots,
         _make_pid_ratio_plots,
-        _plot_PpT,
+        _plot_dNdpT,
     ]
 
     def delete_lists(l):

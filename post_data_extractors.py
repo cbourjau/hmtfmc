@@ -25,7 +25,7 @@ def get_Nch_edges_for_percentile_edges(percentile_edges, event_counter):
     Returns
     -------
     list :
-           Edges in Nch of the estimator, first edge is 0 last edge the highest available bin
+           Edges in Nch of the estimator, first edge is lowest in Nch, last edge the highest in Nch
     """
     nch_bins = event_counter.GetXaxis().GetNbins()
     n_total = event_counter.Integral(1, nch_bins)
@@ -242,6 +242,9 @@ def get_pT_distribution(results_est_dir, pids, nch_low, nch_up, normalized):
     summed_mult_pt.xaxis.SetRangeUser(nch_low, nch_up)
     projy = asrootpy(summed_mult_pt.ProjectionY())
     projy.name = gen_random_name()
+    event_counter = asrootpy(results_est_dir.event_counter)
+    # Scale by the number of events in the interval; N_ch == bin - 1
+    projy.Scale(1.0 / event_counter.Integral(nch_low, nch_up))
     if normalized:
         projy.Scale(1.0 / projy.Integral())
     return projy
