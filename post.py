@@ -382,8 +382,8 @@ def _make_PNch_plots(f, sums, results_post):
     log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
     mult_bin_size = 10
     for ref_est_name in ref_ests:
-        for est_dir in get_est_dirs(sums):
-            est_name = est_dir.GetName()
+        for res_est_dir in get_est_dirs(results_post):
+            est_name = res_est_dir.GetName()
             # Figure properties:
             fig_vs_estmult = Figure()
             fig_vs_refmult = Figure()
@@ -400,44 +400,48 @@ def _make_PNch_plots(f, sums, results_post):
             fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est_name)
 
             corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est_name, est_name)
-            nch_max = corr_hist.xaxis.GetNbins()
-            mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
-            nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
 
-            is_last_bin = False
-            for nch_lower_edge in range(0, nch_max, mult_bin_size):
-                if nch_lower_edge + mult_bin_size > nch_cutoff:
-                    nch_upper_edge = nch_max
-                    is_last_bin = True
-                else:
-                    nch_upper_edge = nch_lower_edge + mult_bin_size
-
+            # logic when dealing with fixed bins given in Nch:
+            # ------------------------------------------------
+            # mean_nch_est = corr_hist.GetMean(1)  # mean of x axis
+            # nch_max = corr_hist.xaxis.GetNbins()
+            # nch_cutoff = mean_nch_est * mean_mult_cutoff_factor
+            # nch_bins = [(low, low + mult_bin_size) for low in range(0, int(nch_cutoff), mult_bin_size)]
+            # # a large last bin covering the rest:
+            # nch_bins += [(nch_bins[-1][2], nch_max)]
+            # legend_tmpl = "{} < N_{ch} < {}"
+            # logic when dealing with percentile bins:
+            # ----------------------------------------
+            # event_counter_est = asrootpy(getattr(res_est_dir, "event_counter"))
+            nch_bins_est = NCH_EDGES[est_name]
+            nch_bins_ref = NCH_EDGES[ref_est_name]
+            legend_tmpl = "{}% - {}%"
+            fig_vs_estmult.legend.title = "Selected in {}".format(make_estimator_title(ref_est_name))
+            fig_vs_refmult.legend.title = "Selected in {}".format(make_estimator_title(est_name))
+            # WARNING: the following needs tweeking when going back to fixed N_ch bins!
+            for nch_bin, perc_bin in zip(nch_bins_ref, perc_bins):
                 # vs est_mult:
                 corr_hist.xaxis.SetRange(0, 0)  # reset x axis
-                corr_hist.yaxis.SetRange(nch_lower_edge, nch_upper_edge)
+                corr_hist.yaxis.SetRange(*nch_bin)
                 h_vs_est = asrootpy(corr_hist.ProjectionX(gen_random_name()))
                 if h_vs_est.Integral() > 0:
                     h_vs_est.Scale(1.0 / h_vs_est.Integral())
-                    fig_vs_estmult.add_plottable(h_vs_est,
-                                                 "{} < N_{{ch}}^{{{}}} < {}".
-                                                 format(nch_lower_edge,
-                                                        make_estimator_title(ref_est_name),
-                                                        nch_upper_edge))
-
+                    fig_vs_estmult.add_plottable(h_vs_est, legend_tmpl.format(perc_bin[0] * 100, perc_bin[1] * 100))
+                else:
+                    log.info("No charged particles in {}*100 percentile bin of estimator {}. This should not happen".
+                             format(perc_bin, ref_est_name))
+            for nch_bin, perc_bin in zip(nch_bins_est, perc_bins):
                 # vs ref_mult:
                 corr_hist.yaxis.SetRange(0, 0)  # reset y axis
-                corr_hist.xaxis.SetRange(nch_lower_edge, nch_upper_edge)
+                corr_hist.xaxis.SetRange(*nch_bin)
                 h_vs_ref = asrootpy(corr_hist.ProjectionY(gen_random_name()))
                 if h_vs_ref.Integral() > 0:
                     h_vs_ref.Scale(1.0 / h_vs_ref.Integral())
-                    fig_vs_refmult.add_plottable(h_vs_ref,
-                                                 "{} < N_{{ch}}^{{{}}} < {}".
-                                                 format(nch_lower_edge,
-                                                        make_estimator_title(est_name),
-                                                        nch_upper_edge))
-
-                if is_last_bin:
-                    break
+                    fig_vs_refmult.add_plottable(h_vs_ref, legend_tmpl.format(perc_bin[0] * 100, perc_bin[1] * 100))
+                else:
+                    log.info(
+                        "No charged particles in {}*100 percentile bin of estimator {}. This should not happen".
+                        format(perc_bin, est_name))
 
             path = results_post.GetPath().split(":")[1] + "/" + est_name  # file.root:/internal/root/path
             # vs est_mult
@@ -886,7 +890,6 @@ if __name__ == "__main__":
         _mk_results_dir,
     ]
     plotting_functions = [
-        _make_event_counters,
         _make_dNdeta,
         _make_PNch_plots,
         _plot_nMPI_vs_Nch,
@@ -910,6 +913,26 @@ if __name__ == "__main__":
             sums = f.MultEstimators.Sums
             func(f, sums)
             delete_lists(sums)
+
+    # Find Nch edges from percentile for all estimators:
+    # --------------------------------------------------
+    # Do it globally here because root is a piece of shit and it cannot open two event_counters
+    # from different directories at the same time without corrupting the file. Fuck you ROOT!
+    NCH_EDGES = {}
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        _make_event_counters(f, sums, results_post)
+        delete_lists(sums)
+    with root_open(sys.argv[1], 'update') as f:
+        sums = f.MultEstimators.Sums
+        results_post = f.MultEstimators.results_post
+        for est_dir in get_est_dirs(results_post):
+            event_counter = est_dir.event_counter
+            NCH_EDGES[est_dir.GetName()] = [
+                get_Nch_edges_for_percentile_edges(perc_bin, event_counter) for perc_bin in perc_bins]
+        delete_lists(sums)
+
     for func in plotting_functions:
         with root_open(sys.argv[1], 'update') as f:
             sums = f.MultEstimators.Sums
