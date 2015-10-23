@@ -9,6 +9,12 @@ import sys
 import os
 
 from dump_plots_to_files import dump_plots_to_files
+if len(sys.argv) != 3:
+    print (
+        "Usage:\n"
+        'python make_summary_pres.py file.root "title of presentation"\n'
+    )
+    quit()
 
 # create the plot files
 dump_plots_to_files(sys.argv[1])
