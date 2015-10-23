@@ -155,21 +155,25 @@ def _make_dNdeta(f, sums, results_post):
         event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
         fig = Figure()
-        fig.plot.palette = 'colorblind'
-        fig.xtitle = '#eta'
+        fig_mb_ratio = Figure()
+        fig.plot.palette = fig_mb_ratio.plot.palette = 'colorblind'
+        fig.xtitle = fig_mb_ratio.xtitle = '#eta'
         fig.ytitle = '1/N dN_{ch}/d#eta'
-        fig.legend.position = 'tl'
-        fig.legend.title = make_estimator_title(est_dir.GetName())
-        fig.plot.ymin = 0
-        # fig.plot.ymax = 5
+        fig_mb_ratio.ytitle = 'dN/d#eta (1/MB)'
+        fig.legend.title = fig_mb_ratio.legend.title = make_estimator_title(est_dir.GetName())
+        fig.plot.ymin = fig_mb_ratio.plot.ymin = 0
+        dNdeta_mb = get_dNdeta_in_mult_interval(h2d, event_counter, [0, 250])
         for nch_int, perc_int in zip(NCH_EDGES[est_dir.GetName()], perc_bins):
             title = "{}%-{}%".format(perc_int[0] * 100, perc_int[1] * 100)
-            fig.add_plottable(get_dNdeta_in_mult_interval(h2d, event_counter, nch_int), legend_title=title)
+            dNdeta_in_interval = get_dNdeta_in_mult_interval(h2d, event_counter, nch_int)
+            fig.add_plottable(dNdeta_in_interval, legend_title=title)
+            fig_mb_ratio.add_plottable(dNdeta_in_interval / dNdeta_mb, legend_title=title)
         # add MB as well:
         title = "MB"
-        fig.add_plottable(get_dNdeta_in_mult_interval(h2d, event_counter, [0, 250]), legend_title=title)
+        fig.add_plottable(dNdeta_mb, legend_title=title)
         path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
         fig.save_to_root_file(f, "dNdeta_summary", path=path)
+        fig_mb_ratio.save_to_root_file(f, "dNdeta_MB_ratio_summary", path=path)
 
 
 def _make_hists_vs_pt(f, sums, results_post):
@@ -468,31 +472,6 @@ def _make_mult_vs_pt_plots(f, sums, results_post):
             mult_pt = asrootpy(h3d.Project3D("yx"))
             mult_pt.name = h3d.zaxis.GetBinLabel(ibin)
             mult_pt.Write()
-
-
-def _make_dNdeta_mb_ratio_plots(f, sums, results_post):
-    # Create ratio plots; depends on the previously created histograms
-    log.info("Creating ratios of dN/deta plots for each multiplicity bin")
-    for est_dir in get_est_dirs(results_post):
-        res_dir_str = "MultEstimators/results_post/" + est_dir.GetName()
-        # get the histograms out of the summary plot, even if it is hackish...
-        plot_pad = est_dir.Get("dNdeta_summary").FindObject("plot")
-        # some of the hists are just the frames, neglect those
-        hists = [asrootpy(h) for h in plot_pad.GetListOfPrimitives()
-                 if (isinstance(h, ROOT.TH1) and h.Integral() > 0)]
-        # find the first histogram with name mb_dNdeta
-        mb_hist_name = 'mb_dNdeta'
-        try:
-            mb_hist = next(h for h in hists if h.name == mb_hist_name)
-        except StopIteration:
-            raise StopIteration("no histogram named {} was found in dNdeta summary plot".format(mb_hist_name))
-        ratios = [h / mb_hist for h in hists if h.name != mb_hist_name]
-        fig = Figure()
-        fig.xtitle = '#eta'
-        fig.ytitle = 'dN/d#eta|_{mult} / dN/d#eta|_{MB}'
-        [fig.add_plottable(p, p.title) for p in ratios]
-        name = "dNdeta_ratio_to_mb_canvas"
-        fig.save_to_root_file(f, name, res_dir_str)
 
 
 def _make_correlation_plots(f, sums, results_post):
