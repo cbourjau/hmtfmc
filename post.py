@@ -176,7 +176,7 @@ def _make_dNdeta(f, sums, results_post):
         fig_mb_ratio.save_to_root_file(f, "dNdeta_MB_ratio_summary", path=path)
 
 
-def _make_hists_vs_pt(f, sums, results_post):
+def _pt_distribution_ratios(f, sums, results_post):
     ###########################################################
     # Category 2 on TWiki
     # create particle ratio vs pT plots
@@ -184,60 +184,83 @@ def _make_hists_vs_pt(f, sums, results_post):
     log.info("Computing histograms vs pt")
 
     # Loop over all estimators in the Sums list:
-    for est_dir in get_est_dirs(sums):
+    for est_dir in get_est_dirs(results_post):
         dirname = 'MultEstimators/results_post/{}/pid_ratios/'.format(est_dir.GetName())
 
-        event_counter = asrootpy(getattr(results_post, est_dir.GetName()).event_counter)
-        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0]
+        # event_counter = asrootpy(getattr(results_post, est_dir.GetName()).event_counter)
 
-        nch_edges = get_Nch_edges_for_percentile_edges(perc_edges, event_counter)
-        # mean_nch = est_dir.FindObject("feta_Nch").GetMean(2)  # mean of yaxis
-        # # bin in standard step size up to max_nch; from there ibs all in one bin:
-        # nch_cutoff = int(mean_nch * mean_mult_cutoff_factor)
-        # step_size = 10
-        # nch_edges = list(range(0, nch_cutoff, step_size)) + [h3d_orig.GetXaxis().GetNbins()]
-
-        mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
+        # mult_pt_dir = results_post.FindObject(est_dir.GetName()).Get("mult_pt")
         fig = Figure()
         fig.xtitle = 'p_{T} (GeV)'
         fig.plot.ymin = 0
-        fig.plot.palette = 'root'
-        fig.plot.palette_ncolors = len(nch_edges) - 1
+        fig.plot.palette = 'colorblind'
+        # fig.plot.palette_ncolors = len(nch_edges) - 1
         fig.legend.position = 'bl'
+
+        mult_binned_pt_dists = {}
+        mult_binned_pt_dists['proton'] = [
+            get_pT_distribution(est_dir, [kANTIPROTON, kPROTON], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        mult_binned_pt_dists['pi_ch'] = [
+            get_pT_distribution(est_dir, [kPIMINUS, kPIPLUS], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        mult_binned_pt_dists['xi'] = [
+            get_pT_distribution(est_dir, [kANTIXI, kXI], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        mult_binned_pt_dists['omega'] = [
+            get_pT_distribution(est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        mult_binned_pt_dists['lambda'] = [
+            get_pT_distribution(est_dir, [kANTILAMBDA, kLAMBDA], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        mult_binned_pt_dists['k0s'] = [
+            get_pT_distribution(est_dir, [kK0S], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        mult_binned_pt_dists['pi0'] = [
+            get_pT_distribution(est_dir, [kPI0], nch_low, nch_up)
+            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+        ]
+        perc_titles = ["{}%-{}%".format(perc_bin[0] * 100, perc_bin[1] * 100) for perc_bin in perc_bins]
 
         fig.delete_plottables()
         name = "proton_over_pich__vs__pt"
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPIMINUS, kPIPLUS], nch_edges)
         fig.ytitle = "(p+#bar{p})/#pi^{+-}"
         fig.plot.ymax = .3
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['pi_ch'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "Xi_over_pich__vs__pt"
         fig.plot.ymax = .06
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPIMINUS, kPIPLUS], nch_edges)
         fig.ytitle = "#Xi/#pi^{+-}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['pi_ch'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "OmegaCh_over_pich__vs__pt"
         fig.plot.ymax = .005
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPIMINUS, kPIPLUS], nch_edges)
         fig.ytitle = "#Omega_{ch}/#pi^{+-} "
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['pi_ch'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         # Ratios to pi0
@@ -245,72 +268,72 @@ def _make_hists_vs_pt(f, sums, results_post):
         name = "pich_over_pi0__vs__pt"
         fig.plot.ymax = 2.5
         fig.legend.position = 'bl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kPIMINUS, kPIPLUS], [kPI0], nch_edges)
         fig.ytitle = "#pi^{+-}/#pi^{0}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['pi_ch'], mult_binned_pt_dists['pi0'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "proton_over_pi0__vs__pt"
         fig.plot.ymax = 1
         fig.legend.position = 'tr'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kPI0], nch_edges)
         fig.ytitle = "p/#pi^{0}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['pi0'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "K0S_over_pi0__vs__pt"
         fig.plot.ymax = 1.4
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kK0S], [kPI0], nch_edges)
         fig.ytitle = "K^{0}_{S}/#pi^{0}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['k0s'], mult_binned_pt_dists['pi0'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "Lambda_over_pi0__vs__pt"
         fig.plot.ymax = .9
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kPI0], nch_edges)
         fig.ytitle = "#Lambda/#pi^{0}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['lambda'], mult_binned_pt_dists['pi0'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "Xi_over_pi0__vs__pt"
         fig.plot.ymax = .08
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kPI0], nch_edges)
         fig.ytitle = "#Xi/#pi^{0}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['pi0'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "OmegaCh_over_pi0__vs__pt"
         fig.plot.ymax = .005
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kPI0], nch_edges)
         fig.ytitle = "#Omega_{ch}/#pi^{0}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['pi0'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         # Ratios to K0S
@@ -318,48 +341,48 @@ def _make_hists_vs_pt(f, sums, results_post):
         name = "proton_over_K0S__vs__pt"
         fig.plot.ymax = 2.6
         fig.legend.position = 'tr'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIPROTON, kPROTON], [kK0S], nch_edges)
         fig.ytitle = "p/K^{0}_{S}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['k0s'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "Lambda_over_K0S__vs__pt"
         fig.plot.ymax = 1
         fig.legend.position = 'bl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTILAMBDA, kLAMBDA], [kK0S], nch_edges)
         fig.ytitle = "#Lambda/K^{0}_{S}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['lambda'], mult_binned_pt_dists['k0s'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "Xi_over_K0S__vs__pt"
         fig.plot.ymax = .2
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kANTIXI, kXI], [kK0S], nch_edges)
         fig.ytitle = "#Xi/K^{0}_{S}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['k0s'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
         fig.delete_plottables()
         name = "OmegaCh_over_K0S__vs__pt"
         fig.plot.ymax = .012
         fig.legend.position = 'tl'
-        hs = create_stack_pid_ratio_over_pt(mult_pt_dir, [kOMEGAMINUS, kOMEGAPLUS], [kK0S], nch_edges)
         fig.ytitle = "#Omega_{ch}/K^{0}_{S}"
         fig.legend.title = make_estimator_title(est_dir.GetName())
-        [h.SetTitle(str(int(100 * up)) + "-" + str(int(100 * low)) + "%")
-         for h, up, low in zip(hs, perc_edges[:-1], perc_edges[1:])]
-        [fig.add_plottable(p, p.title) for p in hs]
+        [
+            fig.add_plottable(h1 / h2, legend_title=title)
+            for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['k0s'], perc_titles)
+        ]
         fig.save_to_root_file(f, name, dirname)
 
 

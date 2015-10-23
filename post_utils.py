@@ -64,50 +64,6 @@ def create_dNdeta_stack(h2d, event_counter, with_mb=True):
     return stack
 
 
-def create_stack_pid_ratio_over_pt(mult_pt_dir, pids1, pids2, nch_edges):
-    """
-    Create a hist stack, where hists are the ratio of particles of species 1 over 2 vs. pt, stack is
-    binned in multiplicity bins.
-    pidx must be a list, these particles are added together befor dividing (eg. pi charged)
-    """
-    def make_list_of_pt_plots_binned_in_multclasses(pids, nch_edges):
-        pt_hists_in_multclasses_in_pids = []
-        for ipid, pid in enumerate(pids):
-            h2d = asrootpy(mult_pt_dir.Get(pid))
-            pt_hists_in_multclasses = []
-            for nch_edge_low, nch_edge_up in zip(nch_edges[:-1], nch_edges[1:]):
-                nch_bin_low = nch_edge_low + 1  # <- from nch to bin number
-                nch_bin_up = nch_edge_up + 1
-                h2d.xaxis.SetRange(nch_bin_low, nch_bin_up)
-                pt_hists_in_multclasses.append(asrootpy(h2d.ProjectionY(gen_random_name())))
-                pt_hists_in_multclasses[-1].title = "{} #leq N_{{ch}}^{{est}} #leq {}".\
-                                                    format(nch_edge_low, nch_edge_up)
-            pt_hists_in_multclasses_in_pids.append(pt_hists_in_multclasses)
-        # sum over pids -> list of length multclass
-        # for that, I make convert the npid lists with length nmultclass to
-        # nmultclass tuples of lenghtn npid
-        return map(sum, zip(*pt_hists_in_multclasses_in_pids))
-    pt_hists_pids1 = make_list_of_pt_plots_binned_in_multclasses(pids1, nch_edges)
-    pt_hists_pids2 = make_list_of_pt_plots_binned_in_multclasses(pids2, nch_edges)
-
-    # divide the sum of the two pids lists; results in list of ratios for each mutlclass
-    outstack = HistStack()
-    for h1, h2 in zip(pt_hists_pids1, pt_hists_pids2):
-        if h1.Integral() == 0.0 or h2.Integral() == 0.0:
-            # break if one of the histograms is empty
-            break
-        try:
-            outstack.Add(h1 / h2)
-        except ZeroDivisionError:
-            # break at first zero division
-            break
-
-    outstack.Draw('nostack')
-    outstack.title = "pid{0} / pid{1}".format(pids1, pids2)
-    outstack.xaxis.SetTitle("p_{T}")
-    return outstack
-
-
 def remap_x_values(hist, corr_hist):
     """
     Map the x values of hist to the y values of map_hist.
