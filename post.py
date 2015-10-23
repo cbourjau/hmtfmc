@@ -21,10 +21,12 @@ from post_data_extractors import get_dNdeta_in_mult_interval, get_identified_vs_
     get_Nch_edges_for_percentile_edges, get_nMPI_vs_Nch,\
     get_NchEst1_vs_NchEst2, get_PNch_vs_estmult,\
     get_meanpt_vs_estmult, get_pT_distribution, get_mean_nMPI
-from post_utils import create_stack_pid_ratio_over_pt,\
+from post_utils import \
     remap_x_values,\
-    remove_zero_value_points, remove_non_mutual_points,\
-    remove_points_with_equal_x, remove_points_with_x_err_gt_1NchRef
+    remove_zero_value_points,\
+    remove_non_mutual_points,\
+    remove_points_with_equal_x,\
+    remove_points_with_x_err_gt_1NchRef
 
 from roofi import Figure, Styles
 from roofi.figure import get_color_generator
@@ -405,7 +407,7 @@ def _make_PNch_plots(f, sums, results_post):
     summary_fig.save_to_root_file(f, "PNch_summary", path=path)
 
     log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
-    mult_bin_size = 10
+    # mult_bin_size = 10
     for ref_est_name in ref_ests:
         for res_est_dir in get_est_dirs(results_post):
             est_name = res_est_dir.GetName()
@@ -414,6 +416,9 @@ def _make_PNch_plots(f, sums, results_post):
             fig_vs_refmult = Figure()
             fig_vs_estmult.plot.logy = True
             fig_vs_refmult.plot.logy = True
+
+            fig_vs_estmult.plot.palette = 'colorblind'
+            fig_vs_refmult.plot.palette = 'colorblind'
 
             fig_vs_estmult.legend.position = 'tr'
             fig_vs_refmult.legend.position = 'tr'
@@ -775,29 +780,31 @@ def _plot_dNdpT(f, sums, results_post):
         fig = Figure()
         fig.plot.palette = 'colorblind'
         # fig.plot.ncolors = 5
-        fig.legend.title = make_estimator_title(sums_est_dir.GetName())
         fig.legend.position = 'tr'
-        fig.ytitle = "#frac{1}{N_{evts}}dN/dp_{T} MB"
+        fig.ytitle = "1/N_{evts} dN/dp_{T} (" + make_estimator_title(sums_est_dir.GetName()) + ")"
         fig.xtitle = "p_{T} (GeV)"
         fig.plot.logy = True
         hists = []
-        nch_low, nch_up = 0, 250
         charged_particles = [kPIMINUS, kPIPLUS, kKMINUS, kKPLUS, kPROTON, kANTIPROTON,
                              kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
-        hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
-        hists[-1].title = "MB"
 
         event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
         for perc_bin_up, perc_bin_low in perc_bins:
             nch_low, nch_up = get_Nch_edges_for_percentile_edges([perc_bin_up, perc_bin_low], event_counter)
             hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
             hists[-1].title = "{}%-{}%".format(perc_bin_up * 100, perc_bin_low * 100)
+
+        # add MB last to be consistent with colors in other plots
+        nch_low, nch_up = 0, 250
+        hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
+        hists[-1].title = "MB"
+
         # scale by bin width
         [h.Scale(1, "width") for h in hists]
 
         [fig.add_plottable(p, p.title) for p in hists]
         fig.legend.title = "#pi^{#pm}, K^{#pm}, p, #Lambda, #Xi, #Omega"
-        fig.save_to_root_file(f, "dNdpT_MB", res_dir_str)
+        fig.save_to_root_file(f, "dNdpT", res_dir_str)
 
 
 def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
@@ -809,10 +816,14 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
         fig = Figure()
         fig.plot.palette = 'root'
         fig.plot.ncolors = 7
-        fig.ytitle = ("#left[ #frac{dN^{HM}}{dp_{T}} / #frac{dN^{MB}}{dp_{T}} #right] "
-                      "#times #left[ #frac{<N_{MPI}^{MB}>}{<N_{MPI}^{HM}>} #right]")
         fig.xtitle = "p_{T} (GeV)"
         fig.legend.title = make_estimator_title(sums_est_dir.GetName())
+        if scale_nMPI:
+            fig.ytitle = ("#left[ #frac{dN^{HM}}{dp_{T}} / #frac{dN^{MB}}{dp_{T}} #right] "
+                          "#times #left[ #frac{<N_{MPI}^{MB}>}{<N_{MPI}^{HM}>} #right]")
+        else:
+            fig.ytitle = "#frac{dN^{HM}}{dp_{T}} / #frac{dN^{MB}}{dp_{T}}"
+
         event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
         charged_particles = [kPIMINUS, kPIPLUS, kKMINUS, kKPLUS, kPROTON, kANTIPROTON,
                              kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
@@ -895,7 +906,7 @@ if __name__ == "__main__":
         _plot_nMPI_vs_Nch,
         _make_mult_vs_pt_plots,
         _plot_meanpt_vs_ref_mult_for_pids,
-        _make_hists_vs_pt,  # needs updated results_post!
+        _pt_distribution_ratios,  # needs updated results_post!
         # _make_dNdeta_mb_ratio_plots,
         _make_pid_ratio_plots,
         _plot_dNdpT,

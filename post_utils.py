@@ -13,57 +13,6 @@ def gen_random_name():
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(25))
 
 
-def create_dNdeta_stack(h2d, event_counter, with_mb=True):
-    """
-    Create dN/deta stack for various multiplicity bins from given 2D histogram. If `with_mb` is `True`,
-    also add dNdeta for minimum bias to the stack.
-    xaxis: eta
-    yaxis: multiplicity bins
-    """
-    stack = HistStack(name="dNdeta_stack")
-    nbins = h2d.yaxis.GetNbins()
-    nch_step = 10
-    last_mult_bin = False
-    nevent_threshold = 5000
-    for mult_bin in range(1, nbins, nch_step):
-        mult_bin_upper = mult_bin + nch_step - 1
-        h2d.yaxis.set_range(mult_bin, mult_bin_upper)
-        h = asrootpy(h2d.projection_x())
-        # Combine left over event classes?
-        if h.Integral(mult_bin, mult_bin + nch_step) < nevent_threshold:
-            last_mult_bin = True
-            mult_bin_upper = nbins
-            h2d.yaxis.set_range(mult_bin, mult_bin_upper)
-            h = asrootpy(h2d.projection_x())
-
-        # named colors of the ROOT TColor colorwheel are between 800 and 900, +1 to make them look better
-        h.color = 800 + int(100.0 / (nbins / nch_step) * (mult_bin / nch_step - 1)) + 1
-        h.name = str(mult_bin)
-        h.title = (str(h2d.yaxis.get_bin_low_edge(mult_bin))
-                   + ' #leq N_{ch}^{est} #leq ' +
-                   str(h2d.yaxis.get_bin_up_edge(mult_bin_upper)))
-        h.yaxis.title = '1/N dN_{ch}^{est}/d#eta'
-        # scale by the number of events in this mult_bin
-        try:
-            h.Scale(1.0 / float(event_counter.Integral(mult_bin, mult_bin_upper)))
-        except ZeroDivisionError:
-            # No events in multiplicity range; break loop here
-            break
-        stack.Add(h)
-        if last_mult_bin:
-            break
-    if with_mb:
-        h2d.yaxis.set_range(0, -1)
-        h = asrootpy(h2d.projection_x())
-        h.title = 'MB'
-        h.name = 'mb_dNdeta'
-        h.yaxis.title = '1/N dN_{ch}^{est}/d#eta'
-        h.Scale(1.0 / float(event_counter.Integral(0, -1)))
-        stack.Add(h)
-    stack.Draw('nostack')
-    return stack
-
-
 def remap_x_values(hist, corr_hist):
     """
     Map the x values of hist to the y values of map_hist.
