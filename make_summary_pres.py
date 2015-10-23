@@ -10,6 +10,9 @@ import os
 
 from dump_plots_to_files import dump_plots_to_files
 
+# create the plot files
+dump_plots_to_files(sys.argv[1])
+
 considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C', 'ZDC']
 base_path = './' + sys.argv[1].split('.')[0] + '/'
 process = subprocess.Popen("find . -type f | grep pdf",
@@ -59,9 +62,6 @@ def make_frames(title, fig_paths):
         tex += frame
     return tex
 
-# create the plot files
-dump_plots_to_files(sys.argv[1])
-
 groups = []
 # cycle through the plots in the first estimator folder and find the equivalent plots
 # in the other estimator folders
@@ -103,30 +103,30 @@ tex_body = "\n".join([make_frames(name, paths) for (name, paths) in groups])
 
 tex_doc = (
     r"""
-    \documentclass[xcolor=dvipsnames]{beamer}
+    \documentclass[xcolor=dvipsnames]{{beamer}}
 
-    \usepackage{graphicx,subfigure,url, tikz}
+    \usepackage{{graphicx,subfigure,url, tikz}}
 
     % example themes
-    \usetheme[nat,style=simple]{Frederiksberg}
+    \usetheme[nat,style=simple]{{Frederiksberg}}
 
     % put page numbers
-    \setbeamertemplate{footline}[frame number]{}
+    \setbeamertemplate{{footline}}[frame number]{{}}
     % remove navigation symbols
-    \setbeamertemplate{navigation symbols}{}
-    \author{Christian Bourjau}
-    \institute[NBI, Copenhagen]{Niels Bohr Institute, Copenhagen\\HMTF MC benchmark studies\\Supervisor: Michele Floris}
+    \setbeamertemplate{{navigation symbols}}{{}}
+    \author{{Christian Bourjau}}
+    \institute[NBI, Copenhagen]{{Niels Bohr Institute, Copenhagen\\HMTF MC benchmark studies\\Supervisor: Michele Floris}}
 
-    \title{Summary}
-    \begin{document}
+    \title{{{}}}
+    \begin{{document}}
 
-    \frame[plain]{\titlepage}
-    """
+    \frame[plain]{{\titlepage}}
+    """.format(sys.argv[2])
 )
 tex_doc += tex_body
 tex_doc += r'\end{document}'
 tex_file_name = 'summary.tex'
-with open(base_path + tex_file_name, 'w') as f:
+with open(base_path + '/' + tex_file_name, 'w') as f:
     f.write(tex_doc)
 
 # latex_out = subprocess.Popen('pdflatex -file-line-error -interaction=nonstopmode {}'.format(tex_file_name),

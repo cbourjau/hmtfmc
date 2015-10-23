@@ -5,8 +5,6 @@ import sys
 import os
 import shutil
 
-from wand.image import Image
-
 from ROOT import TDirectory, TCanvas
 from rootpy import asrootpy
 from rootpy.io import root_open
