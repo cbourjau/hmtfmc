@@ -209,12 +209,12 @@ class Figure(object):
             legend_entries = []
         else:
             legend_entries = [e for e in legend.GetListOfPrimitives()]
-        plottables = [{'p': p} for p in pad.GetListOfPrimitives() if is_plottable(p)]
+        plottables = [{'p': asrootpy(p)} for p in pad.GetListOfPrimitives() if is_plottable(p)]
         for pdict in plottables:
             for legend_entry in legend_entries:
                 if pdict['p'] == legend_entry.GetObject():
                     pdict['legend_title'] = legend_entry.GetLabel()
-        self._plottables.append(plottables)
+        self._plottables += plottables
 
     def draw_to_canvas(self):
         """
@@ -340,6 +340,7 @@ class Figure(object):
             pad_plot.SetLogx(True)
         if self.plot.logy:
             pad_plot.SetLogy(True)
+        pad_plot.Update()  # needed sometimes with import of canvas. maybe because other "plot" pads exist...
         return c
 
     def delete_plottables(self):

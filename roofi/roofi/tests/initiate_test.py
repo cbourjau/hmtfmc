@@ -333,6 +333,8 @@ class Test_import_from_canvas(unittest.TestCase):
         fig = Figure()
         fig.import_plottables_from_canvas(self.canvas)
         self.assertEqual(len(fig._plottables), 1)
+        self.assertIsInstance(fig._plottables[0], dict)
+        fig.draw_to_canvas()
 
     def test_import_non_roofi_canvas(self):
         fig = Figure()
