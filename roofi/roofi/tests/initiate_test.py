@@ -29,9 +29,11 @@ class Test_Figure(unittest.TestCase):
         self.assertNotEqual(h, f._plottables[0])
 
         # add histogram with legend
-        self.assertEqual(len(f._legend_labels), 0)
+        legend_labels = [pdic['legend_title'] for pdic in f._plottables if pdic['legend_title'] != '']
+        self.assertEqual(len(legend_labels), 0)
         f.add_plottable(h, legend_title="cool hist")
-        self.assertEqual(len(f._legend_labels), 1)
+        legend_labels = [pdic['legend_title'] for pdic in f._plottables if pdic['legend_title'] != '']
+        self.assertEqual(len(legend_labels), 1)
 
         # no old plottables if I make a new one:
         f = Figure()

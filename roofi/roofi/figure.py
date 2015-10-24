@@ -122,7 +122,6 @@ class Figure(object):
 
         # Private:
         self._plottables = []
-        self._legend_labels = []
         self.style = Styles.Presentation_full
 
     class Plot(object):
@@ -137,7 +136,7 @@ class Figure(object):
         position = 'tl'
 
     def _create_legend(self):
-        nentries = len(self._legend_labels)
+        nentries = len([pdic['legend_title'] for pdic in self._plottables if pdic['legend_title'] != ''])
         leg = Legend(nentries, leftmargin=0, rightmargin=0, entrysep=0.01,
                      textsize=self.style.legendSize, textfont=43, margin=0.1, )
         if self.legend.title:
@@ -170,7 +169,13 @@ class Figure(object):
         Parameters
         ----------
         obj : Hist1D, Graph
-              A root plottable object
+            A root plottable object
+        legend_title : string
+            Title for this plottable as shown in the legend
+        """
+        self._plottables.append({'p': asrootpy(obj.Clone(gen_random_name())),
+                                 'legend_title': legend_title,
+                                 })
 
         """
         self._plottables.append(asrootpy(obj.Clone(gen_random_name())))
@@ -200,7 +205,8 @@ class Figure(object):
         pad_plot.Draw()
         pad_plot.cd()
 
-        xmin, xmax, ymin, ymax = get_limits(self._plottables, logx=self.plot.logx, logy=self.plot.logy)
+        xmin, xmax, ymin, ymax = get_limits([pdic['p'] for pdic in self._plottables],
+                                            logx=self.plot.logx, logy=self.plot.logy)
         # overwrite these ranges if defaults are given
         if self.plot.xmin is not None:
             xmin = self.plot.xmin
@@ -214,7 +220,8 @@ class Figure(object):
         colors = get_color_generator(self.plot.palette, self.plot.palette_ncolors)
 
         is_first = True
-        for i, obj in enumerate(self._plottables):
+        for i, pdic in enumerate(self._plottables):
+            obj = pdic['p']
             obj.markerstyle = 'circle'
             try:
                 color = next(colors)
@@ -263,13 +270,14 @@ class Figure(object):
         pad_plot.SetLogx(self.plot.logx)
         pad_plot.SetLogy(self.plot.logy)
 
-        if len(self._legend_labels) > 0:
+        # do we have legend titles?
+        if any([pdic['legend_title'] for pdic in self._plottables]):
             leg = self._create_legend()
             longest_label = 0
-            for obj, lable in self._legend_labels:
-                leg.AddEntry(obj, lable)
-                if len(lable) > longest_label:
-                    longest_label = len(lable)
+            for pdic in self._plottables:
+                leg.AddEntry(pdic['p'], pdic['legend_title'])
+                if len(pdic['legend_title']) > longest_label:
+                    longest_label = len(pdic['legend_title'])
 
             # Set the legend position
             # vertical:
@@ -307,7 +315,6 @@ class Figure(object):
         new ones while keeping the lables.
         """
         self._plottables = []
-        self._legend_labels = []
 
     def save_to_root_file(self, in_f, name, path=''):
         """
