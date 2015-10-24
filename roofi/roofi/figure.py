@@ -12,6 +12,15 @@ import ROOT
 # from external import husl
 
 
+def is_plottable(obj):
+    """
+    Check if the given object is considered a plottable.
+
+    Currently, TH1 and TGraph are considered plottable.
+    """
+    return isinstance(obj, (ROOT.TH1, ROOT.TGraph))
+
+
 class Styles(object):
     # Define names of plot layouts:
     class _Default_Style(object):
@@ -177,11 +186,35 @@ class Figure(object):
                                  'legend_title': legend_title,
                                  })
 
+    def import_plottables_from_canvas(self, canvas):
         """
-        self._plottables.append(asrootpy(obj.Clone(gen_random_name())))
-        if legend_title:
-            # check if we already have a legend:
-            self._legend_labels.append((self._plottables[-1], legend_title))
+        Import plottables from a canvas which was previously created with roofi
+
+        Parameters
+        ----------
+        canvas : Canvas
+            A canvas which was created with roofi.
+
+        Raises
+        ------
+        ValueError :
+            The given canvas did not have the internal format as expected from roofi canvases
+        """
+        pad = canvas.FindObject('plot')
+        if pad == None:  # "is None" does not work since TObject is not None
+            raise ValueError("Cannot import canvas, since it is not in roofi format.")
+        try:
+            legend = [p for p in pad.GetListOfPrimitives() if isinstance(p, ROOT.TLegend)][0]
+        except IndexError:
+            legend_entries = []
+        else:
+            legend_entries = [e for e in legend.GetListOfPrimitives()]
+        plottables = [{'p': p} for p in pad.GetListOfPrimitives() if is_plottable(p)]
+        for pdict in plottables:
+            for legend_entry in legend_entries:
+                if pdict['p'] == legend_entry.GetObject():
+                    pdict['legend_title'] = legend_entry.GetLabel()
+        self._plottables.append(plottables)
 
     def draw_to_canvas(self):
         """

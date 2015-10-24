@@ -3,7 +3,7 @@ import unittest
 import shutil
 
 from rootpy import asrootpy
-from rootpy.plotting import Hist1D, Graph
+from rootpy.plotting import Hist1D, Graph, Canvas
 from rootpy.interactive import wait
 from rootpy.io import File
 
@@ -319,3 +319,22 @@ class Test_write_to_tex_file(unittest.TestCase):
         self.fig.save_to_file(name=name, path=path)
         self.assertTrue(os.path.exists(path))
         self.assertTrue(os.path.exists(path + '/' + name))
+
+
+class Test_import_from_canvas(unittest.TestCase):
+    def setUp(self):
+        fig = Figure()
+        h1 = Hist1D(10, 0, 10)
+        h1.Fill(5)
+        fig.add_plottable(h1, legend_title="hist 1")
+        self.canvas = fig.draw_to_canvas()
+
+    def test_import_roofi_canvas(self):
+        fig = Figure()
+        fig.import_plottables_from_canvas(self.canvas)
+        self.assertEqual(len(fig._plottables), 1)
+
+    def test_import_non_roofi_canvas(self):
+        fig = Figure()
+        c = Canvas()
+        self.assertRaises(ValueError, fig.import_plottables_from_canvas, c)
