@@ -19,9 +19,9 @@ def get_Nch_edges_for_percentile_edges(percentile_edges, event_counter):
     Parameters
     ----------
     percentile_edges : list
-                       Edges in percentiles; has to start at 1 and end at 0
+                       Edges in percentiles; high percentile comes first
     event_counter : Hist1D
-                    Event counter histogram with Nch (in estimator region) on the x-axis
+                    Event counter histogram with Nch (in estimator region, binwidth=1) on the x-axis
     Returns
     -------
     list :
@@ -30,23 +30,24 @@ def get_Nch_edges_for_percentile_edges(percentile_edges, event_counter):
     nch_bins = event_counter.GetXaxis().GetNbins()
     n_total = event_counter.Integral(1, nch_bins)
     accu_counts = [0] + [event_counter.Integral(1, binidx) for binidx in range(1, nch_bins)]
-    accu_percents = [1 - (accu_count / float(n_total)) for accu_count in accu_counts]
-
+    # percentage of events having nch=this_idx or more Nch; hence starts at 1.0 at idx=0 and decreases
+    # but the floats might not equal 0.0!!!
+    decumulative_percents = [1 - (accu_count / float(n_total)) for accu_count in accu_counts]
     nch_edges = []  # int(round(n_total - n_total * perc)) for perc in percentile_edges]
-    iter_wanted_perc_edges = iter(percentile_edges)
-    perc_edge = next(iter_wanted_perc_edges)
-    for idx, (accu_count, accu_percent) in enumerate(zip(accu_counts, accu_percents)):
-        # the idx is the nch bin we are looking for
-        try:
-            if accu_percent <= perc_edge:  # this should pick up the first bin with 1.0 = 1.0
-                nch_edges.append(idx)
-                perc_edge = next(iter_wanted_perc_edges)
-                # check if we are skipping a bin because the percentile intervals are too small:
-                if accu_percent <= perc_edge:
-                    raise ValueError("The given percentile edges narrower than one Nch bin!")
-        except StopIteration:
-            # We found the last bin
-            break
+    for perc in percentile_edges:
+        # find the idx where the given percentile edge would fit into the decumulative list
+        for idx, decum_perc in enumerate(decumulative_percents):
+            if perc > decum_perc:
+                # this should pick up 1.0
+                nch_edges.append(idx - 1)
+                break
+        else:
+            # the loop did not break, then the last bin is _probably_ 0.0?
+            if perc == 0.0:
+                nch_edges.append(nch_bins - 1)
+            else:
+                # something is fishy!
+                raise IndexError("Something is fishy here!!!")
     return nch_edges
 
 
