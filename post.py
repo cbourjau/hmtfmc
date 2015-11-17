@@ -195,9 +195,10 @@ def _pt_distribution_ratios(f, sums, results_post):
         fig = Figure()
         fig.xtitle = 'p_{T} (GeV)'
         fig.plot.ymin = 0
+        fig.plot.xmax = 10
         fig.plot.palette = 'colorblind'
         # fig.plot.palette_ncolors = len(nch_edges) - 1
-        fig.legend.position = 'bl'
+        fig.legend.position = 'br'
 
         mult_binned_pt_dists = {}
         mult_binned_pt_dists['proton'] = [
@@ -541,8 +542,8 @@ def _make_pid_ratio_plots(f, sums, results_post):
     fig = Figure()
     fig.plot.ncolors = len(considered_ests)
     fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
-    fig.plot.xmin = 0
-    fig.plot.xmax = 40
+    #fig.plot.xmin = 0
+    #fig.plot.xmax = 40
 
     # Proton / pi_ch
 
