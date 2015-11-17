@@ -169,7 +169,7 @@ class Figure(object):
             # marker size 1 == 8 px, and never scales with canvas...
             obj.SetMarkerSize(self.style.markerSizepx / 8.0)
 
-    def add_plottable(self, obj, legend_title=''):
+    def add_plottable(self, obj, legend_title='', markerstyle=None, color=None):
         """
         Add a plottable objet to this figure. This function performs a
         copy of the passed object and assigns it a random name. Once
@@ -184,6 +184,8 @@ class Figure(object):
         """
         self._plottables.append({'p': asrootpy(obj.Clone(gen_random_name())),
                                  'legend_title': legend_title,
+                                 'markerstyle': markerstyle,
+                                 'color': color,
                                  })
 
     def import_plottables_from_canvas(self, canvas):
@@ -255,23 +257,24 @@ class Figure(object):
         is_first = True
         for i, pdic in enumerate(self._plottables):
             obj = pdic['p']
-            obj.markerstyle = 'circle'
-            try:
-                color = next(colors)
-            except StopIteration:
-                log.warning("Ran out of colors; defaulting to black")
-                color = 1
-            obj.color = color
-
+            if pdic.get('markerstyle', None):
+                obj.markerstyle = pdic['markerstyle']
+            else:
+                obj.markerstyle = 'circle'
+            if pdic.get('color', None):
+                obj.color = pdic['color']
+            else:
+                try:
+                    color = next(colors)
+                except StopIteration:
+                    log.warning("Ran out of colors; defaulting to black")
+                    color = 1
+                obj.color = color
             xaxis = obj.GetXaxis()
             yaxis = obj.GetYaxis()
 
             obj.SetMinimum(ymin)
             obj.SetMaximum(ymax)
-            yaxis.SetLimits(ymin, ymax)  # for unbinned data
-            yaxis.SetRangeUser(ymin, ymax)
-
-            xaxis.SetLimits(xmin, xmax)
 
             xaxis.SetTitle(self.xtitle)
             yaxis.SetTitle(self.ytitle)
@@ -285,12 +288,17 @@ class Figure(object):
             self._theme_plottable(obj)
 
             if isinstance(obj, ROOT.TGraph):
+                # SetLimit on a TH1 is simply messing up the lables of the axis to fuck over the user!
+                xaxis.SetLimits(xmin, xmax)
+                yaxis.SetLimits(ymin, ymax)  # for unbinned data
                 if is_first:
                     drawoption = 'APL'  # root think axis are over rated for graphs...
                 else:
                     drawoption = 'PLsame'
             elif isinstance(obj, ROOT.TH1):
                 obj.SetStats(0)
+                xaxis.SetRangeUser(xmin, xmax)
+                yaxis.SetRangeUser(ymin, ymax)
                 if is_first:
                     drawoption = ''
                 else:
@@ -308,6 +316,8 @@ class Figure(object):
             leg = self._create_legend()
             longest_label = 0
             for pdic in self._plottables:
+                if not pdic.get('legend_title', False):
+                    continue
                 leg.AddEntry(pdic['p'], pdic['legend_title'])
                 if len(pdic['legend_title']) > longest_label:
                     longest_label = len(pdic['legend_title'])
