@@ -178,7 +178,7 @@ def get_nMPI_vs_Nch(sums_est_dir):
     return profx
 
 
-def get_pT_distribution(results_est_dir, pids, nch_low, nch_up, normalized):
+def get_pT_distribution(results_est_dir, pids, nch_low, nch_up, normalized=False):
     """
     Parameters
     ----------
