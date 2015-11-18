@@ -3,10 +3,7 @@ This file provides functions to extract data from the "Sums" histogram. The func
 plottables.
 """
 
-import sys, os, string, random
-
 from rootpy import asrootpy
-from rootpy.plotting import HistStack, Canvas, Legend, Pad, Hist1D, Hist2D, Graph
 
 from post_utils import gen_random_name
 
@@ -83,28 +80,39 @@ def get_identified_vs_mult(h3d, pdg):
     return h
 
 
-def get_NchEst1_vs_NchEst2(sums, est1, est2):
+def get_correlation_histogram(sums, classifier1, classifier2):
     """
-    Returns the correlation histogram between estimator 1 and estimator two
+    Returns the correlation histogram between classifier 1 and 2
+
     Parameters
     ----------
     sums : TList
            Sums directory
-    est1 : str
+    classifier1 : str
            Name of estimator 1
-    est2 : str
+    classifier2 : str
            Name of estimator 2
     Returns
     -------
     Hist2D :
-            Hist2D with Nch est1 on the x- and Nch est2 on the y-axis_title
+        Hist2D with classifier1 on the x- and classifier2 on the y-axis_title
+
+    Raises
+    ------
+    ValueError :
+        If either of the classifiers was not found
+
     """
     if not isinstance(sums, ROOT.TList):
         raise TypeError("{} is not of type ROOT.TList".format(sums))
-    hist_name = "fcorr_thisNch_vs_refNch"
-    corr_hist = asrootpy(sums.FindObject(est2).FindObject(hist_name))
-    if not isinstance(corr_hist, ROOT.TH2):
-        raise ValueError("Correlation histogram with name {} not found".format(hist_name))
+    naming_pattern = "corr_this_with_{}"
+    try:
+        corr_hist = asrootpy(sums.FindObject(classifier1).FindObject(naming_pattern.format(classifier2)))
+    except TypeError:
+        # The first classifier was not found, raising TypeError when trying to find the 2nd one
+        raise ValueError("Classifier {} was not found in given list".format(classifier1))
+    if not corr_hist:
+        raise ValueError("Correlation histogram {} vs {} not found".format(classifier1, classifier2))
     return corr_hist
 
 
@@ -125,25 +133,8 @@ def get_PNch_vs_estmult(sums, est):
         raise TypeError("{} is not of type ROOT.TList".format(sums))
     # nasty hardcoded:
     ref_est = "EtaLt05"
-    corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est, est)
+    corr_hist = get_correlation_histogram(sums, est, ref_est)
     return asrootpy(corr_hist.ProjectionX(gen_random_name()))
-
-
-def get_nMPI_vs_Nch(sums_est_dir):
-    """
-    Parameters
-    ----------
-    sums_est_dir : TList
-        Estimator directory from Sums
-
-    Returns
-    -------
-    Profile :
-        Profile with N_ch on the xaxis and <nMPI> on the yaxis
-    """
-    nch_nmpi = sums_est_dir.FindObject("fNch_vs_nMPI")
-    profx = nch_nmpi.ProfileX()
-    return profx
 
 
 def get_pT_distribution(results_est_dir, pids, nch_low, nch_up, normalized=False):
@@ -184,9 +175,9 @@ def get_mean_nMPI(sums_est_dir, nch_low, nch_up):
     Parameters
     ----------
     sums_est_dir : TList
-                   List for a given estimator
+        List for a given estimator
     nch_low, nch_up : int
-           Lower and upper limit of Nch for which <nMPI> should be calculated
+        Lower and upper limit of Nch for which <nMPI> should be calculated
     Returns
     -------
     Float :

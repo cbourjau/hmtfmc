@@ -15,11 +15,10 @@ if len(sys.argv) != 2:
 
 from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log, collection
-from rootpy.plotting import Hist1D, Hist2D, Canvas, Legend
+from rootpy.plotting import Hist2D
 
-from post_data_extractors import get_dNdeta_in_mult_interval, get_identified_vs_mult,\
-    get_Nch_edges_for_percentile_edges, get_nMPI_vs_Nch,\
-    get_NchEst1_vs_NchEst2, get_PNch_vs_estmult,\
+from post_data_extractors import get_dNdeta_in_classifier_bin_interval, get_identified_vs_mult,\
+    get_correlation_histogram, get_PNch_vs_estmult,\
     get_meanpt_vs_estmult, get_pT_distribution, get_mean_nMPI
 from post_utils import \
     remap_x_values,\
@@ -29,7 +28,6 @@ from post_utils import \
     remove_points_with_x_err_gt_1NchRef
 
 from roofi import Figure, Styles
-from roofi.figure import get_color_generator
 
 
 def gen_random_name():
@@ -204,7 +202,8 @@ def _make_event_counters(f, sums, results_post):
     log.info("Creating event counters")
     for est_dir in get_est_dirs(sums):
         results_est_dir = results_post.__getattr__(est_dir.GetName())
-        corr = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
+        # Nasty, but just use a reference estimator here...
+        corr = get_correlation_histogram(sums, est_dir.GetName(), "EtaLt05")
         counter = asrootpy(corr.ProjectionX())
         counter.name = "event_counter"
         f.cd("MultEstimators/results_post/" + est_dir.GetName())
@@ -216,7 +215,6 @@ def _make_dNdeta(f, sums, results_post):
     log.info("Creating dN/deta bin in multiplicity")
     for est_dir in get_est_dirs(sums):
         results_est_dir = results_post.Get(est_dir.GetName())
-        h2d = asrootpy(est_dir.FindObject('feta_Nch'))
         event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
         fig = Figure()
@@ -495,7 +493,7 @@ def _make_PNch_plots(f, sums, results_post):
             fig_vs_estmult.ytitle = "P(N_{{ch}}^{{{}}})".format(est_name)
             fig_vs_refmult.ytitle = "P(N_{{ch}}^{{{}}})".format(ref_est_name)
 
-            corr_hist = get_NchEst1_vs_NchEst2(sums, ref_est_name, est_name)
+            corr_hist = get_correlation_histogram(sums, est_name, ref_est_name)
 
             # logic when dealing with fixed bins given in Nch:
             # ------------------------------------------------
@@ -920,7 +918,7 @@ def _plot_nMPI_vs_Nch(f, sums, results_post):
     summary_fig.plot.logy = True
 
     for est_dir in get_est_dirs(sums):
-        h_tmp = get_nMPI_vs_Nch(est_dir)
+        h_tmp = asrootpy(get_correlation_histogram(sums, est_dir.GetName(), "MPI").ProfileX())
         summary_fig.add_plottable(h_tmp, make_estimator_title(est_dir.GetName()))
 
     path = results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
