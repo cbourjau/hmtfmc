@@ -8,6 +8,7 @@ These plottables are then plotted with the plotting functions in plotting_util.p
 import sys
 import string
 import random
+from pprint import pprint
 
 if len(sys.argv) != 2:
     print "Usage: python ./post.py path_to_root_file.root"
@@ -604,8 +605,8 @@ def _make_pid_ratio_plots(f, sums, results_post):
     fig = Figure()
     fig.plot.ncolors = len(considered_ests)
     fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
-    #fig.plot.xmin = 0
-    #fig.plot.xmax = 40
+    # fig.plot.xmin = 0
+    # fig.plot.xmax = 40
 
     # Proton / pi_ch
 
@@ -758,7 +759,6 @@ def _make_pid_ratio_plots(f, sums, results_post):
     name = "_".join(pids1) + "_div_" + "_".join(pids2)
     fig.save_to_root_file(f, name, ratios_dir)
 
-
     # ######################################################################################
     # # vs Est mult
     # _plot_particle_ratios_vs_estmult(f, sums, results_post, ['321', '-321'], ['310'],
@@ -806,32 +806,31 @@ def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
         fig.save_to_root_file(f, "mean_pt", res_dir_str)
 
 
-def _plot_event_counter_with_shaded_perc_areas(f, results_post):
-    log.info("Broken: Root sucks! Creating shaded event counter with percentile regions")
-    return
-    for est_dir in get_est_dirs(results_post):
-        event_counter = asrootpy(getattr(est_dir, "event_counter"))
-        perc_edges = [1, .6, .4, .2, .1, .05, .025, 0.012, 0]
-        nch_edges = get_Nch_edges_for_percentile_edges(perc_edges, event_counter)
-        c = Canvas(name="event_counter_with_perc")
-        leg = Legend(len(nch_edges) - 1)
-        copies = []
-        colors = get_color_generator(ncolors=10)
-        # Draw the hist once
-        event_counter.Draw()
-        for nch_low, nch_up in zip(nch_edges[:-1], nch_edges[1:]):
-            copies.append(event_counter.Clone(gen_random_name()))
-            copies[-1].xaxis.SetRangeUser(nch_low, nch_up)
-            copies[-1].SetFillStyle(1001)
-            copies[-1].color = next(colors)
-            copies[-1].xaxis.title = "N_{ch}"
-            copies[-1].yaxis.title = "counts"
-            leg.AddEntry(copies[-1], "{}-{}%".format(str(nch_low), str(nch_up)))
-            copies[-1].Draw('sameHist')
-            break
-        leg.Draw()
-        est_dir.cd()
-        c.Write()
+# def _plot_event_counter_with_shaded_perc_areas(f, results_post):
+#     log.info("Broken: Root sucks! Creating shaded event counter with percentile regions")
+#     return
+#     for est_dir in get_est_dirs(results_post):
+#         event_counter = asrootpy(getattr(est_dir, "event_counter"))
+#         nch_edges = get_Nch_edges_for_percentile_edges(perc_edges, event_counter)
+#         c = Canvas(name="event_counter_with_perc")
+#         leg = Legend(len(nch_edges) - 1)
+#         copies = []
+#         colors = get_color_generator(ncolors=10)
+#         # Draw the hist once
+#         event_counter.Draw()
+#         for nch_low, nch_up in zip(nch_edges[:-1], nch_edges[1:]):
+#             copies.append(event_counter.Clone(gen_random_name()))
+#             copies[-1].xaxis.SetRangeUser(nch_low, nch_up)
+#             copies[-1].SetFillStyle(1001)
+#             copies[-1].color = next(colors)
+#             copies[-1].xaxis.title = "N_{ch}"
+#             copies[-1].yaxis.title = "counts"
+#             leg.AddEntry(copies[-1], "{}-{}%".format(str(nch_low), str(nch_up)))
+#             copies[-1].Draw('sameHist')
+#             break
+#         leg.Draw()
+#         est_dir.cd()
+#         c.Write()
 
 
 def _plot_dNdpT(f, sums, results_post):
@@ -952,7 +951,8 @@ if __name__ == "__main__":
     # Rebin multiplicity with factor:
     rebin_mult = 10
     ref_ests = ['EtaLt05', ]
-    considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C']  # ,'ZDC']
+    considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C', 'ZDC',
+                       'nMPI', 'Q2', 'spherocity', 'sphericity']
 
     reset_functions = [
         _delete_results_dir,
@@ -962,13 +962,13 @@ if __name__ == "__main__":
         # _make_correlation_plots,  # require nTuples
         _make_dNdeta,
         _make_PNch_plots,
-        _plot_nMPI_vs_Nch,
-        _make_mult_vs_pt_plots,
-        _plot_meanpt_vs_ref_mult_for_pids,
-        _pt_distribution_ratios,  # needs updated results_post!
-        # _make_dNdeta_mb_ratio_plots,
-        _make_pid_ratio_plots,
-        _plot_dNdpT,
+        #_plot_nMPI_vs_Nch,
+        #_make_mult_vs_pt_plots,
+        #_plot_meanpt_vs_ref_mult_for_pids,
+        #_pt_distribution_ratios,  # needs updated results_post!
+        ## _make_dNdeta_mb_ratio_plots,
+        #_make_pid_ratio_plots,
+        #_plot_dNdpT,
     ]
 
     def delete_lists(l):
@@ -1017,12 +1017,13 @@ if __name__ == "__main__":
             results_post = f.MultEstimators.results_post
             func(f, sums, results_post)
             delete_lists(sums)
+
     # the following two need extra parameters
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
-        _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=False)
+        # _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=False)
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
-        _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=True)
+        # _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=True)
