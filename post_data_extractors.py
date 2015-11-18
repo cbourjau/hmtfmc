@@ -13,44 +13,6 @@ from post_utils import gen_random_name
 import ROOT
 
 
-def get_Nch_edges_for_percentile_edges(percentile_edges, event_counter):
-    """
-    Returns the bin edges so that each bin reprecents the given percentile edges
-    Parameters
-    ----------
-    percentile_edges : list
-                       Edges in percentiles; high percentile comes first
-    event_counter : Hist1D
-                    Event counter histogram with Nch (in estimator region, binwidth=1) on the x-axis
-    Returns
-    -------
-    list :
-           Edges in Nch of the estimator, first edge is lowest in Nch, last edge the highest in Nch
-    """
-    nch_bins = event_counter.GetXaxis().GetNbins()
-    n_total = event_counter.Integral(1, nch_bins)
-    accu_counts = [0] + [event_counter.Integral(1, binidx) for binidx in range(1, nch_bins)]
-    # percentage of events having nch=this_idx or more Nch; hence starts at 1.0 at idx=0 and decreases
-    # but the floats might not equal 0.0!!!
-    decumulative_percents = [1 - (accu_count / float(n_total)) for accu_count in accu_counts]
-    nch_edges = []  # int(round(n_total - n_total * perc)) for perc in percentile_edges]
-    for perc in percentile_edges:
-        # find the idx where the given percentile edge would fit into the decumulative list
-        for idx, decum_perc in enumerate(decumulative_percents):
-            if perc > decum_perc:
-                # this should pick up 1.0
-                nch_edges.append(idx - 1)
-                break
-        else:
-            # the loop did not break, then the last bin is _probably_ 0.0?
-            if perc == 0.0:
-                nch_edges.append(nch_bins - 1)
-            else:
-                # something is fishy!
-                raise IndexError("Something is fishy here!!!")
-    return nch_edges
-
-
 def get_meanpt_vs_estmult(resutlts_est_dir, pids):
     """
     Create a 1Dprofile for the given pids and the given estimator name
@@ -64,30 +26,36 @@ def get_meanpt_vs_estmult(resutlts_est_dir, pids):
     return profx
 
 
-def get_dNdeta_in_mult_interval(h2d, event_counter, mult_interval):
+def get_dNdeta_in_classifier_bin_interval(sums_classifier_dir, event_counter, classifier_bin_interval):
     """
-    Create dN/deta stack for various multiplicity bins from given 2D histogram. If `with_mb` is `True`,
-    also add dNdeta for minimum bias to the stack.
+    Get dN/deta for a given interval of classifier bin indices
     Parameters
     ----------
-    h2d : Hist2D
-          feta_Nch from the Sums list
+    sums_classifier_dir : TList
+        Sums directory of a classifier
     event_counter : Hist1D
-                    Event counter histogram used for scaling
-    mult_interval : list
-               Nch bin edges
+        Event counter histogram with the classifier value on the xaxis
+    classifier_bin_interval : list
+        classifier value bin edges given as bin indices
     Returns
     -------
     Hist1D
     """
-    h2d.yaxis.set_range(mult_interval[0] + 1, mult_interval[1] + 1)
+    hist_name = "eta_classifier_{}".format(sums_classifier_dir.GetName())
+    h2d = asrootpy(sums_classifier_dir.FindObject(hist_name))
+    if not h2d:
+        raise ValueError("Could not find histogram {}".format(hist_name))
+    h2d.yaxis.set_range(classifier_bin_interval[0], classifier_bin_interval[1])
     h = asrootpy(h2d.projection_x(gen_random_name()))
-    h.title = "{} - {} %".format(100 * mult_interval[0], 100 * mult_interval[1])
+    h.title = "{} - {} %".format(100 * classifier_bin_interval[0], 100 * classifier_bin_interval[1])
     # scale by the number of events in this mult_interval and bin width
     try:
-        h.Scale(1.0 / float(event_counter.Integral(mult_interval[0] + 1, mult_interval[1] + 1)), "width")
+        h.Scale((1.0 /
+                 float(event_counter.Integral(classifier_bin_interval[0], classifier_bin_interval[1]))),
+                "width")
     except ZeroDivisionError:
-        raise ZeroDivisionError("Consider increasing the nch interval to avoid this")
+        # If this happens, we have empty bins in dN/deta! The stats must suck!
+        raise ZeroDivisionError("Your statistics are terrible! Consider increasing the classifier value interval to avoid this")
     return h
 
 

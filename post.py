@@ -68,7 +68,70 @@ kOMEGAPLUS = str(-3334)
 
 # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
 mean_mult_cutoff_factor = 4
-perc_bins = [(1, 0.7), (.5, .4), (.1, .05), (0.001, 0.0)]
+std_perc_bins = [(1, 0.7), (.5, .4), (.1, .05), (0.001, 0.0)]
+PERC_BINS = {
+    'EtaLt05': std_perc_bins,
+    'EtaLt08': std_perc_bins,
+    'EtaLt15': std_perc_bins,
+    'Eta08_15': std_perc_bins,
+    'V0M': std_perc_bins,
+    'V0A': std_perc_bins,
+    'V0C': std_perc_bins,
+    'ZDC': [(1, 0.7), (.7, .3), (.3, .05), (0.001, 0.0)],
+    'nMPI': [(1, 0.0)],  # [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+    'Q2': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+    'spherocity': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+    'sphericity': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+}
+
+
+def percentile_bin_to_binidx_bin(percentile_bin, event_counter):
+    """
+    Converts a given percentile interval (eg. (.5, .4)) to an interval of bin numbers of the given
+    event_counter histogram.
+
+    Parameters
+    ----------
+    percentile_bin : tuple
+        Two percentiles, each withing 0-1. Needs to be decreasing
+    event_counter : Hist1D
+        Distribution of events over a classifier value
+
+    Returns
+    -------
+    tuple :
+        two bin numbers representing the given percentile. The first bin is inclusive, the second exclusive.
+        Ie. The bin numbers can be used directly in SetRange
+
+    Raises
+    ------
+    ValueError :
+        The percentile specifies a range which is not found in the given event_counter histogram. It might be too
+        narrow.
+    """
+    nbins = event_counter.GetXaxis().GetNbins()
+    ntotal_events = event_counter.Integral(1, nbins)  # .Integral is a closed interval, as far as I can tell...
+    # fraction of events with greater or equal classifier values; hence decreasing values
+    frac_events_with_geq_classifier_value = [event_counter.Integral(binidx, nbins) / float(ntotal_events)
+                                             for binidx in range(1, nbins + 1)]
+    # small checks:
+    if frac_events_with_geq_classifier_value[0] != 1:
+        assert(0)
+    if len(frac_events_with_geq_classifier_value) != nbins:
+        assert(0)
+
+    # produce a list of bools, the first and last True are the first and last bin index
+    fraction_is_in_percentile_interval = lambda fraction: percentile_bin[0] >= fraction >= percentile_bin[1]
+    bin_is_in_percentile_interval = map(fraction_is_in_percentile_interval, frac_events_with_geq_classifier_value)
+    # get the indices of the elements that are True, sorry, this is a bit ugly
+    indices_of_bins_in_percentile_interval = [i for i, b in enumerate(bin_is_in_percentile_interval) if b]
+    # return the first and last binidx of the bins in the percentile interval; +1 for root binidx shit
+    try:
+        return (indices_of_bins_in_percentile_interval[0] + 1, indices_of_bins_in_percentile_interval[-1] + 1)
+    except IndexError:
+        print "percentiles: "
+        print frac_events_with_geq_classifier_value
+        raise ValueError("The given percentile interval did not match any bins in the given event_counter histogram")
 
 
 def get_est_dirs(sums):
@@ -164,10 +227,11 @@ def _make_dNdeta(f, sums, results_post):
         fig_mb_ratio.ytitle = 'dN/d#eta (1/MB)'
         fig.legend.title = fig_mb_ratio.legend.title = make_estimator_title(est_dir.GetName())
         fig.plot.ymin = fig_mb_ratio.plot.ymin = 0
-        dNdeta_mb = get_dNdeta_in_mult_interval(h2d, event_counter, [0, 250])
-        for nch_int, perc_int in zip(NCH_EDGES[est_dir.GetName()], perc_bins):
-            title = "{}%-{}%".format(perc_int[0] * 100, perc_int[1] * 100)
-            dNdeta_in_interval = get_dNdeta_in_mult_interval(h2d, event_counter, nch_int)
+        dNdeta_mb = get_dNdeta_in_classifier_bin_interval(est_dir, event_counter,
+                                                          [1, event_counter.GetXaxis().GetNbins()])
+        for cls_bin, perc_bin in zip(NCH_EDGES[est_dir.GetName()], PERC_BINS[est_dir.GetName()]):
+            title = "{}%-{}%".format(perc_bin[1] * 100, perc_bin[0] * 100)
+            dNdeta_in_interval = get_dNdeta_in_classifier_bin_interval(est_dir, event_counter, cls_bin)
             fig.add_plottable(dNdeta_in_interval, legend_title=title)
             fig_mb_ratio.add_plottable(dNdeta_in_interval / dNdeta_mb, legend_title=title)
         # add MB as well:
@@ -229,7 +293,8 @@ def _pt_distribution_ratios(f, sums, results_post):
             get_pT_distribution(est_dir, [kPI0], nch_low, nch_up)
             for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
         ]
-        perc_titles = ["{}%-{}%".format(perc_bin[0] * 100, perc_bin[1] * 100) for perc_bin in perc_bins]
+        perc_titles = ["{}%-{}%".format(perc_bin[0] * 100, perc_bin[1] * 100)
+                       for perc_bin in PERC_BINS[est_dir.GetName()]]
 
         fig.delete_plottables()
         name = "proton_over_pich__vs__pt"
@@ -444,13 +509,12 @@ def _make_PNch_plots(f, sums, results_post):
             # logic when dealing with percentile bins:
             # ----------------------------------------
             # event_counter_est = asrootpy(getattr(res_est_dir, "event_counter"))
-            nch_bins_est = NCH_EDGES[est_name]
-            nch_bins_ref = NCH_EDGES[ref_est_name]
+
             legend_tmpl = "{}% - {}%"
             fig_vs_estmult.legend.title = "Selected in {}".format(make_estimator_title(ref_est_name))
             fig_vs_refmult.legend.title = "Selected in {}".format(make_estimator_title(est_name))
             # WARNING: the following needs tweeking when going back to fixed N_ch bins!
-            for nch_bin, perc_bin in zip(nch_bins_ref, perc_bins):
+            for nch_bin, perc_bin in zip(NCH_EDGES[ref_est_name], PERC_BINS[ref_est_name]):
                 # vs est_mult:
                 corr_hist.xaxis.SetRange(0, 0)  # reset x axis
                 corr_hist.yaxis.SetRange(nch_bin[0] + 1, nch_bin[1] + 1)  # mind the crackpot binning!
@@ -461,7 +525,7 @@ def _make_PNch_plots(f, sums, results_post):
                 else:
                     log.info("No charged particles in {}*100 percentile bin of estimator {}. This should not happen".
                              format(perc_bin, ref_est_name))
-            for nch_bin, perc_bin in zip(nch_bins_est, perc_bins):
+            for nch_bin, perc_bin in zip(NCH_EDGES[est_name], PERC_BINS[est_name]):
                 # vs ref_mult:
                 corr_hist.yaxis.SetRange(0, 0)  # reset y axis
                 corr_hist.xaxis.SetRange(*nch_bin)
@@ -789,11 +853,9 @@ def _plot_dNdpT(f, sums, results_post):
         charged_particles = [kPIMINUS, kPIPLUS, kKMINUS, kKPLUS, kPROTON, kANTIPROTON,
                              kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
 
-        event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
-        for perc_bin_up, perc_bin_low in perc_bins:
-            nch_low, nch_up = get_Nch_edges_for_percentile_edges([perc_bin_up, perc_bin_low], event_counter)
-            hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
-            hists[-1].title = "{}%-{}%".format(perc_bin_up * 100, perc_bin_low * 100)
+        for perc_bin, classifier_bin in zip(PERC_BINS[sums_est_dir.GetName()], NCH_EDGES[sums_est_dir.GetName()]):
+            hists.append(get_pT_distribution(res_est_dir, charged_particles, *classifier_bin, normalized=False))
+            hists[-1].title = "{}%-{}%".format(perc_bin[1] * 100, perc_bin[0] * 100)
 
         # add MB last to be consistent with colors in other plots
         nch_low, nch_up = 0, 250
@@ -825,7 +887,6 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
         else:
             fig.ytitle = "#frac{dN^{HM}}{dp_{T}} / #frac{dN^{MB}}{dp_{T}}"
 
-        event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
         charged_particles = [kPIMINUS, kPIPLUS, kKMINUS, kKPLUS, kPROTON, kANTIPROTON,
                              kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
 
@@ -834,15 +895,13 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
         pt_dist_mb = get_pT_distribution(res_est_dir, charged_particles, nch_low_mb, nch_up_mb, normalized=False)
         mean_nmpi_mb = get_mean_nMPI(sums_est_dir, nch_low_mb, nch_up_mb)
 
-        event_counter = asrootpy(getattr(res_est_dir, "event_counter"))
-        for perc_bin_up, perc_bin_low in perc_bins:
-            nch_low, nch_up = get_Nch_edges_for_percentile_edges([perc_bin_up, perc_bin_low], event_counter)
+        for perc_bin, classifier_bin in zip(PERC_BINS[sums_est_dir.GetName()], NCH_EDGES[sums_est_dir.GetName()]):
             # get the pt distribution in this Nch interval
             pt_dist_in_interval = get_pT_distribution(res_est_dir, charged_particles,
-                                                      nch_low, nch_up, normalized=False)
-            title = "{}%-{}%".format(perc_bin_up * 100, perc_bin_low * 100)
+                                                      *classifier_bin, normalized=False)
+            title = "{}%-{}%".format(perc_bin[1] * 100, perc_bin[0] * 100)
             if scale_nMPI:
-                mean_nmpi_hm = get_mean_nMPI(sums_est_dir, nch_low, nch_up)
+                mean_nmpi_hm = get_mean_nMPI(sums_est_dir, *classifier_bin)
                 fig.add_plottable((pt_dist_in_interval / pt_dist_mb) * (mean_nmpi_mb / mean_nmpi_hm), title)
                 name = "pt_hm_div_pt_mb_scaled_nMPI"
             else:
@@ -942,8 +1001,16 @@ if __name__ == "__main__":
         results_post = f.MultEstimators.results_post
         for est_dir in get_est_dirs(results_post):
             event_counter = est_dir.event_counter
-            NCH_EDGES[est_dir.GetName()] = [
-                get_Nch_edges_for_percentile_edges(perc_bin, event_counter) for perc_bin in perc_bins]
+            try:
+                NCH_EDGES[est_dir.GetName()] = [percentile_bin_to_binidx_bin(perc_bin, event_counter)
+                                                for perc_bin in PERC_BINS[est_dir.GetName()]]
+            except ValueError, e:
+                print "Error occured for classifier " + est_dir.GetName()
+                print "Desired percentile bins: "
+                print PERC_BINS[est_dir.GetName()]
+                raise e
+        print "Bin edges for given percentile bins"
+        pprint(NCH_EDGES)
         delete_lists(sums)
 
     for func in plotting_functions:
