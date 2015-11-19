@@ -52,6 +52,11 @@ class Test_draw_to_canvas(unittest.TestCase):
         f = Figure()
         self.assertRaises(IndexError, f.draw_to_canvas)
 
+    def test_add_graph_without_points(self):
+        gr = Graph()
+        f = Figure()
+        self.assertRaises(ValueError, f.add_plottable, gr)
+
     def test_draw_to_canvas_no_legend(self):
         f = Figure()
         h = Hist1D(10, 0, 10)

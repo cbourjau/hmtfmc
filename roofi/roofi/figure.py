@@ -181,7 +181,16 @@ class Figure(object):
             A root plottable object
         legend_title : string
             Title for this plottable as shown in the legend
+
+        Raises
+        ------
+        ValueError :
+            If the passed variable does not make it possible to deduce a region to plot.
+            Ie. a graph without points_to_remov
         """
+        if isinstance(obj, ROOT.TGraph):
+            if obj.GetN() == 0:
+                raise ValueError("The given TGraph does not contain any points and cannot be plotted")
         self._plottables.append({'p': asrootpy(obj.Clone(gen_random_name())),
                                  'legend_title': legend_title,
                                  'markerstyle': markerstyle,
