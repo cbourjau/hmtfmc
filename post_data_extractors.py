@@ -137,39 +137,40 @@ def get_PNch_vs_estmult(sums, est):
     return asrootpy(corr_hist.ProjectionX(gen_random_name()))
 
 
-def get_pT_distribution(results_est_dir, pids, nch_low, nch_up, normalized=False):
+def get_pT_distribution(results_est_dir, pids, classifier_bin_interval, normalized=False):
     """
     Parameters
     ----------
     results_est_dir : TDirectory
-               Directory of a given estimator
+        Directory of a given estimator
     pids : list
-           List of strings denoting requested pids
-    nch_low, nch_up : int
-           Lower and upper limit of Nch for which the p_T distribution should be made
+        List of strings denoting requested pids
+    classifier_bin_interval : tuple
+        Lower and upper limit of classifier value for which the p_T distribution should be made.
+        This value needs to be given as bin indices!
     normalized : Boolean
-           Should the distribution be normalized to yield P(p_T)?
+        Should the distribution be normalized to yield P(p_T)?
     Returns
     -------
     Hist1D :
-            Histogram P(p_T)
+        Histogram P(p_T)
     """
     mult_pt_hists = []
     for pid in pids:
         mult_pt_hists.append(getattr(results_est_dir.mult_pt, pid))
     summed_mult_pt = sum(mult_pt_hists)
-    summed_mult_pt.xaxis.SetRangeUser(nch_low, nch_up)
+    summed_mult_pt.xaxis.SetRange(*classifier_bin_interval)
     projy = asrootpy(summed_mult_pt.ProjectionY())
     projy.name = gen_random_name()
     event_counter = asrootpy(results_est_dir.event_counter)
-    # Scale by the number of events in the interval; N_ch == bin - 1
-    projy.Scale(1.0 / event_counter.Integral(nch_low, nch_up))
+    # Scale by the number of events in the interval;
+    projy.Scale(1.0 / event_counter.Integral(*classifier_bin_interval))
     if normalized:
         projy.Scale(1.0 / projy.Integral())
     return projy
 
 
-def get_mean_nMPI(sums_est_dir, nch_low, nch_up):
+def get_mean_nMPI(sums_est_dir, classifier_bin_interval):
     """
     Get the mean nMPI of events in a given N_ch interval
     Parameters
@@ -183,6 +184,6 @@ def get_mean_nMPI(sums_est_dir, nch_low, nch_up):
     Float :
            <nMPI>
     """
-    nch_vs_nmpi = asrootpy(sums_est_dir.FindObject("fNch_vs_nMPI"))
-    nch_vs_nmpi.xaxis.SetRangeUser(nch_low, nch_up)
+    nch_vs_nmpi = asrootpy(sums_est_dir.FindObject("corr_this_with_nMPI"))
+    nch_vs_nmpi.xaxis.SetRange(*classifier_bin_interval)
     return nch_vs_nmpi.GetMean(2)

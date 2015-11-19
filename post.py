@@ -169,10 +169,10 @@ def _get_graphs_particle_ratios_vs_refmult(f, sums, results_post, pids1, pids2, 
     This function depends on the correlation histograms to be present in f
     """
     ratios = []
+    ref_classifier = 'EtaLt05'
     for est_dir in get_est_dirs(sums):
-        h3d = asrootpy(est_dir.FindObject("fNch_pT_pid"))
-        corr_hist = asrootpy(est_dir.FindObject("fcorr_thisNch_vs_refNch"))
-
+        h3d = asrootpy(est_dir.FindObject("classifier_pT_PID_{}".format(est_dir.GetName())))
+        corr_hist = get_correlation_histogram(sums, est_dir.GetName(), ref_classifier)
         pids1_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids1])
         pids2_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids2])
 
@@ -265,32 +265,32 @@ def _pt_distribution_ratios(f, sums, results_post):
 
         mult_binned_pt_dists = {}
         mult_binned_pt_dists['proton'] = [
-            get_pT_distribution(est_dir, [kANTIPROTON, kPROTON], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kANTIPROTON, kPROTON], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         mult_binned_pt_dists['pi_ch'] = [
-            get_pT_distribution(est_dir, [kPIMINUS, kPIPLUS], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kPIMINUS, kPIPLUS], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         mult_binned_pt_dists['xi'] = [
-            get_pT_distribution(est_dir, [kANTIXI, kXI], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kANTIXI, kXI], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         mult_binned_pt_dists['omega'] = [
-            get_pT_distribution(est_dir, [kOMEGAMINUS, kOMEGAPLUS], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kOMEGAMINUS, kOMEGAPLUS], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         mult_binned_pt_dists['lambda'] = [
-            get_pT_distribution(est_dir, [kANTILAMBDA, kLAMBDA], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kANTILAMBDA, kLAMBDA], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         mult_binned_pt_dists['k0s'] = [
-            get_pT_distribution(est_dir, [kK0S], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kK0S], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         mult_binned_pt_dists['pi0'] = [
-            get_pT_distribution(est_dir, [kPI0], nch_low, nch_up)
-            for nch_low, nch_up in NCH_EDGES[est_dir.GetName()]
+            get_pT_distribution(est_dir, [kPI0], classifier_bin_interval)
+            for classifier_bin_interval in NCH_EDGES[est_dir.GetName()]
         ]
         perc_titles = ["{}%-{}%".format(perc_bin[0] * 100, perc_bin[1] * 100)
                        for perc_bin in PERC_BINS[est_dir.GetName()]]
@@ -516,7 +516,7 @@ def _make_PNch_plots(f, sums, results_post):
             for nch_bin, perc_bin in zip(NCH_EDGES[ref_est_name], PERC_BINS[ref_est_name]):
                 # vs est_mult:
                 corr_hist.xaxis.SetRange(0, 0)  # reset x axis
-                corr_hist.yaxis.SetRange(nch_bin[0] + 1, nch_bin[1] + 1)  # mind the crackpot binning!
+                corr_hist.yaxis.SetRange(nch_bin[0], nch_bin[1])
                 h_vs_est = asrootpy(corr_hist.ProjectionX(gen_random_name()))
                 if h_vs_est.Integral() > 0:
                     h_vs_est.Scale(1.0 / h_vs_est.Integral())
@@ -545,7 +545,7 @@ def _make_PNch_plots(f, sums, results_post):
 
 
 def _make_mult_vs_pt_plots(f, sums, results_post):
-    log.info("Makeing 2D mult pt plots for each particle kind")
+    log.info("Makeing 2D  pt plots for each particle kind")
     for est_dir in get_est_dirs(sums):
         path = (results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
                 + "/" + est_dir.GetName()
@@ -556,7 +556,7 @@ def _make_mult_vs_pt_plots(f, sums, results_post):
             pass
         f.cd(path)
 
-        h3d = asrootpy(est_dir.FindObject('fNch_pT_pid'))
+        h3d = asrootpy(est_dir.FindObject('classifier_pT_PID_{}'.format(est_dir.GetName())))
         # loop through all particle kinds:
         nPIDs = h3d.zaxis.GetNbins()
         for ibin in range(1, nPIDs + 1):
@@ -771,7 +771,7 @@ def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
         if sums_est_dir.GetName() != res_est_dir.GetName():
             raise IndexError("Order of estimator dirs is different in sums and results_post")
         res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
-        corr_hist = asrootpy(sums_est_dir.FindObject("fcorr_thisNch_vs_refNch"))
+        corr_hist = get_correlation_histogram(sums, sums_est_dir.GetName(), "EtaLt05")
         fig = Figure()
         fig.plot.palette = 'root'
         fig.plot.ncolors = 7
@@ -782,6 +782,9 @@ def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
         fig.ytitle = "<p_{T}>"
         fig.xtitle = "N_{ch}|_{|#eta|<0.5}"
         fig.legend.title = make_estimator_title(sums_est_dir.GetName())
+        # Get the <pT> per classifier bin; then, re-map the classifier value to the reference classifier (eg EtaLt05)
+        # This might not make a lot of sense, actually. Maybe it would be much more telling if I were to
+        # put the percentile bins on the x-axis? As in the highest 1% of that classifier has a <pT> of ...
         graphs = []
         graphs.append(remap_x_values(get_meanpt_vs_estmult(res_est_dir, [kPI0, kPIMINUS, kPIPLUS]), corr_hist))
         graphs[-1].title = "#pi"
@@ -851,12 +854,12 @@ def _plot_dNdpT(f, sums, results_post):
                              kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
 
         for perc_bin, classifier_bin in zip(PERC_BINS[sums_est_dir.GetName()], NCH_EDGES[sums_est_dir.GetName()]):
-            hists.append(get_pT_distribution(res_est_dir, charged_particles, *classifier_bin, normalized=False))
+            hists.append(get_pT_distribution(res_est_dir, charged_particles, classifier_bin, normalized=False))
             hists[-1].title = "{}%-{}%".format(perc_bin[1] * 100, perc_bin[0] * 100)
 
-        # add MB last to be consistent with colors in other plots
-        nch_low, nch_up = 0, 250
-        hists.append(get_pT_distribution(res_est_dir, charged_particles, nch_low, nch_up, normalized=False))
+        # add MB last to be consistent with colors in other plots; the very first and very last bin we look at
+        classifier_bin_mb = (NCH_EDGES[sums_est_dir.GetName()][0][0], NCH_EDGES[sums_est_dir.GetName()][-1][-1])
+        hists.append(get_pT_distribution(res_est_dir, charged_particles, classifier_bin_mb, normalized=False))
         hists[-1].title = "MB"
 
         # scale by bin width
@@ -888,17 +891,17 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
                              kLAMBDA, kANTILAMBDA, kXI, kANTIXI, kOMEGAMINUS, kOMEGAPLUS]
 
         # get the MB distribution which will be used to devide the nch-binned distributions
-        nch_low_mb, nch_up_mb = 0, 250
-        pt_dist_mb = get_pT_distribution(res_est_dir, charged_particles, nch_low_mb, nch_up_mb, normalized=False)
-        mean_nmpi_mb = get_mean_nMPI(sums_est_dir, nch_low_mb, nch_up_mb)
+        classifier_bin_mb = (NCH_EDGES[sums_est_dir.GetName()][0][0], NCH_EDGES[sums_est_dir.GetName()][-1][-1])
+        pt_dist_mb = get_pT_distribution(res_est_dir, charged_particles, classifier_bin_mb, normalized=False)
+        mean_nmpi_mb = get_mean_nMPI(sums_est_dir, classifier_bin_mb)
 
         for perc_bin, classifier_bin in zip(PERC_BINS[sums_est_dir.GetName()], NCH_EDGES[sums_est_dir.GetName()]):
             # get the pt distribution in this Nch interval
             pt_dist_in_interval = get_pT_distribution(res_est_dir, charged_particles,
-                                                      *classifier_bin, normalized=False)
+                                                      classifier_bin, normalized=False)
             title = "{}%-{}%".format(perc_bin[1] * 100, perc_bin[0] * 100)
             if scale_nMPI:
-                mean_nmpi_hm = get_mean_nMPI(sums_est_dir, *classifier_bin)
+                mean_nmpi_hm = get_mean_nMPI(sums_est_dir, classifier_bin)
                 fig.add_plottable((pt_dist_in_interval / pt_dist_mb) * (mean_nmpi_mb / mean_nmpi_hm), title)
                 name = "pt_hm_div_pt_mb_scaled_nMPI"
             else:
@@ -963,12 +966,12 @@ if __name__ == "__main__":
         _make_dNdeta,
         _make_PNch_plots,
         #_plot_nMPI_vs_Nch,
-        #_make_mult_vs_pt_plots,
-        #_plot_meanpt_vs_ref_mult_for_pids,
-        #_pt_distribution_ratios,  # needs updated results_post!
+        _make_mult_vs_pt_plots,
+        _plot_meanpt_vs_ref_mult_for_pids,
+        _pt_distribution_ratios,  # needs updated results_post!
         ## _make_dNdeta_mb_ratio_plots,
-        #_make_pid_ratio_plots,
-        #_plot_dNdpT,
+        _make_pid_ratio_plots,
+        _plot_dNdpT,
     ]
 
     def delete_lists(l):
@@ -1022,7 +1025,7 @@ if __name__ == "__main__":
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
-        # _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=False)
+        _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=False)
     with root_open(sys.argv[1], 'update') as f:
         sums = f.MultEstimators.Sums
         results_post = f.MultEstimators.results_post
