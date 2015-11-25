@@ -10,10 +10,6 @@ import string
 import random
 from pprint import pprint
 
-if len(sys.argv) != 2:
-    print "Usage: python ./post.py path_to_root_file.root"
-    quit()
-
 from rootpy.io import root_open
 from rootpy import asrootpy, ROOT, log, collection
 from rootpy.plotting import Hist2D
@@ -138,7 +134,8 @@ def get_est_dirs(sums):
 
 
 def _plot_particle_ratios_vs_estmult(f, sums, results_post, pids1, pids2, scale=None, ytitle=''):
-    ratio_vs_estmult_dir = 'MultEstimators/results_post/pid_ratios_vs_estmult'
+    ratio_vs_estmult_dir = (results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
+                            + '/pid_ratios_vs_estmult')
     fig = Figure()
     if not ytitle:
         fig.ytitle = ", ".join(pids1) + " / " + ", ".join(pids2)
@@ -207,7 +204,8 @@ def _make_event_counters(f, sums, results_post):
         corr = get_correlation_histogram(sums, est_dir.GetName(), "EtaLt05")
         counter = asrootpy(corr.ProjectionX())
         counter.name = "event_counter"
-        f.cd("MultEstimators/results_post/" + est_dir.GetName())
+        path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
+        f.cd(path)
         results_est_dir.WriteTObject(counter)
 
 
@@ -247,10 +245,10 @@ def _pt_distribution_ratios(f, sums, results_post):
     # create particle ratio vs pT plots
 
     log.info("Computing histograms vs pt")
-
+    results_path = results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
     # Loop over all estimators in the Sums list:
     for est_dir in get_est_dirs(results_post):
-        dirname = 'MultEstimators/results_post/{}/pid_ratios/'.format(est_dir.GetName())
+        dirname = '{}/{}/pid_ratios/'.format(results_path, est_dir.GetName())
 
         # event_counter = asrootpy(getattr(results_post, est_dir.GetName()).event_counter)
 
@@ -537,7 +535,7 @@ def _make_PNch_plots(f, sums, results_post):
                         "No charged particles in {}*100 percentile bin of estimator {}. This should not happen".
                         format(perc_bin, est_name))
 
-            path = results_post.GetPath().split(":")[1] + "/" + est_name  # file.root:/internal/root/path
+            path = res_est_dir.GetPath().split(":")[1]
             # vs est_mult
             fig_vs_estmult.save_to_root_file(f, "PNchEst_binned_in_Nch{}".format(ref_est_name), path)
             # vs est_mult
@@ -569,7 +567,7 @@ def _make_mult_vs_pt_plots(f, sums, results_post):
 def _make_correlation_plots(f, sums, results_post):
     # Make correlations between estimators
     log.info("Correlating N_ch of each estimator")
-    corr_dir = 'MultEstimators/results_post/correlations'
+    corr_dir = results_post.GetPath().split(":")[1] + '/correlations'
     try:
         f.mkdir(corr_dir, recurse=True)
     except:
@@ -601,7 +599,7 @@ def _make_correlation_plots(f, sums, results_post):
 
 def _make_pid_ratio_plots(f, sums, results_post):
     log.info("Creating plots vs refmult")
-    ratios_dir = 'MultEstimators/results_post/pid_ratios_vs_refmult'
+    ratios_dir = results_post.GetPath().split(":")[1] + '/pid_ratios_vs_refmult'
     fig = Figure()
     fig.plot.ncolors = len(considered_ests)
     fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
@@ -770,7 +768,7 @@ def _plot_meanpt_vs_ref_mult_for_pids(f, sums, results_post):
     for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
         if sums_est_dir.GetName() != res_est_dir.GetName():
             raise IndexError("Order of estimator dirs is different in sums and results_post")
-        res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
+        res_dir_str = res_est_dir.GetPath().split(":")[1]
         corr_hist = get_correlation_histogram(sums, sums_est_dir.GetName(), "EtaLt05")
         fig = Figure()
         fig.plot.palette = 'root'
@@ -841,7 +839,7 @@ def _plot_dNdpT(f, sums, results_post):
     for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
         if sums_est_dir.GetName() != res_est_dir.GetName():
             raise IndexError("Order of estimator dirs is different in sums and results_post")
-        res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
+        res_dir_str = res_est_dir.GetPath().split(":")[1]
         fig = Figure()
         fig.plot.palette = 'colorblind'
         # fig.plot.ncolors = 5
@@ -875,7 +873,7 @@ def _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI):
     for sums_est_dir, res_est_dir in zip(get_est_dirs(sums), get_est_dirs(results_post)):
         if sums_est_dir.GetName() != res_est_dir.GetName():
             raise IndexError("Order of estimator dirs is different in sums and results_post")
-        res_dir_str = "MultEstimators/results_post/" + res_est_dir.GetName()
+        res_dir_str = res_est_dir.GetPath().split(":")[1]
         fig = Figure()
         fig.plot.palette = 'root'
         fig.plot.ncolors = 7
@@ -929,20 +927,23 @@ def _plot_nMPI_vs_Nch(f, sums, results_post):
 
 def _delete_results_dir(f, sums):
     # delete old result directory
-    f.rm('MultEstimators/results_post')
+    f.rm('MultEstimators/results_post' + global_trigger)
     f.Write()
 
 
 def _mk_results_dir(f, sums):
-    f.mkdir('MultEstimators/results_post', recurse=True)
+    f.mkdir('MultEstimators/results_post' + global_trigger, recurse=True)
     for est_dir in get_est_dirs(sums):
         try:
-            resdir = f.MultEstimators.results_post.mkdir(est_dir.GetName())
+            resdir = f.MultEstimators.__getattr__(results_dir_name).mkdir(est_dir.GetName())
             resdir.Write()
         except:
             pass
 
 if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print "Usage: python post.py file.root [InelGt0]"
+        quit()
     # go into batch mode
     ROOT.gROOT.SetBatch(True)
     # set default style for all plots
@@ -956,6 +957,12 @@ if __name__ == "__main__":
     ref_ests = ['EtaLt05', ]
     considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C', 'ZDC',
                        'nMPI', 'Q2', 'spherocity', 'sphericity']
+    try:
+        golbal_trigger = sys.argv[2]
+    except IndexError:
+        global_trigger = ""
+    sums_dir_name = "Sums" + global_trigger
+    results_dir_name = "results_post" + global_trigger
 
     reset_functions = [
         _delete_results_dir,
@@ -965,11 +972,11 @@ if __name__ == "__main__":
         # _make_correlation_plots,  # require nTuples
         _make_dNdeta,
         _make_PNch_plots,
-        #_plot_nMPI_vs_Nch,
+        # _plot_nMPI_vs_Nch,
         _make_mult_vs_pt_plots,
         _plot_meanpt_vs_ref_mult_for_pids,
         _pt_distribution_ratios,  # needs updated results_post!
-        ## _make_dNdeta_mb_ratio_plots,
+        #  _make_dNdeta_mb_ratio_plots,
         _make_pid_ratio_plots,
         _plot_dNdpT,
     ]
@@ -983,7 +990,7 @@ if __name__ == "__main__":
 
     for func in reset_functions:
         with root_open(sys.argv[1], 'update') as f:
-            sums = f.MultEstimators.Sums
+            sums = f.MultEstimators.__getattr__(sums_dir_name)
             func(f, sums)
             delete_lists(sums)
 
@@ -993,13 +1000,13 @@ if __name__ == "__main__":
     # from different directories at the same time without corrupting the file. Fuck you ROOT!
     NCH_EDGES = {}
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
+        sums = f.MultEstimators.__getattr__(sums_dir_name)
+        results_post = f.MultEstimators.__getattr__(results_dir_name)
         _make_event_counters(f, sums, results_post)
         delete_lists(sums)
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
+        sums = f.MultEstimators.__getattr__(sums_dir_name)
+        results_post = f.MultEstimators.__getattr__(results_dir_name)
         for est_dir in get_est_dirs(results_post):
             event_counter = est_dir.event_counter
             try:
@@ -1016,17 +1023,17 @@ if __name__ == "__main__":
 
     for func in plotting_functions:
         with root_open(sys.argv[1], 'update') as f:
-            sums = f.MultEstimators.Sums
-            results_post = f.MultEstimators.results_post
+            sums = f.MultEstimators.__getattr__(sums_dir_name)
+            results_post = f.MultEstimators.__getattr__(results_dir_name)
             func(f, sums, results_post)
             delete_lists(sums)
 
     # the following two need extra parameters
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
+        sums = f.MultEstimators.__getattr__(sums_dir_name)
+        results_post = f.MultEstimators.__getattr__(results_dir_name)
         _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=False)
     with root_open(sys.argv[1], 'update') as f:
-        sums = f.MultEstimators.Sums
-        results_post = f.MultEstimators.results_post
+        sums = f.MultEstimators.__getattr__(sums_dir_name)
+        results_post = f.MultEstimators.__getattr__(results_dir_name)
         # _plot_pT_HM_div_pt_MB(f, sums, results_post, scale_nMPI=True)
