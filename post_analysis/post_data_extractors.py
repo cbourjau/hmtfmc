@@ -5,7 +5,15 @@ plottables.
 
 from rootpy import asrootpy
 
-from post_utils import gen_random_name
+from post_utils import \
+    gen_random_name,\
+    get_est_dirs,\
+    make_estimator_title,\
+    remap_x_values,\
+    remove_zero_value_points,\
+    remove_points_with_equal_x,\
+    remove_points_with_x_err_gt_1NchRef,\
+    remove_non_mutual_points
 
 import ROOT
 
@@ -187,3 +195,39 @@ def get_mean_nMPI(sums_est_dir, classifier_bin_interval):
     nch_vs_nmpi = asrootpy(sums_est_dir.FindObject("corr_this_with_nMPI"))
     nch_vs_nmpi.xaxis.SetRange(*classifier_bin_interval)
     return nch_vs_nmpi.GetMean(2)
+
+
+def get_graphs_particle_ratios_vs_refmult(plottingcls, pids1, pids2, scale=None, ytitle=''):
+    """
+    Returns list of ratios of the two pid-lists (pids1/pids2) vs refmult.
+    This function depends on the correlation histograms to be present in f
+    """
+    ratios = []
+    ref_classifier = 'EtaLt05'
+    for est_dir in get_est_dirs(plottingcls.sums, plottingcls.considered_ests):
+        h3d = asrootpy(est_dir.FindObject("classifier_pT_PID_{}".format(est_dir.GetName())))
+        corr_hist = get_correlation_histogram(plottingcls.sums, est_dir.GetName(), ref_classifier)
+        pids1_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids1])
+        pids2_vs_estmult = sum([get_identified_vs_mult(h3d, pdg) for pdg in pids2])
+
+        # remap histograms using the correlation between the current estimator and the reference one
+        pids1_vs_refmult = remap_x_values(pids1_vs_estmult, corr_hist)
+        pids2_vs_refmult = remap_x_values(pids2_vs_estmult, corr_hist)
+
+        # sanitize
+        for g in [pids1_vs_refmult, pids2_vs_refmult]:
+            remove_zero_value_points(g)
+            remove_points_with_x_err_gt_1NchRef(g)
+            remove_points_with_equal_x(g)
+        remove_non_mutual_points(pids1_vs_refmult, pids2_vs_refmult)
+
+        try:
+            ratio = pids1_vs_refmult / pids2_vs_refmult
+        except ZeroDivisionError:
+            print "ZeroDivisionError in {}".format(est_dir.GetName())
+            continue
+        if scale:
+            ratio.Scale(scale)
+        ratio.title = make_estimator_title(est_dir.GetName())
+        ratios.append(ratio)
+    return ratios
