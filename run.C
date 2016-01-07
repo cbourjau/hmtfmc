@@ -134,9 +134,9 @@ void run(const TString runmode_str  = "lite",
 				      ),
 	 const char * analysisFiles="",//"AliMultiplicityEstimators.cxx+:"
 	                               //"AliAnalysisTaskHMTFMCMultEst.cxx+"),
-	 const TString adderFiles=("$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(\"\"):"
-				   "$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(\"InelGt0\"):"
-				   "$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(\"SphericityGt09\")"
+	 const TString adderFiles=("$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(0):"  // Inel
+				   "$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(1):"  // InelGt0
+				   "$ALICE_PHYSICS/PWG/HMTF/macros/AddTaskHMTFMCMultEst.C(2)"   // V0AND
 				   ))
 {
   if(!(runmode_str.BeginsWith("local") ||
