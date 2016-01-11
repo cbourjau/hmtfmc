@@ -23,7 +23,7 @@ from post_utils import \
     remove_points_with_x_err_gt_1NchRef,\
     percentile_bin_to_binidx_bin
 
-from roofi import Figure, Styles
+from roofie import Figure, Styles
 
 kPROTON = str(2212)
 kANTIPROTON = str(-2212)
@@ -49,8 +49,8 @@ class Plotting(object):
         # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
         # self.mean_mult_cutoff_factor = 4
         self.ref_ests = ['EtaLt05', ]
-        self.considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M', 'V0A', 'V0C', 'ZDC',
-                                'nMPI', 'Q2', 'spherocity', 'sphericity']
+        self.considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M',  # 'V0A', 'V0C',
+                                'ZDC', 'nMPI', 'Q2', 'spherocity', 'sphericity']
 
         std_perc_bins = [(1, 0.7), (.5, .4), (.1, .05), (0.001, 0.0)]
         self.perc_bins = {

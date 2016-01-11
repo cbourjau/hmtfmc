@@ -1,4 +1,4 @@
-from roofi.figure import Figure
+from roofie.figure import Figure
 
 from rootpy.io import root_open
 
