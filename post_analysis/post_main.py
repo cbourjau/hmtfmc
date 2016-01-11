@@ -10,8 +10,8 @@ from rootpy import log, ROOT
 from post_plotting import Plotting
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print "Usage: python post.py file.root [InelGt0]"
+    if len(sys.argv) < 3:
+        print "Usage: python post.py file.root {Inel, InelGt0, V0AND}"
         quit()
     # go into batch mode
     ROOT.gROOT.SetBatch(True)
