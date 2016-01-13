@@ -183,7 +183,7 @@ class Plotting(object):
             fig = Figure()
             fig.plot.palette = 'colorblind'
             fig.xtitle = '#eta'
-            fig.ytitle = '1/N dN_{ch}/d#eta (1/MB)' if ratio_to_mb else '1/N dN_{ch}/d#eta'
+            fig.ytitle = 'Ratio of dN_{ch}/d#eta over MB result' if ratio_to_mb else '1/N #times dN_{ch}/d#eta'
             fig.legend.title = make_estimator_title(est_dir.GetName())
             fig.plot.ymin = 0
             dNdeta_mb = get_dNdeta_in_classifier_bin_interval(est_dir, event_counter,
@@ -933,6 +933,7 @@ class Plotting(object):
         summary_fig.plot.palette = 'root'
         summary_fig.legend.position = 'br'
         summary_fig.plot.logy = True
+        summary_fig.plot.ymin = 1
 
         for est_dir in get_est_dirs(self.sums, self.considered_ests):
             h_tmp = asrootpy(get_correlation_histogram(self.sums, est_dir.GetName(), "nMPI").ProfileX())

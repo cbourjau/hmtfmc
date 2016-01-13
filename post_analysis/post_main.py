@@ -11,8 +11,8 @@ from post_plotting import Plotting
 from roofie.beamify import Beamerdoc
 
 if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print "Usage: python post.py file.root {Inel, InelGt0, V0AND}"
+    if len(sys.argv) < 4:
+        print """Usage: python post.py file.root {Inel, InelGt0, V0AND} "<summary name>" """
         quit()
     # go into batch mode
     ROOT.gROOT.SetBatch(True)
@@ -28,14 +28,13 @@ if __name__ == "__main__":
     results_dir_name = "results_post" + global_trigger
 
     plotting = Plotting(f_name=sys.argv[1], sums_dir_name=sums_dir_name, results_dir_name=results_dir_name)
-    latexdoc = Beamerdoc()
-    latexdoc.author = "Christian Bourjau"
-    latexdoc.title = "Summary of ..."
+    latexdoc = Beamerdoc(author="Christian Bourjau", title=sys.argv[3])
+
     # run the actual plots:
     sec = latexdoc.add_section(r"$dN/d\eta$")
     [sec.add_figure(fig) for fig in plotting.plot_dNdetas(ratio_to_mb=False)]
 
-    sec = latexdoc.add_section(r"$dN/d\eta (1/MB)$")
+    sec = latexdoc.add_section(r"$dN/d\eta$ over MB result")
     [sec.add_figure(fig) for fig in plotting.plot_dNdetas(ratio_to_mb=True)]
 
     sec = latexdoc.add_section(r"$P(N_{ch})$ summary")
@@ -58,10 +57,10 @@ if __name__ == "__main__":
     sec = latexdoc.add_section(r"$dN/dp_T$")
     [sec.add_figure(fig) for fig in plotting.plot_dNdpT()]
 
-    sec = latexdoc.add_section(r"$dN_{HM}/dp_T / dN_{MB}/dp_T$")
+    sec = latexdoc.add_section(r"$\left[ dN_{HM}/dp_T\right] / \left[ dN_{MB}/dp_T\right]$")
     [sec.add_figure(fig) for fig in plotting.plot_pT_HM_div_pt_MB(scale_nMPI=False)]
 
-    sec = latexdoc.add_section(r"$dN_{HM}/dp_T / dN_{MB}/dp_T \times <N_{MPI}^{MB}> / <N_{MPI}^{HM}>$")
+    sec = latexdoc.add_section(r"$\left[ dN_{HM}/dp_T\right] / \left[ dN_{MB}/dp_T\right] \times \left[ \left<N_{MPI}^{MB}\right> / \left<N_{MPI}^{HM}\right>\right]$")
     [sec.add_figure(fig) for fig in plotting.plot_pT_HM_div_pt_MB(scale_nMPI=True)]
 
     sec = latexdoc.add_section(r"$nMPI(N_{ch})$")
