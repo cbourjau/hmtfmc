@@ -172,50 +172,50 @@ class Plotting(object):
             results_est_dir.WriteTObject(counter)
 
     @_io_decorator
-    def plot_dNdetas(self):
+    def plot_dNdetas(self, ratio_to_mb):
         # Loop over all estimators in the Sums list:
         log.info("Creating dN/deta bin in multiplicity")
+        figs = []
         for est_dir in get_est_dirs(self.sums, self.considered_ests):
             results_est_dir = self.results_post.Get(est_dir.GetName())
             event_counter = asrootpy(results_est_dir.Get("event_counter"))
 
             fig = Figure()
-            fig_mb_ratio = Figure()
-            fig.plot.palette = fig_mb_ratio.plot.palette = 'colorblind'
-            fig.xtitle = fig_mb_ratio.xtitle = '#eta'
-            fig.ytitle = '1/N dN_{ch}/d#eta'
-            fig_mb_ratio.ytitle = 'dN/d#eta (1/MB)'
-            fig.legend.title = fig_mb_ratio.legend.title = make_estimator_title(est_dir.GetName())
-            fig.plot.ymin = fig_mb_ratio.plot.ymin = 0
+            fig.plot.palette = 'colorblind'
+            fig.xtitle = '#eta'
+            fig.ytitle = '1/N dN_{ch}/d#eta (1/MB)' if ratio_to_mb else '1/N dN_{ch}/d#eta'
+            fig.legend.title = make_estimator_title(est_dir.GetName())
+            fig.plot.ymin = 0
             dNdeta_mb = get_dNdeta_in_classifier_bin_interval(est_dir, event_counter,
                                                               [1, event_counter.GetXaxis().GetNbins()])
             for cls_bin, perc_bin in zip(self.nch_edges[est_dir.GetName()], self.perc_bins[est_dir.GetName()]):
                 title = "{}%-{}%".format(perc_bin[1] * 100, perc_bin[0] * 100)
                 dNdeta_in_interval = get_dNdeta_in_classifier_bin_interval(est_dir, event_counter, cls_bin)
-                fig.add_plottable(dNdeta_in_interval, legend_title=title)
-                fig_mb_ratio.add_plottable(dNdeta_in_interval / dNdeta_mb, legend_title=title)
-                # add MB as well:
-            title = "MB"
-            fig.add_plottable(dNdeta_mb, legend_title=title)
+                if ratio_to_mb:
+                    fig.add_plottable(dNdeta_in_interval / dNdeta_mb, legend_title=title)
+                else:
+                    fig.add_plottable(dNdeta_in_interval, legend_title=title)
+            # add MB as well, if it is not the ratio plots we are making
+            if not ratio_to_mb:
+                title = "MB"
+                fig.add_plottable(dNdeta_mb, legend_title=title)
             path = results_est_dir.GetPath().split(":")[1]  # file.root:/internal/root/path
-            fig.save_to_root_file(self.f, "dNdeta_summary", path=path)
-            fig_mb_ratio.save_to_root_file(self.f, "dNdeta_MB_ratio_summary", path=path)
+            if ratio_to_mb:
+                fig.save_to_root_file(self.f, "dNdeta_MB_ratio_summary", path=path)
+            else:
+                fig.save_to_root_file(self.f, "dNdeta_summary", path=path)
+            figs.append(fig)
+        return figs
 
     @_io_decorator
     def plot_pt_distribution_ratios(self):
-        ###########################################################
-        # Category 2 on TWiki
         # create particle ratio vs pT plots
-
         log.info("Computing histograms vs pt")
         results_path = self.results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
         # Loop over all estimators in the Sums list:
-        for est_dir in get_est_dirs(self.results_post, self.considered_ests):
-            dirname = '{}/{}/pid_ratios/'.format(results_path, est_dir.GetName())
+        figs = []
 
-            # event_counter = asrootpy(getattr(self.results_post, est_dir.GetName()).event_counter)
-
-            # mult_pt_dir = self.results_post.FindObject(est_dir.GetName()).Get("mult_pt")
+        def get_new_figure():
             fig = Figure()
             fig.xtitle = 'p_{T} (GeV)'
             fig.plot.ymin = 0
@@ -223,6 +223,10 @@ class Plotting(object):
             fig.plot.palette = 'colorblind'
             # fig.plot.palette_ncolors = len(nch_edges) - 1
             fig.legend.position = 'br'
+            return fig
+
+        for est_dir in get_est_dirs(self.results_post, self.considered_ests):
+            dirname = '{}/{}/pid_ratios/'.format(results_path, est_dir.GetName())
 
             mult_binned_pt_dists = {}
             mult_binned_pt_dists['proton'] = [
@@ -256,7 +260,7 @@ class Plotting(object):
             perc_titles = ["{}%-{}%".format(perc_bin[0] * 100, perc_bin[1] * 100)
                            for perc_bin in self.perc_bins[est_dir.GetName()]]
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "proton_over_pich__vs__pt"
             fig.ytitle = "(p+#bar{p})/#pi^{+-}"
             fig.plot.ymax = .3
@@ -266,8 +270,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "Xi_over_pich__vs__pt"
             fig.plot.ymax = .06
             fig.legend.position = 'tl'
@@ -278,8 +283,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "OmegaCh_over_pich__vs__pt"
             fig.plot.ymax = .005
             fig.legend.position = 'tl'
@@ -290,9 +296,10 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['pi_ch'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
             # Ratios to pi0
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "pich_over_pi0__vs__pt"
             fig.plot.ymax = 2.5
             fig.legend.position = 'bl'
@@ -303,8 +310,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['pi_ch'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "proton_over_pi0__vs__pt"
             fig.plot.ymax = 1
             fig.legend.position = 'tr'
@@ -315,8 +323,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "K0S_over_pi0__vs__pt"
             fig.plot.ymax = 1.4
             fig.legend.position = 'tl'
@@ -327,8 +336,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['k0s'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "Lambda_over_pi0__vs__pt"
             fig.plot.ymax = .9
             fig.legend.position = 'tl'
@@ -339,8 +349,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['lambda'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "Xi_over_pi0__vs__pt"
             fig.plot.ymax = .08
             fig.legend.position = 'tl'
@@ -351,8 +362,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "OmegaCh_over_pi0__vs__pt"
             fig.plot.ymax = .005
             fig.legend.position = 'tl'
@@ -363,9 +375,10 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['pi0'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
             # Ratios to K0S
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "proton_over_K0S__vs__pt"
             fig.plot.ymax = 2.6
             fig.legend.position = 'tr'
@@ -376,8 +389,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['proton'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "Lambda_over_K0S__vs__pt"
             fig.plot.ymax = 1
             fig.legend.position = 'bl'
@@ -388,8 +402,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['lambda'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "Xi_over_K0S__vs__pt"
             fig.plot.ymax = .2
             fig.legend.position = 'tl'
@@ -400,8 +415,9 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['xi'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
 
-            fig.delete_plottables()
+            fig = get_new_figure()
             name = "OmegaCh_over_K0S__vs__pt"
             fig.plot.ymax = .012
             fig.legend.position = 'tl'
@@ -412,14 +428,17 @@ class Plotting(object):
                 for h1, h2, title in zip(mult_binned_pt_dists['omega'], mult_binned_pt_dists['k0s'], perc_titles)
             ]
             fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
+        return figs
 
     @_io_decorator
-    def plot_PNch(self):
+    def plot_PNch_summary(self):
         log.info("Creating P(Nch) summary plot")
         summary_fig = Figure()
         summary_fig.xtitle = "N_{ch}^{est}"
         summary_fig.ytitle = "P(N_{ch}^{est})"
         summary_fig.legend.position = 'tr'
+        summary_fig.plot.logy = True
 
         for est_dir in get_est_dirs(self.sums, self.considered_ests):
             est_name = est_dir.GetName()
@@ -428,12 +447,16 @@ class Plotting(object):
                 h_tmp.Scale(1.0 / h_tmp.Integral())
                 summary_fig.add_plottable(h_tmp, make_estimator_title(est_name))
 
-        summary_fig.plot.logy = True
         path = self.results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
         summary_fig.save_to_root_file(self.f, "PNch_summary", path=path)
+        # list as return type is expected for making the pdf
+        return [summary_fig]
 
+    @_io_decorator
+    def plot_PNch(self):
         log.info("Creating P(Nch_est) and P(Nch_refest) histograms")
         # mult_bin_size = 10
+        figs = []
         for ref_est_name in self.ref_ests:
             for res_est_dir in get_est_dirs(self.results_post, self.considered_ests):
                 est_name = res_est_dir.GetName()
@@ -503,6 +526,9 @@ class Plotting(object):
                 fig_vs_estmult.save_to_root_file(self.f, "PNchEst_binned_in_Nch{}".format(ref_est_name), path)
                 # vs est_mult
                 fig_vs_refmult.save_to_root_file(self.f, "PNch{}_binned_in_NchEst".format(ref_est_name), path)
+                figs.append(fig_vs_estmult)
+                figs.append(fig_vs_refmult)
+        return figs
 
     @_io_decorator
     def plot_mult_vs_pt(self):
@@ -563,162 +589,176 @@ class Plotting(object):
     def plot_pid_ratio_vs_refmult(self):
         log.info("Creating plots vs refmult")
         ratios_dir = self.results_post.GetPath().split(":")[1] + '/pid_ratios_vs_refmult'
-        fig = Figure()
-        fig.plot.ncolors = len(self.considered_ests)
-        fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
-        # fig.plot.xmin = 0
-        # fig.plot.xmax = 40
 
+        def get_new_figure():
+            fig = Figure()
+            fig.plot.ncolors = len(self.considered_ests)
+            fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
+            # fig.plot.xmin = 0
+            # fig.plot.xmax = 40
+            return fig
+
+        figs = []
         # Proton / pi_ch
-
+        fig = get_new_figure()
         pids1, pids2 = ['-2212', '2212'], ['-211', '211']
         fig.ytitle = "p/#pi^{+-}"
         fig.plot.ymin, fig.plot.ymax = 0.04, 0.13
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2, )
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # K / pi_ch
+        fig = get_new_figure()
         pids1, pids2 = ['310', '321', '-321'], ['-211', '211']
         fig.ytitle = "K^{*}/#pi^{+-}"
         fig.plot.ymin, fig.plot.ymax = 0.09, 0.30
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # Lambda / pi_ch
+        fig = get_new_figure()
         pids1, pids2 = ['3122'], ['-211', '211']
         fig.ytitle = "#Lambda / #pi^{+-}"
         fig.plot.ymin, fig.plot.ymax = 0.005, 0.035
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # Xi / pi_ch
+        fig = get_new_figure()
         pids1, pids2 = ['3312'], ['-211', '211']
         fig.ytitle = "#Xi / #pi^{+-}"
         fig.plot.ymin, fig.plot.ymax = 0.0004, 0.002
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # Omega / pi_ch
+        fig = get_new_figure()
         pids1, pids2 = ['3334', '-3334'], ['-211', '211']
         fig.ytitle = "#Omega / #pi^{+-}"
         fig.plot.ymin, fig.plot.ymax = 0.00001, 0.00011
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # pi_ch/pi0
+        fig = get_new_figure()
         pids1, pids2 = ['-211', '211'], ['111']
         fig.ytitle = "#pi^{+-}/#pi^{0}"
         fig.plot.ymin, fig.plot.ymax = 1.5, 2.2
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # proton / pi0
+        fig = get_new_figure()
         pids1, pids2 = ['-2212', '2212'], ['111']
         fig.ytitle = "p/#pi^{0}"
         fig.plot.ymin, fig.plot.ymax = 0.09, 0.13
-        fig.legend.position = 'bl'
-        fig.delete_plottables()
+        fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
-        fig.legend.position = 'tl'
+        figs.append(fig)
 
         # K / pi0
+        fig = get_new_figure()
         pids1, pids2 = ['310', '321', '-321'], ['111']
         fig.ytitle = "K^{*}/#pi^{0}"
         fig.plot.ymin, fig.plot.ymax = 0.15, 0.34
-        fig.legend.position = 'bl'
-        fig.delete_plottables()
+        fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
-        fig.legend.position = 'tl'
+        figs.append(fig)
 
         # Lambda / pi0
+        fig = get_new_figure()
         pids1, pids2 = ['3122'], ['111']
         fig.ytitle = "#Lambda/#pi^{0}"
         fig.plot.ymin, fig.plot.ymax = 0.014, 0.036
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # Xi / pi0
+        fig = get_new_figure()
         pids1, pids2 = ['3312'], ['111']
         fig.ytitle = "#Xi/#pi^{0}"
         fig.plot.ymin, fig.plot.ymax = 0.0010, 0.0018
-        fig.legend.position = 'bl'
-        fig.delete_plottables()
+        fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
-        fig.legend.position = 'tl'
+        figs.append(fig)
 
         # Omega / pi0
+        fig = get_new_figure()
         pids1, pids2 = ['3334', '-3334'], ['111']
         fig.ytitle = "#Omega/#pi^{0}"
-        fig.legend.position = 'bl'
+        fig.legend.position = 'tl'
         fig.plot.ymin, fig.plot.ymax = 0.00002, 0.00010
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
-        fig.legend.position = 'tl'
+        figs.append(fig)
 
         # K_ch / K0_S
+        fig = get_new_figure()
         pids1, pids2 = ['321', '-321'], ['310']
         fig.ytitle = "(K^{+}+K^{-}) / (2#timesK^{0}_{S})"
         fig.plot.ymin, fig.plot.ymax = 0.4, 1.3
-        fig.legend.position = 'bl'
-        fig.delete_plottables()
+        fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2, scale=.5)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
-        fig.legend.position = 'tl'
+        figs.append(fig)
 
         # K0_S / Lambda
+        fig = get_new_figure()
         pids1, pids2 = ['310'], ['-3122', '3122']
         fig.ytitle = "K^{0}_{S} / #Lambda"
         fig.plot.ymin, fig.plot.ymax = 1.9, 3.7
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
 
         # K0_S / Xi
+        fig = get_new_figure()
         pids1, pids2 = ['310'], ['3312']
         fig.ytitle = "K^{0}_{S} / #Xi"
         fig.plot.ymin, fig.plot.ymax = 57, 78
-        fig.delete_plottables()
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
         fig.save_to_root_file(self.f, name, ratios_dir)
+        figs.append(fig)
+
+        return figs
 
         # ######################################################################################
         # # vs Est mult
@@ -728,7 +768,9 @@ class Plotting(object):
     @_io_decorator
     def plot_meanpt_vs_ref_mult_for_pids(self):
         log.info("Creating mean pT plots")
-        for sums_est_dir, res_est_dir in zip(get_est_dirs(self.sums, self.considered_ests), get_est_dirs(self.results_post, self.considered_ests)):
+        figs = []
+        for sums_est_dir, res_est_dir in zip(get_est_dirs(self.sums, self.considered_ests),
+                                             get_est_dirs(self.results_post, self.considered_ests)):
             if sums_est_dir.GetName() != res_est_dir.GetName():
                 raise IndexError("Order of estimator dirs is different in sums and results_post")
             res_dir_str = res_est_dir.GetPath().split(":")[1]
@@ -769,6 +811,8 @@ class Plotting(object):
             fig.legend.title = make_estimator_title(sums_est_dir.GetName())
             [fig.add_plottable(g, g.title) for g in graphs]
             fig.save_to_root_file(self.f, "mean_pt", res_dir_str)
+            figs.append(fig)
+        return figs
 
     # def _plot_event_counter_with_shaded_perc_areas(f, results_post):
     #     log.info("Broken: Root sucks! Creating shaded event counter with percentile regions")
@@ -799,7 +843,9 @@ class Plotting(object):
     @_io_decorator
     def plot_dNdpT(self):
         log.info("1/N_evts  dN_ch/dpT plots")
-        for sums_est_dir, res_est_dir in zip(get_est_dirs(self.sums, self.considered_ests), get_est_dirs(self.results_post, self.considered_ests)):
+        figs = []
+        for sums_est_dir, res_est_dir in zip(get_est_dirs(self.sums, self.considered_ests),
+                                             get_est_dirs(self.results_post, self.considered_ests)):
             if sums_est_dir.GetName() != res_est_dir.GetName():
                 raise IndexError("Order of estimator dirs is different in sums and results_post")
             res_dir_str = res_est_dir.GetPath().split(":")[1]
@@ -829,10 +875,13 @@ class Plotting(object):
             [fig.add_plottable(p, p.title) for p in hists]
             fig.legend.title = "#pi^{#pm}, K^{#pm}, p, #Lambda, #Xi, #Omega"
             fig.save_to_root_file(self.f, "dNdpT", res_dir_str)
+            figs.append(fig)
+        return figs
 
     @_io_decorator
     def plot_pT_HM_div_pt_MB(self, scale_nMPI):
-        log.info("Plot dN/dpT ratios scaled with nMPI")
+        log.info("Plot dN_{HM}/dpT / dN_{MB}/dpT ratios scaled with nMPI")
+        figs = []
         for sums_est_dir, res_est_dir in zip(get_est_dirs(self.sums, self.considered_ests),
                                              get_est_dirs(self.results_post, self.considered_ests)):
             if sums_est_dir.GetName() != res_est_dir.GetName():
@@ -872,6 +921,8 @@ class Plotting(object):
                     fig.add_plottable((pt_dist_in_interval / pt_dist_mb), title)
                     name = "pt_hm_div_pt_mb"
             fig.save_to_root_file(self.f, name, res_dir_str)
+            figs.append(fig)
+        return figs
 
     @_io_decorator
     def plot_nMPI_vs_Nch(self):
@@ -884,8 +935,9 @@ class Plotting(object):
         summary_fig.plot.logy = True
 
         for est_dir in get_est_dirs(self.sums, self.considered_ests):
-            h_tmp = asrootpy(get_correlation_histogram(self.sums, est_dir.GetName(), "MPI").ProfileX())
+            h_tmp = asrootpy(get_correlation_histogram(self.sums, est_dir.GetName(), "nMPI").ProfileX())
             summary_fig.add_plottable(h_tmp, make_estimator_title(est_dir.GetName()))
 
         path = self.results_post.GetPath().split(":")[1]  # file.root:/internal/root/path
         summary_fig.save_to_root_file(self.f, "nMPI_summary", path=path)
+        return [summary_fig]
