@@ -10,6 +10,33 @@ from rootpy import log, ROOT
 from post_plotting import Plotting
 from roofie.beamify import Beamerdoc
 
+############
+# Settings #
+############
+
+# A list of the estimators which will be included in the plots (if available in the input file)
+considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M',  # 'V0A', 'V0C',
+                   'ZDC', 'nMPI', 'Q2', 'spherocity', 'sphericity']
+
+# Ranges of percentiles which should be considered in the plots These
+# ranges are then translated into ranges of bins in multiplicity, nMPI
+# or whatever is applicable
+std_perc_bins = [(1, 0.7), (.5, .4), (.1, .05), (0.001, 0.0)]
+percentile_bins = {
+    'EtaLt05': std_perc_bins,
+    'EtaLt08': std_perc_bins,
+    'EtaLt15': std_perc_bins,
+    'Eta08_15': std_perc_bins,
+    'V0M': std_perc_bins,
+    'V0A': std_perc_bins,
+    'V0C': std_perc_bins,
+    'ZDC': [(1, 0.7), (.7, .3), (.3, .05), (0.001, 0.0)],
+    'nMPI': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+    'Q2': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+    'spherocity': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+    'sphericity': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
+}
+
 if __name__ == "__main__":
     if len(sys.argv) < 4:
         print """Usage: python post.py file.root {Inel, InelGt0, V0AND} "<summary name>" """
@@ -27,7 +54,8 @@ if __name__ == "__main__":
     sums_dir_name = "Sums" + global_trigger
     results_dir_name = "results_post" + global_trigger
 
-    plotting = Plotting(f_name=sys.argv[1], sums_dir_name=sums_dir_name, results_dir_name=results_dir_name)
+    plotting = Plotting(f_name=sys.argv[1], sums_dir_name=sums_dir_name, results_dir_name=results_dir_name,
+                        percentile_bins=percentile_bins, considered_ests=considered_ests)
     latexdoc = Beamerdoc(author="Christian Bourjau", title=sys.argv[3])
 
     # run the actual plots:

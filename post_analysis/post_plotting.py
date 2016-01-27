@@ -42,31 +42,15 @@ kOMEGAPLUS = str(-3334)
 
 
 class Plotting(object):
-    def __init__(self, f_name, sums_dir_name, results_dir_name):
+    def __init__(self, f_name, sums_dir_name, results_dir_name, percentile_bins, considered_ests):
         self.f_name = f_name
         self.sums_dir_name = sums_dir_name
         self.results_dir_name = results_dir_name
         # use the last mult bin starts at a multiplicity  x times larger than the mean in this estimator
         # self.mean_mult_cutoff_factor = 4
         self.ref_ests = ['EtaLt05', ]
-        self.considered_ests = ['EtaLt05', 'EtaLt08', 'EtaLt15', 'Eta08_15', 'V0M',  # 'V0A', 'V0C',
-                                'ZDC', 'nMPI', 'Q2', 'spherocity', 'sphericity']
-
-        std_perc_bins = [(1, 0.7), (.5, .4), (.1, .05), (0.001, 0.0)]
-        self.perc_bins = {
-            'EtaLt05': std_perc_bins,
-            'EtaLt08': std_perc_bins,
-            'EtaLt15': std_perc_bins,
-            'Eta08_15': std_perc_bins,
-            'V0M': std_perc_bins,
-            'V0A': std_perc_bins,
-            'V0C': std_perc_bins,
-            'ZDC': [(1, 0.7), (.7, .3), (.3, .05), (0.001, 0.0)],
-            'nMPI': [(1, 0.0)],  # [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
-            'Q2': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
-            'spherocity': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
-            'sphericity': [(1, 0.7), (.7, .4), (.3, .05), (0.001, 0.0)],
-        }
+        self.considered_ests = considered_ests
+        self.perc_bins = percentile_bins
         # figure out the nch edges corresponding to the percentile edges, depends on P(Nch)
         self.delete_results_dir()
         self.make_results_dir()
