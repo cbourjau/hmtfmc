@@ -95,7 +95,9 @@ class Plotting(object):
                 print "Error occured for classifier " + est_dir.GetName()
                 print "Desired percentile bins: "
                 print self.perc_bins[est_dir.GetName()]
-                raise e
+                print "You can change the percentile bins in post_main.py"
+                print "For now, falling back to one single bin from 100% - 0%"
+                nch_edges[est_dir.GetName()] = [percentile_bin_to_binidx_bin((1.0, 0.0), event_counter)]
         print "Bin edges for given percentile bins"
         return nch_edges
 
@@ -235,6 +237,10 @@ class Plotting(object):
             ]
             mult_binned_pt_dists['k0s'] = [
                 get_pT_distribution(est_dir, [kK0S], classifier_bin_interval)
+                for classifier_bin_interval in self.nch_edges[est_dir.GetName()]
+            ]
+            mult_binned_pt_dists['k_ch'] = [
+                get_pT_distribution(est_dir, [kKPLUS, kKMINUS], classifier_bin_interval)
                 for classifier_bin_interval in self.nch_edges[est_dir.GetName()]
             ]
             mult_binned_pt_dists['pi0'] = [
@@ -413,6 +419,20 @@ class Plotting(object):
             ]
             fig.save_to_root_file(self.f, name, dirname)
             figs.append(fig)
+
+            fig = get_new_figure()
+            name = "Kaon_over_pich__vs__pt"
+            fig.plot.ymax = 1
+            fig.legend.position = 'tl'
+            fig.ytitle = "(K^{+} + K^{-}) / (#pi^{+} +#pi^{-})"
+            fig.legend.title = make_estimator_title(est_dir.GetName())
+            [
+                fig.add_plottable(h1 / h2, legend_title=title)
+                for h1, h2, title in zip(mult_binned_pt_dists['k_ch'], mult_binned_pt_dists['pi_ch'], perc_titles)
+            ]
+            fig.save_to_root_file(self.f, name, dirname)
+            figs.append(fig)
+
         return figs
 
     @_io_decorator
@@ -578,8 +598,8 @@ class Plotting(object):
             fig = Figure()
             fig.plot.ncolors = len(self.considered_ests)
             fig.xtitle = "N_{ch}|_{" + make_estimator_title('EtaLt05') + "}"
-            # fig.plot.xmin = 0
-            # fig.plot.xmax = 40
+            fig.plot.xmin = 0
+            fig.plot.xmax = 60
             return fig
 
         figs = []
@@ -620,7 +640,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['3312'], ['-211', '211']
         fig.ytitle = "#Xi / #pi^{+-}"
-        fig.plot.ymin, fig.plot.ymax = 0.0004, 0.002
+        fig.plot.ymin, fig.plot.ymax = 0.0004, 0.003
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
@@ -631,7 +651,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['3334', '-3334'], ['-211', '211']
         fig.ytitle = "#Omega / #pi^{+-}"
-        fig.plot.ymin, fig.plot.ymax = 0.00001, 0.00011
+        fig.plot.ymin, fig.plot.ymax = 0.00001, 0.0005
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
@@ -653,7 +673,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['-2212', '2212'], ['111']
         fig.ytitle = "p/#pi^{0}"
-        fig.plot.ymin, fig.plot.ymax = 0.09, 0.13
+        fig.plot.ymin, fig.plot.ymax = 0.09, 0.30
         fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
@@ -665,7 +685,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['310', '321', '-321'], ['111']
         fig.ytitle = "K^{*}/#pi^{0}"
-        fig.plot.ymin, fig.plot.ymax = 0.15, 0.34
+        fig.plot.ymin, fig.plot.ymax = 0.15, 0.50
         fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
@@ -677,7 +697,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['3122'], ['111']
         fig.ytitle = "#Lambda/#pi^{0}"
-        fig.plot.ymin, fig.plot.ymax = 0.014, 0.036
+        fig.plot.ymin, fig.plot.ymax = 0.014, 0.045
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
@@ -688,7 +708,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['3312'], ['111']
         fig.ytitle = "#Xi/#pi^{0}"
-        fig.plot.ymin, fig.plot.ymax = 0.0010, 0.0018
+        fig.plot.ymin, fig.plot.ymax = 0.0010, 0.005
         fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
@@ -701,7 +721,7 @@ class Plotting(object):
         pids1, pids2 = ['3334', '-3334'], ['111']
         fig.ytitle = "#Omega/#pi^{0}"
         fig.legend.position = 'tl'
-        fig.plot.ymin, fig.plot.ymax = 0.00002, 0.00010
+        fig.plot.ymin, fig.plot.ymax = 0.00002, 0.0008
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
@@ -712,7 +732,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['321', '-321'], ['310']
         fig.ytitle = "(K^{+}+K^{-}) / (2#timesK^{0}_{S})"
-        fig.plot.ymin, fig.plot.ymax = 0.4, 1.3
+        fig.plot.ymin, fig.plot.ymax = 0.4, 1.5
         fig.legend.position = 'tl'
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2, scale=.5)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
@@ -724,7 +744,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['310'], ['-3122', '3122']
         fig.ytitle = "K^{0}_{S} / #Lambda"
-        fig.plot.ymin, fig.plot.ymax = 1.9, 3.7
+        fig.plot.ymin, fig.plot.ymax = 1.3, 3.7
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
@@ -735,7 +755,7 @@ class Plotting(object):
         fig = get_new_figure()
         pids1, pids2 = ['310'], ['3312']
         fig.ytitle = "K^{0}_{S} / #Xi"
-        fig.plot.ymin, fig.plot.ymax = 57, 78
+        fig.plot.ymin, fig.plot.ymax = 15, 80
         graphs = get_graphs_particle_ratios_vs_refmult(self, pids1, pids2)
         [fig.add_plottable(g, legend_title=g.GetTitle()) for g in graphs]
         name = "_".join(pids1) + "_div_" + "_".join(pids2)
@@ -787,9 +807,9 @@ class Plotting(object):
             fig.plot.palette = 'root'
             fig.plot.ncolors = 7
             fig.plot.xmin = 0
-            fig.plot.xmax = 25
+            fig.plot.xmax = 40
             fig.plot.ymin = 0.3
-            fig.plot.ymax = 1.9
+            fig.plot.ymax = 2.1
             fig.ytitle = "<p_{T}>"
             fig.xtitle = "N_{ch}|_{|#eta|<0.5}"
             fig.legend.title = make_estimator_title(sums_est_dir.GetName())
